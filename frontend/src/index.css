@@ -1,0 +1,144 @@
+@import url('https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,300..800;1,6..72,300..800&family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500;600;700&display=swap');
+@import 'tailwindcss';
+
+@theme {
+  --color-paper: #faf9f5;
+  --color-paper-deep: #f2f0e8;
+  --color-ink: #0f100f;
+  --color-ink-soft: #33352f;
+  --color-matcha: #d4ed64;
+  --color-matcha-deep: #c3dd4f;
+  --color-mist: #bbd9fa;
+  --color-hair: #e7e4d9;
+  --color-hair-dark: #262826;
+
+  /* Newsreader for bold display headings; Instrument Serif for italic accents */
+  --font-display: 'Newsreader', ui-serif, Georgia, serif;
+  --font-serif: 'Instrument Serif', ui-serif, Georgia, serif;
+  --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: var(--font-sans);
+  background-color: var(--color-paper);
+  color: var(--color-ink);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+::selection {
+  background: var(--color-matcha);
+  color: var(--color-ink);
+}
+
+/* upright display headings — Newsreader 600 for editorial weight without being too heavy */
+.font-display {
+  font-family: var(--font-display);
+  font-style: normal;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 0.96;
+}
+/* italic accent spans inside body copy — keep Instrument Serif */
+.font-serif {
+  font-family: var(--font-serif);
+  font-style: italic;
+  font-weight: 400;
+  letter-spacing: -0.01em;
+}
+
+/* ---- word-by-word text reveal ---- */
+@keyframes sk-word {
+  from {
+    opacity: 0;
+    transform: translateY(0.5em);
+    filter: blur(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+    filter: blur(0);
+  }
+}
+.sk-reveal .sk-w {
+  display: inline-block;
+  opacity: 0;
+  will-change: transform, opacity, filter;
+}
+.sk-reveal.sk-play .sk-w {
+  animation: sk-word 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation-delay: calc(var(--i) * 70ms);
+}
+@media (prefers-reduced-motion: reduce) {
+  .sk-reveal .sk-w {
+    opacity: 1 !important;
+    animation: none !important;
+    filter: none !important;
+    transform: none !important;
+  }
+}
+
+/* ---- hero explainer motion ---- */
+@keyframes sk-rise {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes sk-pop {
+  0% { opacity: 0; transform: scale(0.94); }
+  60% { transform: scale(1.02); }
+  100% { opacity: 1; transform: scale(1); }
+}
+@keyframes sk-scan {
+  0% { transform: translateY(-6%); }
+  100% { transform: translateY(106%); }
+}
+@keyframes sk-type {
+  from { width: 0; }
+  to { width: 100%; }
+}
+@keyframes sk-blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+@keyframes sk-bar {
+  from { width: 0%; }
+  to { width: 100%; }
+}
+.sk-rise { animation: sk-rise 0.5s cubic-bezier(0.22, 1, 0.36, 1) both; }
+.sk-pop { animation: sk-pop 0.45s cubic-bezier(0.22, 1, 0.36, 1) both; }
+
+@media (prefers-reduced-motion: reduce) {
+  .sk-rise, .sk-pop { animation: none; }
+}
+
+/* ---- highlighted motion-video frame glow ---- */
+@keyframes sk-glow {
+  0%, 100% { opacity: 0.55; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.015); }
+}
+.sk-glow-ring {
+  animation: sk-glow 3.4s ease-in-out infinite;
+}
+
+/* ---- workflow connector draw ---- */
+@keyframes sk-dash {
+  to { stroke-dashoffset: 0; }
+}
+@keyframes sk-flow {
+  0% { opacity: 0; transform: translateY(8px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
+/* Hide scrollbars until scrolling */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+}
+*:hover,
+*:focus-within {
+  scrollbar-color: rgba(15, 16, 15, 0.2) transparent;
+}

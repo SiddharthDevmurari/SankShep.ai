@@ -1,0 +1,10 @@
+{
+  "description": "Transforms lengthy documents into concise summaries, scripts, and presentations with AI-powered editing and strong privacy for teams and professionals.",
+  "robots": {
+    "index": false
+  },
+  "accessibility": {
+    "addBypassLinks": false,
+    "ignoreReducedMotion": false
+  }
+}

@@ -1,0 +1,64 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Environment — NEVER commit these
+.env
+.env.local
+.env.*.local
+*.local
+
+# Build output
+dist/
+dist-ssr/
+build/
+
+# Vite
+*.timestamp-*.mjs
+
+# TypeScript
+*.tsbuildinfo
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Editor & OS
+.vscode/
+!.vscode/extensions.json
+.idea/
+.DS_Store
+Thumbs.db
+*.suo
+*.user
+
+# graphify output
+graphify-out/
+.graphify_python
+.graphify_root
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.egg-info/
+.venv/
+venv/
+
+# Temp
+*.tmp
+*.temp
+
+# API test scripts
+frontend/test-api.mjs
+
+# Claude Code & Figma Make workspace files (IDE-specific, not app code)
+.claude/
+.agents/
+skills-lock.json
