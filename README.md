@@ -42,7 +42,7 @@ VITE_GROQ_KEY_1=gsk_your_key_here
 
 Get a free key at <https://console.groq.com>.
 
-> **Supabase is optional.** Leave `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` blank to use the built-in mock auth.
+> **No Supabase setup needed.** Every copy of the app connects to the same central Supabase project, pinned in `frontend/src/lib/supabase.ts`. Accounts and activity are shared across all machines.
 
 ### 3. Run the dev server
 
@@ -54,14 +54,15 @@ Open <http://localhost:5173> in your browser.
 
 ---
 
-## Demo accounts
+## Database setup (one-time, project owner only)
 
-| Role  | Email               | Password |
-|-------|---------------------|----------|
-| User  | demo@sankshep.ai    | demo123  |
-| Admin | admin@gmail.com     | admin    |
+1. In the Supabase dashboard, open **SQL Editor**, paste `frontend/supabase/schema.sql`, and run it. This creates `profiles` and `activity_logs`, the RLS policies, and the admin RPC.
+2. Under **Authentication → Sign In / Providers → Email**, turn **Confirm email** **off** and save. Sign-up has no email verification: accounts are created and signed in immediately, and no emails are sent.
+3. The SQL creates the shared demo account `demo@sankshep.ai` / `demo123`, used by the **Use Demo Credentials** button. To create the admin, paste `frontend/supabase/create_admin.sql` into the SQL Editor, replace `CHANGE_ME` with your chosen password (6+ characters), and run it. Re-run it any time to reset the admin password.
 
-Click **"Try demo account"** on the login page to auto-fill and submit instantly.
+`admin@gmail.com` gets the `admin` role automatically.
+
+Users can delete their own account from the account menu (click the avatar in the workspace header). The admin can delete any account from the Admin Panel. The demo and admin accounts can't be deleted.
 
 ---
 
@@ -71,11 +72,12 @@ Click **"Try demo account"** on the login page to auto-fill and submit instantly
 frontend/
 ├── src/
 │   ├── lib/
-│   │   ├── supabase.ts        # Supabase client (null when env vars absent)
+│   │   ├── supabase.ts        # Central Supabase client (pinned URL + key)
 │   │   ├── groq.ts            # Fetch wrapper with round-robin key rotation
-│   │   └── pipeline.ts        # LangGraph-style parse + parallel format pipeline
+│   │   ├── pipeline.ts        # LangGraph-style parse + parallel format pipeline
+│   │   └── activity.ts        # Activity logging + history/admin queries
 │   ├── contexts/
-│   │   └── AuthContext.tsx    # Dual Supabase / mock auth provider
+│   │   └── AuthContext.tsx    # Supabase auth provider
 │   ├── components/
 │   │   ├── GlobalHeader.tsx   # Persistent header (Home / Workspace / Logout)
 │   │   └── ProtectedRoute.tsx # Redirects to /login when unauthenticated
@@ -87,10 +89,12 @@ frontend/
 │   │   ├── TransformView.tsx  # LeftPanel + RightPanel wired to pipeline
 │   │   ├── LeftPanel.tsx      # File upload, URL, paste, format/tone config
 │   │   ├── RightPanel.tsx     # Output tabs, split pane, regeneration
-│   │   ├── ActivityView.tsx   # Activity & Insights placeholder
-│   │   └── AdminPanel.tsx     # Admin-only system status panel
+│   │   ├── ActivityView.tsx   # The signed-in user's own history + stats
+│   │   ├── ActivityFeed.tsx   # Shared chronological feed component
+│   │   └── AdminPanel.tsx     # Admin-only: all users + global activity feed
 │   ├── App.tsx                # BrowserRouter + AuthProvider + routes
 │   └── index.css              # Tailwind v4 + design tokens
+├── supabase/schema.sql    # Tables, RLS policies, triggers — run in Supabase
 ├── .env.local.example
 ├── package.json
 └── vite.config.ts
@@ -104,10 +108,13 @@ frontend/
 |-----------------------|----------|------------------------------------------|
 | `VITE_GROQ_KEY_1`     | Yes      | Primary Groq API key                     |
 | `VITE_GROQ_KEY_2`…`5` | No       | Extra keys for round-robin rotation      |
-| `VITE_SUPABASE_URL`   | No       | Supabase project URL (mock auth if blank)|
-| `VITE_SUPABASE_ANON_KEY` | No    | Supabase anon key                        |
 
 ---
+
+## Deploy to Vercel
+
+1. Import the repo in Vercel and set **Root Directory** to `frontend`. `vercel.json` handles the build and the SPA route rewrites.
+2. Add the environment variables `VITE_GROQ_KEY_1` … `VITE_GROQ_KEY_5` in Vercel → Project → Settings → Environment Variables. Supabase needs none.
 
 ## Build for production
 

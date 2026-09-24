@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useNavigate, useLocation, Link } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
+import { DEMO_EMAIL, DEMO_PASSWORD } from '../lib/supabase'
 import { Eye, EyeOff, Zap } from 'lucide-react'
 
 const stroke = { fill: 'none', stroke: 'currentColor', strokeWidth: 1.6, strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const }
@@ -16,18 +17,21 @@ export default function LoginPage() {
   const [password, setPassword] = useState('')
   const [showPass, setShowPass] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [info, setInfo] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+
   const fillDemo = async () => {
-    setEmail('demo@sankshep.ai')
-    setPassword('demo123')
+    setEmail(DEMO_EMAIL)
+    setPassword(DEMO_PASSWORD)
     setMode('login')
     setError(null)
-    setInfo(null)
     setLoading(true)
-    const { error } = await signIn('demo@sankshep.ai', 'demo123')
+    const { error } = await signIn(DEMO_EMAIL, DEMO_PASSWORD)
     if (error) {
-      setError(error)
+      setError(
+        /incorrect email or password/i.test(error)
+          ? 'The demo account isn’t set up in the database yet. Run frontend/supabase/schema.sql in the Supabase SQL Editor.'
+          : error,
+      )
       setLoading(false)
     } else {
       navigate(from, { replace: true })
@@ -37,27 +41,15 @@ export default function LoginPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError(null)
-    setInfo(null)
     setLoading(true)
 
-    if (mode === 'login') {
-      const { error } = await signIn(email, password)
-      if (error) {
-        setError(error)
-        setLoading(false)
-      } else {
-        navigate(from, { replace: true })
-      }
+    // Sign-up creates the account and signs in immediately — no email step.
+    const { error } = mode === 'login' ? await signIn(email, password) : await signUp(email, password)
+    if (error) {
+      setError(error)
+      setLoading(false)
     } else {
-      const { error } = await signUp(email, password)
-      if (error) {
-        setError(error)
-        setLoading(false)
-      } else {
-        setInfo('Account created! Check your email for a confirmation link, or log in now.')
-        setMode('login')
-        setLoading(false)
-      }
+      navigate(from, { replace: true })
     }
   }
 
@@ -145,6 +137,7 @@ export default function LoginPage() {
                   id="password"
                   type={showPass ? 'text' : 'password'}
                   required
+                  minLength={mode === 'signup' ? 6 : undefined}
                   autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
@@ -162,15 +155,10 @@ export default function LoginPage() {
               </div>
             </div>
 
-            {/* Error / Info */}
+            {/* Error */}
             {error && (
               <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-[13px] text-red-700">
                 {error}
-              </div>
-            )}
-            {info && (
-              <div className="rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-[13px] text-green-700">
-                {info}
               </div>
             )}
 
@@ -195,19 +183,12 @@ export default function LoginPage() {
           <p className="mt-6 text-center text-[13.5px] text-ink-soft">
             {mode === 'login' ? "Don't have an account? " : 'Already have an account? '}
             <button
-              onClick={() => { setMode(mode === 'login' ? 'signup' : 'login'); setError(null); setInfo(null) }}
+              onClick={() => { setMode(mode === 'login' ? 'signup' : 'login'); setError(null) }}
               className="font-medium text-ink underline underline-offset-2 hover:no-underline"
             >
               {mode === 'login' ? 'Sign up' : 'Log in'}
             </button>
           </p>
-
-          {/* Admin hint */}
-          {mode === 'login' && (
-            <p className="mt-4 text-center text-[11.5px] text-ink-soft/50">
-              Admin access: admin@gmail.com / admin
-            </p>
-          )}
         </div>
       </div>
     </div>

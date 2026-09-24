@@ -1,8 +1,13 @@
-import { useState } from 'react'
-import { Copy, Check, Download, RefreshCw, Eye, Code2 } from 'lucide-react'
+import { useLayoutEffect, useRef, useState } from 'react'
+import {
+  ArrowUp, Check, CircleAlert, Copy, Download, Eye, PanelLeft, PanelLeftClose, PenLine, WandSparkles, X,
+} from 'lucide-react'
 import type { OutputFormat, FormatResult } from '../lib/pipeline'
 import { regenerateFormat } from '../lib/pipeline'
+import { logActivity, previewOf } from '../lib/activity'
 import type { ToneOption } from '../lib/pipeline'
+import { RichText } from './RichText'
+import { ALL_FORMATS, STEP_IDS, StepNumber, toneLabel, type LeftPanelStatus } from './LeftPanel'
 
 interface Props {
   results: Partial<Record<OutputFormat, FormatResult>>
@@ -10,15 +15,35 @@ interface Props {
   tone: ToneOption
   generating: boolean
   selectedFormats: OutputFormat[]
+  notice: string | null
+  onDismissNotice: () => void
+  status: LeftPanelStatus | null
 }
 
-export function RightPanel({ results, parsedSource, tone, generating, selectedFormats }: Props) {
+const EMPTY_QUOTE =
+  'Transform your content into multiple formats. Upload your source, select your outputs, and generate accurate, editable drafts in seconds.'
+
+const SHORT_LABEL: Partial<Record<OutputFormat, string>> = {
+  'Twitter/X Post': 'X / Twitter',
+  'PPT Presentation': 'Slide Deck',
+  'Simplified Explanation': 'Simplified',
+  'Language Translation': 'Translation',
+}
+
+function countWords(text: string) {
+  const t = text.trim()
+  return t ? t.split(/\s+/).length : 0
+}
+
+export function RightPanel({ results, parsedSource, tone, generating, selectedFormats, notice, onDismissNotice, status }: Props) {
   const [activeTab, setActiveTab] = useState<OutputFormat | null>(null)
   const [viewMode, setViewMode] = useState<'editor' | 'mockup'>('editor')
+  const [showSource, setShowSource] = useState(false)
   const [copied, setCopied] = useState(false)
   const [refinement, setRefinement] = useState('')
   const [regenerating, setRegenerating] = useState(false)
   const [localResults, setLocalResults] = useState<Partial<Record<OutputFormat, FormatResult>>>({})
+  const editorRef = useRef<HTMLTextAreaElement>(null)
 
   // Merge API results with locally-regenerated overrides
   const merged: Partial<Record<OutputFormat, FormatResult>> = { ...results, ...localResults }
@@ -27,6 +52,15 @@ export function RightPanel({ results, parsedSource, tone, generating, selectedFo
   const tabs = selectedFormats.filter((f) => merged[f])
   const currentTab = activeTab && tabs.includes(activeTab) ? activeTab : tabs[0] ?? null
   const activeResult = currentTab ? merged[currentTab] : null
+  const output = activeResult?.output ?? ''
+
+  // Grow the editor with its content so the page scrolls, not the textarea.
+  useLayoutEffect(() => {
+    const el = editorRef.current
+    if (!el) return
+    el.style.height = 'auto'
+    el.style.height = `${el.scrollHeight}px`
+  }, [output, currentTab, viewMode, showSource])
 
   /* ─── Copy ──────────────────────────────────────────────────────────────── */
   const handleCopy = async () => {
@@ -49,8 +83,9 @@ export function RightPanel({ results, parsedSource, tone, generating, selectedFo
 
   /* ─── Regenerate (independent — only this tab) ──────────────────────────── */
   const handleRegenerate = async () => {
-    if (!currentTab || !activeResult) return
+    if (!currentTab || !activeResult || !refinement.trim() || regenerating) return
     setRegenerating(true)
+    const t0 = Date.now()
     const result = await regenerateFormat(
       currentTab,
       activeResult.output,
@@ -58,6 +93,19 @@ export function RightPanel({ results, parsedSource, tone, generating, selectedFo
       parsedSource,
       tone,
     )
+    void logActivity({
+      action: 'regenerate',
+      ...previewOf(parsedSource),
+      formats: [currentTab],
+      tone,
+      refinement: refinement.trim() || null,
+      outputs: result.status === 'success' ? { [currentTab]: result.output } : null,
+      status: result.status,
+      success_count: result.status === 'success' ? 1 : 0,
+      error_count: result.status === 'success' ? 0 : 1,
+      error_message: result.error ?? null,
+      duration_ms: Date.now() - t0,
+    })
     // Only update the current tab — all other tabs are untouched
     setLocalResults((prev) => ({ ...prev, [currentTab]: result }))
     setRefinement('')
@@ -76,185 +124,290 @@ export function RightPanel({ results, parsedSource, tone, generating, selectedFo
     return map[currentTab] ?? 'Export as .md'
   })()
 
-  /* ─── Empty / Loading state ─────────────────────────────────────────────── */
+  const noticeBanner = notice && (
+    <div role="alert" className="sk-rise absolute left-1/2 top-6 z-20 flex w-[min(640px,calc(100%-3rem))] -translate-x-1/2 items-start gap-3 rounded-2xl bg-white px-4 py-3.5 text-[13px] text-ink sk-float">
+      <CircleAlert className="mt-0.5 h-4 w-4 shrink-0 text-red-600" />
+      <p className="flex-1 leading-relaxed">{notice}</p>
+      <button onClick={onDismissNotice} aria-label="Dismiss" className="rounded-full p-1 text-ink-mute hover:bg-paper-deep hover:text-ink">
+        <X className="h-3.5 w-3.5" />
+      </button>
+    </div>
+  )
+
+  /* ─── Loading state ─────────────────────────────────────────────────────── */
   if (generating && tabs.length === 0) {
     return (
-      <div className="flex h-full flex-col items-center justify-center gap-4 text-center px-8">
-        <div className="relative">
-          <div className="h-12 w-12 animate-spin rounded-full border-2 border-hair border-t-matcha-deep" />
-          <div className="absolute inset-0 flex items-center justify-center">
-            <div className="h-4 w-4 rounded-full bg-matcha-deep animate-pulse" />
+      <div className="flex min-h-0 flex-1 flex-col">
+        <CanvasHeader
+          title="Output canvas"
+          status={`Drafting ${selectedFormats.length} ${selectedFormats.length === 1 ? 'format' : 'formats'}`}
+        />
+        <div className="flex-1 overflow-y-auto px-6 py-10 sm:px-10">
+          <div className="mx-auto w-full max-w-[640px]" aria-live="polite">
+            <p className="text-[14px] text-ink-mute">
+              Reading your source, then writing each format in parallel. This usually takes under a minute.
+            </p>
+            <ul className="mt-6 divide-y divide-line rounded-xl border border-line">
+              {selectedFormats.map((f, i) => (
+                <li key={f} className="sk-rise flex items-center gap-4 px-4 py-3.5" style={{ animationDelay: `${i * 60}ms` }}>
+                  <span className="w-40 shrink-0 truncate text-[14px] font-medium text-ink">{SHORT_LABEL[f] ?? f}</span>
+                  <span className="sk-skeleton h-2 flex-1 rounded-full" />
+                  <span className="text-[12.5px] text-ink-mute">Writing…</span>
+                </li>
+              ))}
+            </ul>
           </div>
-        </div>
-        <div>
-          <p className="font-semibold text-ink">Generating your content</p>
-          <p className="mt-1 text-[13px] text-ink-soft">
-            Running parallel AI pipeline across {selectedFormats.length} format{selectedFormats.length !== 1 ? 's' : ''}…
-          </p>
-        </div>
-        <div className="mt-2 flex flex-wrap justify-center gap-1.5">
-          {selectedFormats.map((f) => (
-            <span key={f} className="rounded-full border border-hair bg-white px-2.5 py-1 text-[11px] text-ink-soft animate-pulse">
-              {f}
-            </span>
-          ))}
         </div>
       </div>
     )
   }
 
+  /* ─── Empty state: a quiet brief, then the same three steps as the left panel ── */
   if (tabs.length === 0) {
+    const steps: { n: string; id: string; title: string; value: string; done: boolean }[] = [
+      {
+        n: '01', id: STEP_IDS.source, title: 'Source',
+        value: status?.sourceLabel ?? 'Add a file, link or pasted text',
+        done: !!status?.sourceLabel,
+      },
+      {
+        n: '02', id: STEP_IDS.outputs, title: 'Outputs',
+        value: status && (status.formats.length || status.hasCustomSchema)
+          ? `${status.formats.length || 1} ${(status.formats.length || 1) === 1 ? 'format' : 'formats'} selected`
+          : 'Choose at least one format',
+        done: !!status && (status.formats.length > 0 || status.hasCustomSchema),
+      },
+      {
+        n: '03', id: STEP_IDS.voice, title: 'Voice',
+        value: status ? `${toneLabel(status.tone)} tone${status.hasCustomSchema ? ' · custom instructions' : ''}` : 'Professional tone',
+        done: true,
+      },
+    ]
+    const queued = (status?.formats ?? [])
+      .map((f) => ALL_FORMATS.find((m) => m.label === f))
+      .filter((m): m is (typeof ALL_FORMATS)[number] => !!m)
+
+    const focusStep = (id: string) => {
+      const el = document.getElementById(id)
+      if (!el) return
+      el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      el.focus({ preventScroll: true })
+    }
+
     return (
-      <div className="flex h-full flex-col items-center justify-center gap-3 text-center px-8">
-        <div className="h-16 w-16 rounded-2xl bg-paper-deep flex items-center justify-center">
-          <svg viewBox="0 0 24 24" className="h-8 w-8 text-ink-soft/40" fill="none" stroke="currentColor" strokeWidth={1.4} strokeLinecap="round">
-            <rect x="3" y="3" width="18" height="18" rx="3" />
-            <path d="M3 9h18M9 21V9" />
-          </svg>
+      <div className="relative flex min-h-0 flex-1 flex-col">
+        <CanvasHeader title="Output canvas" status="Nothing generated yet" />
+        {noticeBanner}
+        <div className="flex-1 overflow-y-auto px-6 py-10 sm:px-10 lg:py-12">
+          <div className="mx-auto w-full max-w-[640px]">
+            <blockquote className="max-w-[46ch] font-serif text-[clamp(1.15rem,1.5vw,1.35rem)] leading-[1.5] text-ink-soft [text-wrap:pretty]">
+              “{EMPTY_QUOTE}”
+            </blockquote>
+
+            <h3 className="mt-10 text-[13px] font-semibold text-ink">Before you generate</h3>
+            <ol className="mt-3 divide-y divide-line rounded-xl border border-line">
+              {steps.map((s) => (
+                <li key={s.n}>
+                  <button
+                    type="button"
+                    onClick={() => focusStep(s.id)}
+                    className="group flex w-full items-center gap-4 px-4 py-3.5 text-left transition-colors hover:bg-paper focus-visible:bg-paper focus-visible:outline-none"
+                  >
+                    <StepNumber n={s.n} done={s.done} />
+                    <span className="min-w-0 flex-1">
+                      <span className="block text-[14px] font-semibold text-ink">{s.title}</span>
+                      <span className="block truncate text-[13px] text-ink-mute">{s.value}</span>
+                    </span>
+                    <span className="text-[12.5px] font-medium text-ink-soft underline decoration-ink/0 underline-offset-4 transition-colors group-hover:decoration-ink/40">
+                      {s.done ? 'Edit' : 'Go to step'}
+                    </span>
+                  </button>
+                </li>
+              ))}
+            </ol>
+
+            <h3 className="mt-10 flex items-baseline justify-between text-[13px] font-semibold text-ink">
+              Drafts you'll get
+              <span className="font-normal text-ink-mute">{queued.length + (status?.hasCustomSchema && queued.length === 0 ? 1 : 0)}</span>
+            </h3>
+            {queued.length > 0 ? (
+              <ul className="mt-3 grid gap-2 sm:grid-cols-2">
+                {queued.map(({ label, short, desc, icon: Icon }) => (
+                  <li key={label} className="flex items-center gap-3 rounded-xl bg-paper px-3.5 py-3">
+                    <Icon className="h-[18px] w-[18px] shrink-0 text-ink" strokeWidth={1.8} />
+                    <span className="min-w-0">
+                      <span className="block truncate text-[13.5px] font-medium text-ink">
+                        {short}{label === 'Language Translation' && status?.targetLanguage ? ` → ${status.targetLanguage}` : ''}
+                      </span>
+                      <span className="block truncate text-[12px] text-ink-mute">{desc}</span>
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            ) : status?.hasCustomSchema ? (
+              <p className="mt-3 rounded-xl bg-paper px-3.5 py-3 text-[13.5px] text-ink">One draft following your custom instructions.</p>
+            ) : (
+              <p className="mt-3 rounded-xl border border-dashed border-ink/25 px-3.5 py-3 text-[13.5px] text-ink-mute">
+                No formats selected. Pick them in step 02 and they'll be listed here.
+              </p>
+            )}
+          </div>
         </div>
-        <p className="font-medium text-ink-soft/70">Output canvas</p>
-        <p className="text-[13px] text-ink-soft/50 max-w-xs">
-          Configure your source content and formats on the left, then hit Generate to see results here.
-        </p>
       </div>
     )
   }
 
   /* ─── Main output view ──────────────────────────────────────────────────── */
+  const words = countWords(output)
+  const isError = activeResult?.status === 'error'
+
   return (
-    <div className="flex h-full flex-col">
-      {/* Tab bar */}
-      <div className="flex items-center gap-1 overflow-x-auto border-b border-hair px-4 pt-2 pb-0 scrollbar-thin">
-        {tabs.map((fmt) => {
-          const r = merged[fmt]
-          const isActive = fmt === currentTab
-          return (
-            <button
-              key={fmt}
-              onClick={() => setActiveTab(fmt)}
-              className={`relative shrink-0 rounded-t-lg px-3.5 py-2 text-[12.5px] font-medium transition-colors ${
-                isActive
-                  ? 'bg-white text-ink border border-b-0 border-hair'
-                  : 'text-ink-soft hover:text-ink hover:bg-paper-deep/60'
-              }`}
-            >
-              {fmt}
-              {r?.status === 'error' && (
-                <span className="ml-1.5 inline-flex h-4 w-4 items-center justify-center rounded-full bg-red-100 text-[9px] text-red-600">!</span>
-              )}
-              {generating && !r && (
-                <span className="ml-1.5 inline-block h-1.5 w-1.5 rounded-full bg-matcha-deep animate-pulse" />
-              )}
-            </button>
-          )
-        })}
-      </div>
+    <div className="relative flex min-h-0 flex-1 flex-col">
+      {noticeBanner}
 
       {/* Toolbar */}
-      <div className="flex items-center gap-2 border-b border-hair bg-white px-4 py-2">
-        {/* View toggle */}
-        <div className="flex rounded-lg border border-hair bg-paper-deep p-0.5 gap-0.5">
-          <button
-            onClick={() => setViewMode('editor')}
-            className={`flex items-center gap-1 rounded-md px-2.5 py-1.5 text-[11.5px] font-medium transition-all ${viewMode === 'editor' ? 'bg-white text-ink shadow-sm' : 'text-ink-soft hover:text-ink'}`}
-          >
-            <Code2 className="h-3 w-3" /> Editor
-          </button>
-          <button
-            onClick={() => setViewMode('mockup')}
-            className={`flex items-center gap-1 rounded-md px-2.5 py-1.5 text-[11.5px] font-medium transition-all ${viewMode === 'mockup' ? 'bg-white text-ink shadow-sm' : 'text-ink-soft hover:text-ink'}`}
-          >
-            <Eye className="h-3 w-3" /> Mockup
-          </button>
+      <div className="flex min-h-[68px] shrink-0 flex-wrap items-center justify-between gap-3 border-b border-line bg-white px-4 py-3 lg:px-5">
+        {/* Format switcher: segmented control */}
+        <div role="tablist" aria-label="Generated formats" className="no-scrollbar flex max-w-full items-center gap-1 overflow-x-auto rounded-full bg-paper-deep/80 p-1 ring-1 ring-hair">
+          {tabs.map((fmt) => {
+            const r = merged[fmt]
+            const active = fmt === currentTab
+            return (
+              <button
+                key={fmt}
+                role="tab"
+                aria-selected={active}
+                onClick={() => setActiveTab(fmt)}
+                className={`flex h-9 shrink-0 items-center gap-2 rounded-full px-4 text-[13px] font-medium transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink/20 ${
+                  active
+                    ? 'bg-white text-ink shadow-[0_0_0_1px_rgba(231,228,217,0.9),0_2px_8px_-3px_rgba(15,16,15,0.18)]'
+                    : 'text-ink-soft hover:text-ink'
+                }`}
+              >
+                {r?.status === 'error' && <span className="h-1.5 w-1.5 rounded-full bg-red-600" aria-label="failed" />}
+                {SHORT_LABEL[fmt] ?? fmt}
+              </button>
+            )
+          })}
         </div>
 
-        <div className="ml-auto flex items-center gap-1.5">
-          <button
-            onClick={handleCopy}
-            className="flex items-center gap-1 rounded-lg border border-hair bg-white px-2.5 py-1.5 text-[12px] font-medium text-ink-soft transition-all hover:border-ink/20 hover:text-ink"
-          >
-            {copied ? <Check className="h-3.5 w-3.5 text-green-600" /> : <Copy className="h-3.5 w-3.5" />}
-            {copied ? 'Copied!' : 'Copy'}
-          </button>
-          <button
-            onClick={handleExport}
-            className="flex items-center gap-1 rounded-lg border border-hair bg-white px-2.5 py-1.5 text-[12px] font-medium text-ink-soft transition-all hover:border-ink/20 hover:text-ink"
-          >
-            <Download className="h-3.5 w-3.5" />
-            {exportLabel}
-          </button>
+        <div className="flex items-center gap-2">
+          <div className="flex items-center gap-0.5 rounded-full bg-paper-deep/80 p-1 ring-1 ring-hair">
+            {([['editor', 'Edit', PenLine], ['mockup', 'Preview', Eye]] as const).map(([mode, label, Icon]) => (
+              <button
+                key={mode}
+                onClick={() => setViewMode(mode)}
+                aria-pressed={viewMode === mode}
+                className={`flex h-8 items-center gap-1.5 rounded-full px-3 text-[12.5px] font-medium transition-all ${
+                  viewMode === mode ? 'bg-white text-ink shadow-[0_0_0_1px_rgba(231,228,217,0.9)]' : 'text-ink-soft hover:text-ink'
+                }`}
+              >
+                <Icon className="h-3.5 w-3.5" /> {label}
+              </button>
+            ))}
+          </div>
+          <IconButton label={showSource ? 'Hide source' : 'Show parsed source'} onClick={() => setShowSource((v) => !v)} active={showSource} className="hidden xl:flex">
+            {showSource ? <PanelLeftClose className="h-4 w-4" /> : <PanelLeft className="h-4 w-4" />}
+          </IconButton>
+          <IconButton label={copied ? 'Copied' : 'Copy'} onClick={handleCopy}>
+            {copied ? <Check className="h-4 w-4 text-green-600" /> : <Copy className="h-4 w-4" />}
+          </IconButton>
+          <IconButton label={exportLabel} onClick={handleExport}>
+            <Download className="h-4 w-4" />
+          </IconButton>
         </div>
       </div>
 
-      {/* Split pane */}
-      <div className="flex flex-1 overflow-hidden">
-        {/* Left: parsed source */}
-        <div className="hidden xl:flex w-[38%] flex-col border-r border-hair bg-paper-deep/40">
-          <p className="shrink-0 border-b border-hair px-4 py-2 text-[11px] font-semibold uppercase tracking-wide text-ink-soft/60">
-            Parsed Source
-          </p>
-          <div className="flex-1 overflow-y-auto px-4 py-3">
-            <p className="whitespace-pre-wrap text-[12.5px] leading-relaxed text-ink-soft">{parsedSource || 'Source will appear here after generation.'}</p>
-          </div>
-        </div>
+      <div className="flex min-h-0 flex-1">
+        {/* Parsed source drawer */}
+        {showSource && (
+          <aside className="hidden w-[340px] shrink-0 flex-col border-r border-line bg-paper-deep/50 xl:flex">
+            <div className="flex items-center justify-between border-b border-hair px-6 py-3.5">
+              <p className="text-[12.5px] font-semibold text-ink-mute">Parsed source</p>
+              <p className="font-mono text-[11px] text-ink-mute">{countWords(parsedSource).toLocaleString()} words</p>
+            </div>
+            <div className="flex-1 overflow-y-auto px-6 py-5">
+              <p className="whitespace-pre-wrap text-[13px] leading-[1.75] text-ink-soft">{parsedSource || 'Source will appear here after generation.'}</p>
+            </div>
+          </aside>
+        )}
 
-        {/* Right: generated output */}
-        <div className="flex flex-1 flex-col overflow-hidden">
-          {activeResult?.status === 'error' ? (
-            <div className="flex flex-1 flex-col items-center justify-center gap-3 px-8 text-center">
-              <div className="rounded-2xl border border-red-200 bg-red-50 px-6 py-5 max-w-sm">
-                <p className="font-medium text-red-700">Generation failed</p>
-                <p className="mt-1 text-[12.5px] text-red-600/80">{activeResult.error}</p>
+        {/* Reading canvas */}
+        <div className="relative min-w-0 flex-1 bg-paper">
+          <div className="h-full overflow-y-auto px-4 pb-44 pt-8 sm:px-8">
+            {isError ? (
+              <div className="sk-sheet mx-auto max-w-[720px] rounded-2xl bg-white px-8 py-12 text-center">
+                <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-red-50 text-red-600 ring-1 ring-red-100">
+                  <CircleAlert className="h-5 w-5" />
+                </span>
+                <p className="mt-5 font-serif text-[26px] text-ink">This draft didn’t come through.</p>
+                <p className="mx-auto mt-2 max-w-md font-mono text-[12px] leading-relaxed text-red-800">{activeResult?.error}</p>
+                <p className="mt-4 text-[13px] text-ink-soft">Describe a change below to try this format again.</p>
               </div>
-            </div>
-          ) : viewMode === 'editor' ? (
-            <textarea
-              value={activeResult?.output ?? ''}
-              onChange={(e) => {
-                if (!currentTab) return
-                setLocalResults((prev) => ({
-                  ...prev,
-                  [currentTab]: { ...activeResult!, output: e.target.value },
-                }))
-              }}
-              className="flex-1 resize-none bg-white px-5 py-4 text-[13.5px] leading-relaxed text-ink outline-none font-mono"
-              placeholder="Generated content will appear here…"
-              spellCheck={false}
-            />
-          ) : (
-            <div className="flex-1 overflow-y-auto bg-white px-5 py-4">
-              <MockupView format={currentTab!} content={activeResult?.output ?? ''} />
-            </div>
-          )}
+            ) : viewMode === 'editor' ? (
+              <article className="sk-sheet mx-auto max-w-[760px] rounded-2xl bg-white px-7 py-10 sm:px-14 sm:py-14">
+                <header className="mb-8 border-b border-hair pb-7">
+                  <p className="text-[12.5px] font-semibold text-ink-mute">
+                    Draft · {tone.toLowerCase()}
+                  </p>
+                  <h2 className="mt-3 font-display text-[clamp(1.9rem,3vw,2.6rem)] font-bold text-ink">{currentTab}</h2>
+                  <p className="mt-4 flex flex-wrap gap-x-4 gap-y-1 font-mono text-[11.5px] text-ink-mute">
+                    <span>{words.toLocaleString()} words</span>
+                    <span>{Math.max(1, Math.ceil(words / 230))} min read</span>
+                    <span>{output.length.toLocaleString()} chars</span>
+                  </p>
+                </header>
+                <textarea
+                  ref={editorRef}
+                  value={output}
+                  onChange={(e) => {
+                    if (!currentTab) return
+                    setLocalResults((prev) => ({
+                      ...prev,
+                      [currentTab]: { ...activeResult!, output: e.target.value },
+                    }))
+                  }}
+                  aria-label={`${currentTab} draft`}
+                  className="block w-full resize-none overflow-hidden bg-transparent text-[16.5px] leading-[1.8] text-ink/90 caret-ink outline-none selection:bg-matcha/60"
+                  placeholder="Generated content will appear here…"
+                  spellCheck
+                />
+              </article>
+            ) : (
+              <MockupView format={currentTab!} content={output} />
+            )}
+          </div>
 
-          {/* Regeneration bar */}
-          <div className="shrink-0 border-t border-hair bg-white px-4 py-3">
-            <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-ink-soft/60">
-              Refine this output
-              <span className="ml-2 font-normal normal-case tracking-normal text-ink-soft/40">(won't affect other tabs)</span>
-            </p>
-            <div className="flex gap-2">
+          {/* Floating refine composer */}
+          <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-paper via-paper/90 to-transparent px-4 pb-6 pt-16 sm:px-8">
+            <form
+              onSubmit={(e) => { e.preventDefault(); void handleRegenerate() }}
+              className="sk-float pointer-events-auto mx-auto flex max-w-[760px] items-center gap-2 rounded-2xl bg-white p-2 transition-shadow focus-within:shadow-[0_0_0_1px_rgba(15,16,15,0.3),0_0_0_5px_rgba(212,237,100,0.35),0_12px_40px_-14px_rgba(15,16,15,0.22)]"
+            >
+              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[15px] bg-paper-deep text-ink-soft">
+                <WandSparkles className="h-[18px] w-[18px]" />
+              </span>
               <input
                 type="text"
                 value={refinement}
                 onChange={(e) => setRefinement(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && handleRegenerate()}
-                placeholder='e.g. "Make it shorter" · "Add a risk table" · "More formal tone"'
-                className="flex-1 rounded-xl border border-hair bg-paper-deep/60 px-3.5 py-2.5 text-[13px] text-ink outline-none focus:border-ink/25 focus:ring-2 focus:ring-ink/8 placeholder:text-ink-soft/40"
+                placeholder={`Refine this ${SHORT_LABEL[currentTab!] ?? currentTab} — “shorter”, “add a risk table”…`}
+                className="min-w-0 flex-1 bg-transparent text-[14.5px] text-ink outline-none placeholder:text-ink-mute"
               />
+              <span className="hidden font-mono text-[10.5px] text-ink-mute md:block">this draft only</span>
               <button
-                onClick={handleRegenerate}
+                type="submit"
                 disabled={regenerating || !refinement.trim()}
-                className="flex items-center gap-1.5 rounded-xl bg-ink px-4 py-2.5 text-[13px] font-medium text-paper transition-all hover:-translate-y-0.5 disabled:opacity-50 disabled:translate-y-0 shrink-0"
+                className="flex h-11 shrink-0 items-center gap-2 rounded-[15px] bg-ink px-5 text-[13.5px] font-semibold text-paper transition-all hover:-translate-y-0.5 active:translate-y-0 disabled:translate-y-0 disabled:opacity-40"
               >
                 {regenerating ? (
-                  <div className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-paper/30 border-t-paper" />
+                  <span className="h-4 w-4 animate-spin rounded-full border-2 border-paper/30 border-t-paper" />
                 ) : (
-                  <RefreshCw className="h-3.5 w-3.5" />
+                  <ArrowUp className="h-4 w-4" />
                 )}
-                [ Regenerate with Changes ]
+                <span className="hidden sm:inline">{regenerating ? 'Refining…' : 'Refine'}</span>
               </button>
-            </div>
+            </form>
           </div>
         </div>
       </div>
@@ -262,22 +415,53 @@ export function RightPanel({ results, parsedSource, tone, generating, selectedFo
   )
 }
 
+function CanvasHeader({ title, status }: { title: string; status: string }) {
+  return (
+    <div className="flex shrink-0 flex-wrap items-end justify-between gap-x-4 gap-y-1 border-b border-line px-6 pb-5 pt-6 sm:px-10">
+      <h2 className="font-display text-[22px] font-bold text-ink">{title}</h2>
+      <p className="text-[13px] text-ink-mute">{status}</p>
+    </div>
+  )
+}
+
+function IconButton({ label, onClick, active, className = '', children }: {
+  label: string
+  onClick: () => void
+  active?: boolean
+  className?: string
+  children: React.ReactNode
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      title={label}
+      aria-label={label}
+      className={`flex h-10 w-10 items-center justify-center rounded-full ring-1 transition-all duration-200 hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink/25 active:translate-y-0 ${
+        active ? 'bg-ink text-paper ring-ink' : 'bg-white text-ink-soft ring-hair hover:text-ink hover:ring-ink/20'
+      } ${className}`}
+    >
+      {children}
+    </button>
+  )
+}
+
 /* ─── Mockup renderer ─────────────────────────────────────────────────────── */
 
 function MockupView({ format, content }: { format: OutputFormat; content: string }) {
-  if (!content) return <p className="text-[13px] text-ink-soft/50">No content yet.</p>
+  if (!content) return <p className="text-center text-[13px] text-ink-mute">No content yet.</p>
 
   if (format === 'LinkedIn Post') {
     return (
-      <div className="mx-auto max-w-lg rounded-2xl border border-hair bg-white p-5 shadow-sm">
+      <div className="sk-sheet mx-auto max-w-[560px] rounded-2xl bg-white p-6">
         <div className="flex items-center gap-3">
-          <div className="h-10 w-10 rounded-full bg-ink flex items-center justify-center text-paper font-bold text-sm">S</div>
+          <div className="flex h-11 w-11 items-center justify-center rounded-full bg-ink text-sm font-bold text-matcha">S</div>
           <div>
-            <p className="text-[14px] font-semibold">Sankshep.ai</p>
-            <p className="text-[11px] text-ink-soft/60">AI Content Platform · Just now</p>
+            <p className="text-[14px] font-semibold text-ink">Sankshep.ai</p>
+            <p className="text-[11.5px] text-ink-mute">AI Content Platform · Just now</p>
           </div>
         </div>
-        <p className="mt-4 text-[14px] leading-relaxed whitespace-pre-wrap">{content}</p>
+        <div className="mt-2 [&_p]:text-[14.5px] [&_p]:leading-[1.7]"><RichText text={content} /></div>
       </div>
     )
   }
@@ -285,17 +469,18 @@ function MockupView({ format, content }: { format: OutputFormat; content: string
   if (format === 'Twitter/X Post') {
     const tweets = content.split(/\n\d+\//).filter(Boolean)
     return (
-      <div className="mx-auto max-w-md space-y-3">
+      <div className="mx-auto max-w-[520px] space-y-3">
         {tweets.map((tw, i) => (
-          <div key={i} className="rounded-2xl border border-hair bg-white p-4 shadow-sm">
-            <div className="flex items-center gap-2">
-              <div className="h-8 w-8 rounded-full bg-ink flex items-center justify-center text-paper text-xs font-bold">S</div>
+          <div key={i} className="sk-sheet rounded-2xl bg-white p-5">
+            <div className="flex items-center gap-2.5">
+              <div className="flex h-9 w-9 items-center justify-center rounded-full bg-ink text-xs font-bold text-matcha">S</div>
               <div>
-                <p className="text-[13px] font-semibold">Sankshep.ai</p>
-                <p className="text-[10px] text-ink-soft/60">@sankshepai</p>
+                <p className="text-[13.5px] font-semibold text-ink">Sankshep.ai</p>
+                <p className="font-mono text-[10.5px] text-ink-mute">@sankshepai</p>
               </div>
+              <span className="ml-auto font-mono text-[10.5px] text-ink-mute">{i + 1}/{tweets.length}</span>
             </div>
-            <p className="mt-2.5 text-[14px] leading-relaxed">{tw.trim()}</p>
+            <p className="mt-3 text-[14.5px] leading-[1.65] text-ink">{tw.trim()}</p>
           </div>
         ))}
       </div>
@@ -304,27 +489,21 @@ function MockupView({ format, content }: { format: OutputFormat; content: string
 
   if (format === 'Executive Summary') {
     return (
-      <div className="mx-auto max-w-2xl rounded-2xl border border-hair bg-white p-8 shadow-sm">
-        <div className="border-b-2 border-ink pb-4 mb-5">
-          <p className="text-[10px] font-bold uppercase tracking-widest text-ink-soft/60">Executive Brief</p>
-          <h2 className="font-display text-[22px] text-ink mt-1">Executive Summary</h2>
+      <div className="sk-sheet mx-auto max-w-[760px] rounded-2xl bg-white px-8 py-10 sm:px-14 sm:py-14">
+        <div className="mb-7 border-b-2 border-ink pb-5">
+          <p className="text-[12.5px] font-semibold text-ink-mute">Executive brief</p>
+          <h2 className="mt-2 font-display text-[30px] text-ink">Executive Summary</h2>
         </div>
-        <div className="prose prose-sm max-w-none">
-          <p className="whitespace-pre-wrap text-[14px] leading-relaxed text-ink">{content}</p>
-        </div>
+        <RichText text={content.replace(/^\s*[#*\s]*executive summary\**\s*\n/i, '')} />
       </div>
     )
   }
 
   // Default: clean document
   return (
-    <div className="mx-auto max-w-2xl">
-      <article className="rounded-2xl border border-hair bg-white p-8 shadow-sm">
-        <div className="mb-2 flex items-center gap-2">
-          <span className="rounded-full bg-matcha/40 px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-ink">{format}</span>
-        </div>
-        <div className="mt-4 whitespace-pre-wrap text-[14px] leading-[1.75] text-ink">{content}</div>
-      </article>
-    </div>
+    <article className="sk-sheet mx-auto max-w-[760px] rounded-2xl bg-white px-8 py-10 sm:px-14 sm:py-14">
+      <span className="rounded-md bg-matcha/40 px-2 py-1 text-[12.5px] font-semibold text-ink">{format}</span>
+      <div className="mt-6"><RichText text={content} /></div>
+    </article>
   )
 }

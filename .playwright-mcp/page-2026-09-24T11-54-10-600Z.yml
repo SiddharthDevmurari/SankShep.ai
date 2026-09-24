@@ -1,0 +1,47 @@
+- generic [ref=e3]:
+  - banner [ref=e4]:
+    - generic [ref=e5]:
+      - link "Sankshep.ai Beta" [ref=e6] [cursor=pointer]:
+        - /url: /
+        - generic [ref=e7]: Sankshep.ai
+        - generic [ref=e8]: Beta
+      - navigation [ref=e9]:
+        - link "Home" [ref=e10] [cursor=pointer]:
+          - /url: /
+        - link "Workspace" [ref=e14] [cursor=pointer]:
+          - /url: /workspace
+      - link "Log in" [ref=e21] [cursor=pointer]:
+        - /url: /login
+  - generic [ref=e22]:
+    - generic [ref=e23]:
+      - link "Sankshep.ai" [ref=e25] [cursor=pointer]:
+        - /url: /
+      - generic [ref=e26]:
+        - heading "Transform any content into every format." [level=2] [ref=e27]: Transform any contentinto every format.
+        - paragraph [ref=e28]: Upload reports, paste text, or drop a link. Get executive summaries, slide decks, LinkedIn posts and more — in seconds.
+        - generic [ref=e29]:
+          - generic [ref=e30]: Executive Summary
+          - generic [ref=e31]: 5-Slide Deck
+          - generic [ref=e32]: LinkedIn Post
+          - generic [ref=e33]: Video Script
+          - generic [ref=e34]: Advisory
+      - paragraph [ref=e35]: © 2026 Sankshep.ai · NTRO SIH
+    - generic [ref=e37]:
+      - heading "Welcome back" [level=1] [ref=e38]
+      - paragraph [ref=e39]: Sign in to access your workspace.
+      - button "[ Use Demo Credentials ]" [ref=e40]
+      - generic [ref=e43]:
+        - generic [ref=e44]:
+          - text: Email
+          - textbox "Email" [ref=e45]:
+            - /placeholder: you@example.com
+        - generic [ref=e46]:
+          - text: Password
+          - generic [ref=e47]:
+            - textbox "Password" [ref=e48]:
+              - /placeholder: ••••••••
+            - button [ref=e49]
+        - button "Sign in" [ref=e53]
+      - paragraph [ref=e54]:
+        - text: Don't have an account?
+        - button "Sign up" [ref=e55]
