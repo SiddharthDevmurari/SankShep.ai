@@ -1,0 +1,57 @@
+- generic [ref=f3e4]:
+  - banner [ref=f3e5]:
+    - generic [ref=f3e6]:
+      - link "Sankshep home" [ref=f3e8] [cursor=pointer]:
+        - /url: /
+        - generic [ref=f3e12]: Sankshep
+      - navigation "Workspace sections" [ref=f3e13]:
+        - tablist [ref=f3e14]:
+          - tab "Transform" [ref=f3e15]
+          - tab "History" [selected] [ref=f3e23]
+          - tab "Analytics" [ref=f3e29]
+      - generic [ref=f3e32]:
+        - button "D demo@sankshep.ai demo" [ref=f3e34]:
+          - generic [ref=f3e35]: D
+          - generic [ref=f3e36]:
+            - generic [ref=f3e37]: demo@sankshep.ai
+            - generic [ref=f3e38]: demo
+        - button "Log out" [ref=f3e41]
+  - main [ref=f3e45]:
+    - generic [ref=f3e47]:
+      - generic [ref=f3e48]:
+        - generic [ref=f3e49]:
+          - paragraph [ref=f3e50]: Workspace log
+          - heading "History" [level=1] [ref=f3e52]
+          - paragraph [ref=f3e53]: Recent transformations from this workspace.
+        - generic [ref=f3e54]:
+          - generic [ref=f3e55]:
+            - generic [ref=f3e56]: Filter by format
+            - combobox "Filter by format" [ref=f3e57] [cursor=pointer]:
+              - option "All formats" [selected]
+              - option "Executive Summary"
+              - option "LinkedIn Post"
+              - option "X / Twitter"
+              - option "Video"
+              - option "Slide Deck"
+              - option "Blog Post"
+              - option "Advisory"
+              - option "Infographic"
+              - option "Simplified"
+              - option "Translation"
+              - option "Custom Format"
+          - button "Refresh" [disabled] [ref=f3e58]
+      - region "Generated drafts" [ref=f3e65]:
+        - paragraph [ref=f3e67]: Loading drafts…
+        - generic [aria-hidden] [ref=f3e68]:
+          - generic [ref=f3e69]: Type
+          - generic [ref=f3e70]: Provider / model
+          - generic [ref=f3e71]: Input
+          - generic [ref=f3e72]: Output
+          - generic [ref=f3e73]: Date
+        - list [aria-hidden] [ref=f3e74]:
+          - listitem [ref=f3e75]
+          - listitem [ref=f3e83]
+          - listitem [ref=f3e91]
+          - listitem [ref=f3e99]
+          - listitem [ref=f3e107]
+          - listitem [ref=f3e115]

@@ -56,7 +56,7 @@ venv/
 *.temp
 
 # API test scripts
-frontend/test-api.mjs
+main/test-api.mjs
 
 # Claude Code & Figma Make workspace files (IDE-specific, not app code)
 .claude/

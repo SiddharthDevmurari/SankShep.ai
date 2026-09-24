@@ -1,0 +1,57 @@
+- generic [ref=f10e4]:
+  - banner [ref=f10e5]:
+    - generic [ref=f10e6]:
+      - link "Sankshep home" [ref=f10e8] [cursor=pointer]:
+        - /url: /
+        - generic [ref=f10e12]: Sankshep
+      - navigation "Workspace sections" [ref=f10e13]:
+        - tablist [ref=f10e14]:
+          - tab "Transform" [ref=f10e15]
+          - tab "History" [selected] [ref=f10e23]
+          - tab "Analytics" [ref=f10e29]
+      - generic [ref=f10e32]:
+        - button "D demo@sankshep.ai demo" [ref=f10e34]:
+          - generic [ref=f10e35]: D
+          - generic [ref=f10e36]:
+            - generic [ref=f10e37]: demo@sankshep.ai
+            - generic [ref=f10e38]: demo
+        - button "Log out" [ref=f10e41]
+  - main [ref=f10e45]:
+    - generic [ref=f10e47]:
+      - generic [ref=f10e48]:
+        - generic [ref=f10e49]:
+          - paragraph [ref=f10e50]: Workspace log
+          - heading "History" [level=1] [ref=f10e51]
+          - paragraph [ref=f10e52]: Recent transformations from this workspace.
+        - generic [ref=f10e53]:
+          - generic [ref=f10e54]:
+            - generic [ref=f10e55]: Filter by format
+            - combobox "Filter by format" [ref=f10e56] [cursor=pointer]:
+              - option "All formats" [selected]
+              - option "Executive Summary"
+              - option "LinkedIn Post"
+              - option "X / Twitter"
+              - option "Video"
+              - option "Slide Deck"
+              - option "Blog Post"
+              - option "Advisory"
+              - option "Infographic"
+              - option "Simplified"
+              - option "Translation"
+              - option "Custom Format"
+          - button "Refresh" [disabled] [ref=f10e57]
+      - region "Generated drafts" [ref=f10e64]:
+        - paragraph [ref=f10e66]: Loading drafts…
+        - generic [aria-hidden] [ref=f10e67]:
+          - generic [ref=f10e68]: Type
+          - generic [ref=f10e69]: Provider / model
+          - generic [ref=f10e70]: Input
+          - generic [ref=f10e71]: Output
+          - generic [ref=f10e72]: Date
+        - list [aria-hidden] [ref=f10e73]:
+          - listitem [ref=f10e74]
+          - listitem [ref=f10e82]
+          - listitem [ref=f10e90]
+          - listitem [ref=f10e98]
+          - listitem [ref=f10e106]
+          - listitem [ref=f10e114]

@@ -1,0 +1,173 @@
+- generic [ref=f10e4]:
+  - banner [ref=f10e5]:
+    - generic [ref=f10e6]:
+      - link "Sankshep home" [ref=f10e8] [cursor=pointer]:
+        - /url: /
+        - generic [ref=f10e12]: Sankshep
+      - navigation "Workspace sections" [ref=f10e13]:
+        - tablist [ref=f10e14]:
+          - tab "Transform" [ref=f10e15]
+          - tab "History" [selected] [ref=f10e23]
+          - tab "Analytics" [ref=f10e29]
+      - generic [ref=f10e32]:
+        - button "D demo@sankshep.ai demo" [ref=f10e34]:
+          - generic [ref=f10e35]: D
+          - generic [ref=f10e36]:
+            - generic [ref=f10e37]: demo@sankshep.ai
+            - generic [ref=f10e38]: demo
+        - button "Log out" [ref=f10e41]
+  - main [ref=f10e45]:
+    - generic [ref=f10e47]:
+      - generic [ref=f10e48]:
+        - generic [ref=f10e49]:
+          - paragraph [ref=f10e50]: Workspace log
+          - heading "History" [level=1] [ref=f10e51]
+          - paragraph [ref=f10e52]: Recent transformations from this workspace.
+        - generic [ref=f10e53]:
+          - generic [ref=f10e54]:
+            - generic [ref=f10e55]: Filter by format
+            - combobox "Filter by format" [ref=f10e56] [cursor=pointer]:
+              - option "All formats" [selected]
+              - option "Executive Summary"
+              - option "LinkedIn Post"
+              - option "X / Twitter"
+              - option "Video"
+              - option "Slide Deck"
+              - option "Blog Post"
+              - option "Advisory"
+              - option "Infographic"
+              - option "Simplified"
+              - option "Translation"
+              - option "Custom Format"
+          - button "Refresh" [ref=f10e57]
+      - region "Generated drafts" [ref=f10e64]:
+        - paragraph [ref=f10e66]: 11 drafts
+        - generic [aria-hidden] [ref=f10e67]:
+          - generic [ref=f10e68]: Type
+          - generic [ref=f10e69]: Provider / model
+          - generic [ref=f10e70]: Input
+          - generic [ref=f10e71]: Output
+          - generic [ref=f10e72]: Date
+        - list [ref=f10e122]:
+          - listitem [ref=f10e123]:
+            - generic [ref=f10e129]:
+              - generic [ref=f10e130]: Executive Summary
+              - generic [ref=f10e131]: Professional
+            - generic [ref=f10e132]: Groq
+            - generic "Estimated from the character count. Drafts logged after the latest schema update show exact counts." [ref=f10e136]:
+              - generic [ref=f10e137]: ~11
+              - text: words
+            - generic [ref=f10e138]: 299 words
+            - paragraph [ref=f10e140]:
+              - time [ref=f10e141]: Sep 24, 2026•23:44
+          - listitem [ref=f10e142]:
+            - generic [ref=f10e148]:
+              - generic [ref=f10e149]: Executive Summary
+              - generic [ref=f10e150]: Professional
+            - generic [ref=f10e151]: Groq
+            - generic "Estimated from the character count. Drafts logged after the latest schema update show exact counts." [ref=f10e155]:
+              - generic [ref=f10e156]: ~11
+              - text: words
+            - generic [ref=f10e157]: 291 words
+            - paragraph [ref=f10e159]:
+              - time [ref=f10e160]: Sep 24, 2026•23:44
+          - listitem [ref=f10e161]:
+            - generic [ref=f10e167]:
+              - generic [ref=f10e168]: Custom Format
+              - generic [ref=f10e169]: Professional
+            - generic [ref=f10e170]: Groq
+            - generic "Estimated from the character count. Drafts logged after the latest schema update show exact counts." [ref=f10e174]:
+              - generic [ref=f10e175]: ~1
+              - text: words
+            - generic [ref=f10e176]: 48 words
+            - paragraph [ref=f10e178]:
+              - time [ref=f10e179]: Sep 24, 2026•23:03
+          - listitem [ref=f10e180]:
+            - generic [ref=f10e186]:
+              - generic [ref=f10e187]: Executive Summary
+              - generic [ref=f10e188]: Professional
+            - generic [ref=f10e189]: Groq
+            - generic "Estimated from the character count. Drafts logged after the latest schema update show exact counts." [ref=f10e193]:
+              - generic [ref=f10e194]: ~1
+              - text: words
+            - generic [ref=f10e195]: 198 words
+            - paragraph [ref=f10e197]:
+              - time [ref=f10e198]: Sep 24, 2026•23:01
+          - listitem [ref=f10e199]:
+            - generic [ref=f10e205]:
+              - generic [ref=f10e206]: X / Twitter
+              - generic [ref=f10e207]: Professional
+            - generic [ref=f10e208]: Groq
+            - generic "Estimated from the character count. Drafts logged after the latest schema update show exact counts." [ref=f10e212]:
+              - generic [ref=f10e213]: ~1
+              - text: words
+            - generic [ref=f10e214]: 45 words
+            - paragraph [ref=f10e216]:
+              - time [ref=f10e217]: Sep 24, 2026•23:01
+          - listitem [ref=f10e218]:
+            - generic [ref=f10e224]:
+              - generic [ref=f10e225]: Executive Summary
+              - generic [ref=f10e226]: Refined · Professional
+            - generic [ref=f10e227]: Groq
+            - generic "Estimated from the character count. Drafts logged after the latest schema update show exact counts." [ref=f10e231]:
+              - generic [ref=f10e232]: ~30
+              - text: words
+            - generic [ref=f10e233]: 86 words
+            - paragraph [ref=f10e235]:
+              - time [ref=f10e236]: Sep 24, 2026•22:40
+          - listitem [ref=f10e237]:
+            - generic [ref=f10e243]:
+              - generic [ref=f10e244]: Executive Summary
+              - generic [ref=f10e245]: Professional · NIPS-2017-attention-is-all-you-need-Paper (1).pdf
+            - generic [ref=f10e246]: Groq
+            - generic "Estimated from the character count. Drafts logged after the latest schema update show exact counts." [ref=f10e250]:
+              - generic [ref=f10e251]: ~34
+              - text: words
+            - generic [ref=f10e252]: 272 words
+            - paragraph [ref=f10e254]:
+              - time [ref=f10e255]: Sep 24, 2026•22:39
+          - listitem [ref=f10e256]:
+            - generic [ref=f10e262]:
+              - generic [ref=f10e263]: Executive Summary
+              - generic [ref=f10e264]: Professional
+            - generic [ref=f10e265]: Groq
+            - generic "Estimated from the character count. Drafts logged after the latest schema update show exact counts." [ref=f10e269]:
+              - generic [ref=f10e270]: ~62
+              - text: words
+            - generic [ref=f10e271]: 313 words
+            - paragraph [ref=f10e273]:
+              - time [ref=f10e274]: Sep 24, 2026•17:00
+          - listitem [ref=f10e275]:
+            - generic [ref=f10e281]:
+              - generic [ref=f10e282]: LinkedIn Post
+              - generic [ref=f10e283]: Professional
+            - generic [ref=f10e284]: Groq
+            - generic "Estimated from the character count. Drafts logged after the latest schema update show exact counts." [ref=f10e288]:
+              - generic [ref=f10e289]: ~62
+              - text: words
+            - generic [ref=f10e290]: 386 words
+            - paragraph [ref=f10e292]:
+              - time [ref=f10e293]: Sep 24, 2026•17:00
+          - listitem [ref=f10e294]:
+            - generic [ref=f10e300]:
+              - generic [ref=f10e301]: Executive Summary
+              - generic [ref=f10e302]: Professional
+            - generic [ref=f10e303]: Groq
+            - generic "Estimated from the character count. Drafts logged after the latest schema update show exact counts." [ref=f10e307]:
+              - generic [ref=f10e308]: ~102
+              - text: words
+            - generic [ref=f10e309]: 333 words
+            - paragraph [ref=f10e311]:
+              - time [ref=f10e312]: Sep 24, 2026•16:17
+          - listitem [ref=f10e313]:
+            - generic [ref=f10e319]:
+              - generic [ref=f10e320]: LinkedIn Post
+              - generic [ref=f10e321]: Professional
+            - generic [ref=f10e322]: Groq
+            - generic "Estimated from the character count. Drafts logged after the latest schema update show exact counts." [ref=f10e326]:
+              - generic [ref=f10e327]: ~102
+              - text: words
+            - generic [ref=f10e328]: 335 words
+            - paragraph [ref=f10e330]:
+              - time [ref=f10e331]: Sep 24, 2026•16:17
+        - paragraph [ref=f10e333]: That's everything in your history.

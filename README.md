@@ -24,7 +24,7 @@ Turn any long-form source (PDF, DOCX, URL, pasted text) into polished, multi-for
 ### 1. Install dependencies
 
 ```bash
-cd frontend
+cd main
 npm install
 ```
 
@@ -42,7 +42,7 @@ VITE_GROQ_KEY_1=gsk_your_key_here
 
 Get a free key at <https://console.groq.com>.
 
-> **No Supabase setup needed.** Every copy of the app connects to the same central Supabase project, pinned in `frontend/src/lib/supabase.ts`. Accounts and activity are shared across all machines.
+> **No Supabase setup needed.** Every copy of the app connects to the same central Supabase project, pinned in `main/src/lib/supabase.ts`. Accounts and activity are shared across all machines.
 
 ### 3. Run the dev server
 
@@ -56,9 +56,9 @@ Open <http://localhost:5173> in your browser.
 
 ## Database setup (one-time, project owner only)
 
-1. In the Supabase dashboard, open **SQL Editor**, paste `frontend/supabase/schema.sql`, and run it. This creates `profiles` and `activity_logs`, the RLS policies, and the admin RPC.
+1. In the Supabase dashboard, open **SQL Editor**, paste `main/supabase/schema.sql`, and run it. This creates `profiles` and `activity_logs`, the RLS policies, and the admin RPC.
 2. Under **Authentication → Sign In / Providers → Email**, turn **Confirm email** **off** and save. Sign-up has no email verification: accounts are created and signed in immediately, and no emails are sent.
-3. The SQL creates the shared demo account `demo@sankshep.ai` / `demo123`, used by the **Use Demo Credentials** button. To create the admin, paste `frontend/supabase/create_admin.sql` into the SQL Editor, replace `CHANGE_ME` with your chosen password (6+ characters), and run it. Re-run it any time to reset the admin password.
+3. The SQL creates the shared demo account `demo@sankshep.ai` / `demo123`, used by the **Use Demo Credentials** button. To create the admin, paste `main/supabase/create_admin.sql` into the SQL Editor, replace `CHANGE_ME` with your chosen password (6+ characters), and run it. Re-run it any time to reset the admin password.
 
 `admin@gmail.com` gets the `admin` role automatically.
 
@@ -69,7 +69,7 @@ Users can delete their own account from the account menu (click the avatar in th
 ## Project structure
 
 ```
-frontend/
+main/
 ├── src/
 │   ├── lib/
 │   │   ├── supabase.ts        # Central Supabase client (pinned URL + key)
@@ -89,7 +89,8 @@ frontend/
 │   │   ├── TransformView.tsx  # LeftPanel + RightPanel wired to pipeline
 │   │   ├── LeftPanel.tsx      # File upload, URL, paste, format/tone config
 │   │   ├── RightPanel.tsx     # Output tabs, split pane, regeneration
-│   │   ├── ActivityView.tsx   # The signed-in user's own history + stats
+│   │   ├── HistoryView.tsx    # /workspace/history: one row per generated draft
+│   │   ├── AnalyticsView.tsx  # /workspace/analytics: totals, format usage, recent drafts
 │   │   ├── ActivityFeed.tsx   # Shared chronological feed component
 │   │   └── AdminPanel.tsx     # Admin-only: all users + global activity feed
 │   ├── App.tsx                # BrowserRouter + AuthProvider + routes
@@ -113,14 +114,14 @@ frontend/
 
 ## Deploy to Vercel
 
-1. Import the repo in Vercel and set **Root Directory** to `frontend`. `vercel.json` handles the build and the SPA route rewrites.
+1. Import the repo in Vercel and set **Root Directory** to `main`. `vercel.json` handles the build and the SPA route rewrites.
 2. Add the environment variables `VITE_GROQ_KEY_1` … `VITE_GROQ_KEY_5` in Vercel → Project → Settings → Environment Variables. Supabase needs none.
 
 ## Build for production
 
 ```bash
 npm run build
-# output: frontend/dist/
+# output: main/dist/
 ```
 
 ---
