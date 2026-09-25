@@ -27,7 +27,7 @@ export function LegalLayout({ title, updated, summary, sections, sibling }: {
       <article className="mx-auto max-w-[1100px] px-5 pb-24 pt-14 sm:px-8 lg:pt-20">
         <header className="max-w-[68ch]">
           <p className="text-[13.5px] font-semibold text-ink-soft">Legal</p>
-          <h1 className="font-headline mt-3 text-[clamp(3rem,7vw,5.25rem)] text-ink">{title}</h1>
+          <h1 className="font-display mt-3 text-[clamp(2.9rem,6.4vw,5rem)] text-ink">{title}</h1>
           <p className="mt-5 font-mono text-[12.5px] text-ink-mute">Last updated {updated}</p>
         </header>
 
