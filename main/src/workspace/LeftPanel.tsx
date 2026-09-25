@@ -11,6 +11,8 @@ import {
 } from '../lib/providers'
 import { describeReader, pickImageReader } from '../lib/ingest'
 import { extractDocument, isDocumentFile } from '../lib/documents'
+import { fetchSavedAudiences, removeAudience, saveAudience } from '../lib/audiences'
+import { useAuth } from '../contexts/AuthContext'
 
 export interface LeftPanelConfig {
   content: string
@@ -183,10 +185,62 @@ export function LeftPanel({ onGenerate, generating, onStatusChange }: Props) {
   const [targetLanguage, setTargetLanguage] = useState('Hindi')
   const [formError, setFormError] = useState<string | null>(null)
 
-  // 04 Audience: a preset name, 'custom', or null for no specific audience
+  // 04 Audience: a preset name, 'custom', `saved:<name>` for a profile saved to the account, or null
   const [audienceChoice, setAudienceChoice] = useState<string | null>(null)
   const [customAudience, setCustomAudience] = useState<Audience>({ name: '', description: '' })
   const [audienceOpen, setAudienceOpen] = useState(false)
+  const { user } = useAuth()
+  const [savedAudiences, setSavedAudiences] = useState<Audience[]>([])
+  const [savedState, setSavedState] = useState<'loading' | 'ready' | 'error'>('loading')
+  const [savingAudience, setSavingAudience] = useState(false)
+  const [audienceNote, setAudienceNote] = useState<{ kind: 'ok' | 'error'; text: string } | null>(null)
+  // The demo account is shared by everyone who signs in to it, so it keeps no profiles.
+  const canSaveAudience = !!user && !user.isDemo
+
+  const loadSavedAudiences = useCallback(() => {
+    setSavedState('loading')
+    fetchSavedAudiences()
+      .then((list) => { setSavedAudiences(list); setSavedState('ready') })
+      .catch(() => setSavedState('error'))
+  }, [])
+  useEffect(() => {
+    if (canSaveAudience) loadSavedAudiences()
+  }, [canSaveAudience, loadSavedAudiences])
+
+  const handleSaveAudience = async () => {
+    if (!customAudience.name.trim() || savingAudience) return
+    setSavingAudience(true)
+    setAudienceNote(null)
+    try {
+      const { list, replaced } = await saveAudience(savedAudiences, customAudience)
+      setSavedAudiences(list)
+      setSavedState('ready')
+      setAudienceChoice(`saved:${customAudience.name.trim()}`)
+      setAudienceNote({ kind: 'ok', text: `${replaced ? 'Updated' : 'Saved'} “${customAudience.name.trim()}” on your account.` })
+    } catch (err) {
+      setAudienceNote({ kind: 'error', text: `Couldn't save the profile. ${err instanceof Error ? err.message : ''}`.trim() })
+    } finally {
+      setSavingAudience(false)
+    }
+  }
+
+  const handleRemoveAudience = async (name: string) => {
+    setAudienceNote(null)
+    try {
+      setSavedAudiences(await removeAudience(savedAudiences, name))
+      setAudienceChoice(null)
+      setAudienceNote({ kind: 'ok', text: `Removed “${name}” from your saved profiles.` })
+    } catch (err) {
+      setAudienceNote({ kind: 'error', text: `Couldn't remove the profile. ${err instanceof Error ? err.message : ''}`.trim() })
+    }
+  }
+
+  /** Opens a saved profile in the custom form; saving it again under the same name updates it. */
+  const editSavedAudience = (profile: Audience) => {
+    setCustomAudience(profile)
+    setAudienceChoice('custom')
+    setAudienceNote(null)
+  }
 
   // 05 Engine
   const [engineMode, setEngineMode] = useState<EngineMode>('single')
@@ -202,9 +256,12 @@ export function LeftPanel({ onGenerate, generating, onStatusChange }: Props) {
   const usedProviders = [...new Set(selectedRefs.map((r) => r.provider))]
   const missingKey = usedProviders.find((p) => !hasKey(p, keys)) ?? null
 
+  const savedChoice = audienceChoice?.startsWith('saved:')
+    ? savedAudiences.find((a) => a.name === audienceChoice.slice(6)) ?? null
+    : null
   const audience: Audience | null =
     audienceChoice === 'custom' ? (customAudience.name.trim() ? customAudience : null)
-    : AUDIENCE_PRESETS.find((a) => a.name === audienceChoice) ?? null
+    : savedChoice ?? AUDIENCE_PRESETS.find((a) => a.name === audienceChoice) ?? null
 
   /* ─── File handling ─────────────────────────────────────────────────────── */
 
@@ -708,12 +765,48 @@ export function LeftPanel({ onGenerate, generating, onStatusChange }: Props) {
                 </button>
               )
             })}
+
+            {/* Profiles saved to this account */}
+            {canSaveAudience && savedState === 'loading' && (
+              <p className="col-span-2 py-1 text-[12.5px] text-ink-mute" aria-live="polite">Loading your saved profiles…</p>
+            )}
+            {canSaveAudience && savedState === 'error' && (
+              <p className="col-span-2 flex flex-wrap items-center gap-x-2 py-1 text-[12.5px] text-red-700" role="alert">
+                Couldn't load your saved profiles.
+                <button type="button" onClick={loadSavedAudiences} className="font-medium text-ink underline decoration-ink/30 underline-offset-4 hover:decoration-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink/30">
+                  Try again
+                </button>
+              </p>
+            )}
+            {savedAudiences.length > 0 && (
+              <>
+                <p className="col-span-2 mt-1 text-[12.5px] font-medium text-ink-mute">Saved to your account</p>
+                {savedAudiences.map((profile) => {
+                  const active = audienceChoice === `saved:${profile.name}`
+                  return (
+                    <button
+                      key={profile.name}
+                      type="button"
+                      aria-pressed={active}
+                      onClick={() => { setAudienceChoice(active ? null : `saved:${profile.name}`); setFormError(null); setAudienceNote(null) }}
+                      className={`min-h-11 truncate rounded-lg border px-3 py-2 text-left text-[13.5px] font-medium transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink/30 active:scale-[0.99] ${
+                        active ? 'border-ink bg-ink text-paper' : 'border-line bg-white text-ink-soft hover:border-ink/40 hover:text-ink'
+                      }`}
+                      title={profile.name}
+                    >
+                      {profile.name}
+                    </button>
+                  )
+                })}
+              </>
+            )}
+
             <button
               type="button"
               aria-pressed={audienceChoice === 'custom'}
               aria-expanded={audienceChoice === 'custom'}
               aria-controls="ws-custom-audience"
-              onClick={() => { setAudienceChoice(audienceChoice === 'custom' ? null : 'custom'); setFormError(null) }}
+              onClick={() => { setAudienceChoice(audienceChoice === 'custom' ? null : 'custom'); setFormError(null); setAudienceNote(null) }}
               className={`col-span-2 flex min-h-11 items-center justify-center gap-2 rounded-lg border px-3 py-2 text-[13.5px] font-medium transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink/30 ${
                 audienceChoice === 'custom' ? 'border-ink bg-ink text-paper' : 'border-dashed border-ink/30 bg-white text-ink-soft hover:border-ink/60 hover:text-ink'
               }`}
@@ -725,8 +818,31 @@ export function LeftPanel({ onGenerate, generating, onStatusChange }: Props) {
 
           {audience && audienceChoice !== 'custom' && (
             <p className="mt-3 text-[13px] leading-relaxed text-ink-mute">
-              <span className="font-medium text-ink">Writes for:</span> {audience.description}
+              <span className="font-medium text-ink">Writes for:</span> {audience.description || 'No description saved.'}
             </p>
+          )}
+
+          {savedChoice && (
+            <div className="mt-2 flex flex-wrap gap-x-4">
+              <button
+                type="button"
+                onClick={() => editSavedAudience(savedChoice)}
+                className="min-h-11 text-[13px] font-medium text-ink underline decoration-ink/30 underline-offset-4 hover:decoration-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink/30"
+              >
+                Edit profile
+              </button>
+              <button
+                type="button"
+                onClick={() => handleRemoveAudience(savedChoice.name)}
+                className="min-h-11 text-[13px] font-medium text-red-700 underline decoration-red-700/30 underline-offset-4 hover:decoration-red-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-700/30"
+              >
+                Remove from saved
+              </button>
+            </div>
+          )}
+
+          {audienceNote && audienceChoice !== 'custom' && (
+            <p role="status" className={`mt-2 text-[12.5px] ${audienceNote.kind === 'error' ? 'text-red-700' : 'text-ink-soft'}`}>{audienceNote.text}</p>
           )}
 
           {audienceChoice === 'custom' && (
@@ -760,6 +876,27 @@ export function LeftPanel({ onGenerate, generating, onStatusChange }: Props) {
                   />
                 </span>
               </label>
+
+              {canSaveAudience ? (
+                <div className="flex flex-wrap items-center gap-x-3 gap-y-2 pt-0.5">
+                  <button
+                    type="button"
+                    onClick={handleSaveAudience}
+                    disabled={!customAudience.name.trim() || savingAudience}
+                    className="flex min-h-11 items-center gap-2 rounded-lg bg-ink px-4 text-[13.5px] font-medium text-paper transition-colors hover:bg-ink-soft focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-matcha disabled:cursor-not-allowed disabled:bg-ink/30"
+                  >
+                    <Check className="h-4 w-4" />
+                    {savingAudience ? 'Saving…' : savedAudiences.some((a) => a.name.toLowerCase() === customAudience.name.trim().toLowerCase()) ? 'Update saved profile' : 'Save audience profile'}
+                  </button>
+                  <span role="status" className={`text-[12.5px] ${audienceNote?.kind === 'error' ? 'text-red-700' : 'text-ink-mute'}`}>
+                    {audienceNote?.text ?? (customAudience.name.trim() ? 'Saves to your account for next time.' : 'Add a profile name to save it.')}
+                  </span>
+                </div>
+              ) : (
+                <p className="text-[12.5px] text-ink-mute">
+                  {user?.isDemo ? 'The shared demo account can’t save profiles. This one is used for this session only.' : 'Sign in to save profiles to your account.'}
+                </p>
+              )}
             </div>
           )}
         </Step>
