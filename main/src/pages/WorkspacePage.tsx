@@ -6,6 +6,7 @@ import { HistoryView } from '../workspace/HistoryView'
 import { AnalyticsView } from '../workspace/AnalyticsView'
 import { AdminPanel } from '../workspace/AdminPanel'
 import { ConfirmDeleteDialog } from '../components/ConfirmDeleteDialog'
+import { BrandCapsule, BrandMark, CAPSULE_SHADOW } from '../components/site/SiteChrome'
 import { Shuffle, History, ChartNoAxesColumn, Shield, LogOut, ChevronDown, Trash2 } from 'lucide-react'
 
 type WorkspaceTab = 'transform' | 'history' | 'analytics' | 'admin'
@@ -68,25 +69,22 @@ export default function WorkspacePage() {
   return (
     <div className="sk-canvas flex h-dvh flex-col overflow-hidden">
 
-      {/* ── Header: full-width, anchored ─────────────────────────────── */}
-      <header className="relative z-30 shrink-0 border-b border-line bg-paper/90 backdrop-blur-xl">
+      {/* ── Header: app chrome on the same stone as the canvas, so bar, toolbar and windows read as one surface ── */}
+      <header className="relative z-30 shrink-0 border-b border-ink/10 bg-canvas/85 backdrop-blur-xl">
         <div className="grid h-16 grid-cols-[1fr_auto_1fr] items-center gap-3 px-4 sm:px-6 lg:px-8">
 
           {/* Brand */}
           <div className="flex min-w-0 items-center gap-3">
-            <Link to="/" className="group flex shrink-0 items-center gap-2.5" aria-label="Sankshep home">
-              <span className="flex h-9 w-9 items-center justify-center rounded-[11px] bg-ink shadow-[0_6px_16px_-8px_rgba(15,16,15,0.6)] transition-transform duration-300 group-hover:-rotate-3">
-                <svg viewBox="0 0 24 24" className="h-[18px] w-[18px] text-matcha" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-                  <path d="M2 12h2M6 8v8M10 5v14M14 8v8M18 6v12M22 12h-2" />
-                </svg>
-              </span>
-              <span className="hidden font-display text-[19px] text-ink sm:block">Sankshep</span>
+            <BrandCapsule className="hidden sm:inline-flex" />
+            {/* Phones: mark only, so the tab control keeps its room */}
+            <Link to="/" className="shrink-0 rounded-full sm:hidden" aria-label="Sankshep home" style={{ boxShadow: CAPSULE_SHADOW }}>
+              <BrandMark className="h-9 w-9 rounded-full" />
             </Link>
           </div>
 
           {/* Tabs: segmented control */}
           <nav aria-label="Workspace sections">
-            <div role="tablist" className="flex items-center gap-1 rounded-full bg-paper-deep/80 p-1 ring-1 ring-hair">
+            <div role="tablist" className="flex items-center gap-1 rounded-full bg-ink/[0.05] p-1 ring-1 ring-ink/10">
               {visibleTabs.map(({ id, label, icon: Icon }) => {
                 const active = activeTab === id
                 return (
@@ -118,7 +116,7 @@ export default function WorkspacePage() {
                   onClick={() => setMenuOpen((v) => !v)}
                   aria-haspopup="menu"
                   aria-expanded={menuOpen}
-                  className="flex items-center gap-2.5 rounded-full py-1 pl-1 pr-2.5 transition-colors hover:bg-paper-deep/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink/20"
+                  className="flex items-center gap-2.5 rounded-full py-1 pl-1 pr-2.5 transition-colors hover:bg-white/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink/20"
                 >
                   <span className="flex h-8 w-8 items-center justify-center rounded-[10px] bg-ink font-mono text-[12px] font-semibold text-matcha">
                     {user.email[0].toUpperCase()}

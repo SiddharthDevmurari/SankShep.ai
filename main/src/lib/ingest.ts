@@ -16,7 +16,7 @@ export type ImageReader = { method: 'vision'; ref: ModelRef } | { method: 'ocr' 
 /** Vision models to borrow when none of the selected models reads images. */
 const FALLBACK_VISION: ModelRef[] = [
   { provider: 'gemini', model: 'gemini-2.5-flash' },
-  { provider: 'mistral', model: 'pixtral-large-latest' },
+  { provider: 'mistral', model: 'mistral-medium-latest' },
 ]
 
 export function pickImageReader(selected: ModelRef[], keys: ApiKeys): ImageReader {

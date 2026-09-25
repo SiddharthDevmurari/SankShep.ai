@@ -29,7 +29,7 @@ export function HistoryView() {
   return (
     <div className={PAGE_FRAME}>
       <PageHeader
-        eyebrow="Workspace log"
+        eyebrow="Log"
         title="History"
         subtitle="Recent transformations from this workspace."
         actions={
@@ -62,13 +62,13 @@ export function HistoryView() {
         }
       />
 
-      <div className="mt-8 lg:mt-10">
+      <div className="mt-5">
         {feed.schemaMissing ? (
           <SchemaNotice />
         ) : feed.error ? (
           <ErrorNotice message={`Couldn't load your history: ${feed.error}`} onRetry={feed.refresh} />
         ) : (
-          <section aria-label="Generated drafts" className="sk-elevated overflow-hidden rounded-2xl border border-line bg-white">
+          <section aria-label="Generated drafts" className="sk-elevated overflow-hidden rounded-xl border border-edge bg-white">
             <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line px-5 py-4 md:px-6">
               <p className="text-[13.5px] text-ink-mute" aria-live="polite">
                 {initialLoad ? 'Loading drafts…' : (

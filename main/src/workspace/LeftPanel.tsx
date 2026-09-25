@@ -11,6 +11,7 @@ import {
 } from '../lib/providers'
 import { hasGroqKey } from '../lib/groq'
 import { describeReader, pickImageReader } from '../lib/ingest'
+import { extractDocumentText, isDocumentFile } from '../lib/documents'
 
 export interface LeftPanelConfig {
   content: string
@@ -143,6 +144,10 @@ export function LeftPanel({ onGenerate, generating, onStatusChange }: Props) {
   const [uploadedFile, setUploadedFile] = useState<File | null>(null)
   const [extractedText, setExtractedText] = useState('')
   const [image, setImage] = useState<ImageInput | null>(null)
+  // True while a PDF/DOCX is being turned into text; Generate waits for it.
+  const [parsing, setParsing] = useState(false)
+  // Bumped on every new file or clear, so a slow parse can't land on top of a newer choice.
+  const fileToken = useRef(0)
 
   const [formats, setFormats] = useState<OutputFormat[]>(['Executive Summary'])
   const [tone, setTone] = useState<ToneOption>('Professional')
@@ -184,9 +189,11 @@ export function LeftPanel({ onGenerate, generating, onStatusChange }: Props) {
       setFormError(`“${file.name}” is ${formatBytes(file.size)}. Images can be up to 10 MB.`)
       return
     }
+    const token = ++fileToken.current
     setFormError(null)
     setUploadedFile(file)
     setImage(null)
+    setParsing(false)
     if (isImageFile(file)) {
       // Images are read at generate time by a vision model or on-device OCR (lib/ingest.ts).
       setExtractedText('')
@@ -198,9 +205,24 @@ export function LeftPanel({ onGenerate, generating, onStatusChange }: Props) {
       }
     } else if (isTextFile(file)) {
       setExtractedText(await file.text())
+    } else if (isDocumentFile(file)) {
+      // PDF/DOCX are parsed to plain text here, so the pipeline never sees the binary file (lib/documents.ts).
+      setExtractedText('')
+      setParsing(true)
+      try {
+        const text = await extractDocumentText(file)
+        if (token === fileToken.current) setExtractedText(text)
+      } catch (err) {
+        if (token !== fileToken.current) return
+        setUploadedFile(null)
+        setFormError(err instanceof Error ? err.message : String(err))
+      } finally {
+        if (token === fileToken.current) setParsing(false)
+      }
     } else {
-      // For PDF/DOCX we just send the filename as placeholder — real extraction needs a backend
-      setExtractedText(`[File: ${file.name}, ${(file.size / 1024).toFixed(0)} KB]\n\nNote: Binary file content. Please paste the text content directly in "Paste Text" mode for AI processing, or set up server-side parsing.`)
+      setUploadedFile(null)
+      setExtractedText('')
+      setFormError(`“${file.name}” isn't a supported file. Upload a PDF, DOCX, TXT, CSV, JSON, Markdown or image file.`)
     }
   }, [])
 
@@ -218,6 +240,8 @@ export function LeftPanel({ onGenerate, generating, onStatusChange }: Props) {
   }
 
   const clearFile = () => {
+    fileToken.current++
+    setParsing(false)
     setUploadedFile(null)
     setExtractedText('')
     setImage(null)
@@ -261,6 +285,10 @@ export function LeftPanel({ onGenerate, generating, onStatusChange }: Props) {
 
   const handleGenerate = () => {
     if (generating) return
+    if (inputMode === 'file' && parsing) {
+      setFormError(`Still reading “${uploadedFile?.name}”. Generate again in a moment.`)
+      return
+    }
     const content = resolveContent()
     const images = inputMode === 'file' && image ? [image] : []
     if (!content.trim() && images.length === 0) {
@@ -384,8 +412,8 @@ export function LeftPanel({ onGenerate, generating, onStatusChange }: Props) {
                     <p className="mt-0.5 text-[12.5px] text-ink-mute">
                       {formatBytes(uploadedFile.size)} · {
                         imageReader ? <>image, read with <span className="font-mono text-[12px] text-ink">{imageReader}</span></>
-                        : isTextFile(uploadedFile) ? `${extractedText.length.toLocaleString()} characters read`
-                        : 'attached'
+                        : parsing ? 'reading text…'
+                        : `${extractedText.length.toLocaleString()} characters read`
                       }
                     </p>
                   </div>

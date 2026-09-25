@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import {
-  ArrowUp, Check, CircleAlert, Copy, Download, Eye, PanelLeft, PanelLeftClose, PenLine, WandSparkles, X,
+  ArrowUp, Check, CircleAlert, Copy, Download, Eye, Hourglass, PanelLeft, PanelLeftClose, PenLine, WandSparkles, X,
 } from 'lucide-react'
 import type { OutputFormat, FormatResult, ModelRun } from '../lib/pipeline'
 import { regenerateFormat } from '../lib/pipeline'
@@ -10,6 +10,8 @@ import type { ToneOption } from '../lib/pipeline'
 import { RichText } from './RichText'
 import { ALL_FORMATS, STEP_IDS, StepNumber, toneLabel, type LeftPanelStatus } from './LeftPanel'
 import type { RunContext } from './TransformView'
+import { BrandMark } from '../components/site/SiteChrome'
+import { buildPptx, fileSlug, saveFile, toPlainText, type ExportKind } from '../lib/exporters'
 
 interface Props {
   /** One run per model; more than one means the user is comparing models. */
@@ -43,7 +45,8 @@ export function RightPanel({ runs, runContext, parsedSource, tone, generating, s
   const comparing = runs.length > 1
   const results: Partial<Record<OutputFormat, FormatResult>> = runs[0]?.results ?? {}
   const [activeTab, setActiveTab] = useState<OutputFormat | null>(null)
-  const [viewMode, setViewMode] = useState<'editor' | 'mockup'>('editor')
+  // Finished drafts open in Preview; Edit is one click away.
+  const [viewMode, setViewMode] = useState<'editor' | 'mockup'>('mockup')
   const [showSource, setShowSource] = useState(false)
   const [copied, setCopied] = useState(false)
   const [refinement, setRefinement] = useState('')
@@ -52,7 +55,11 @@ export function RightPanel({ runs, runContext, parsedSource, tone, generating, s
   const editorRef = useRef<HTMLTextAreaElement>(null)
 
   // A new run replaces every draft; edits and refinements belong to the run they were made on.
-  useEffect(() => { setLocalResults({}) }, [runs])
+  // It also opens in Preview again, even if the last run was left in Edit.
+  useEffect(() => {
+    setLocalResults({})
+    setViewMode('mockup')
+  }, [runs])
 
   // Merge API results with locally-regenerated overrides
   const merged: Partial<Record<OutputFormat, FormatResult>> = { ...results, ...localResults }
@@ -79,15 +86,25 @@ export function RightPanel({ runs, runContext, parsedSource, tone, generating, s
     setTimeout(() => setCopied(false), 2000)
   }
 
-  /* ─── Export ────────────────────────────────────────────────────────────── */
-  const handleExport = () => {
+  /* ─── Download ──────────────────────────────────────────────────────────── */
+  const [exportError, setExportError] = useState<string | null>(null)
+  useEffect(() => { setExportError(null) }, [currentTab, runs])
+
+  const handleExport = async (kind: ExportKind) => {
     if (!activeResult?.output || !currentTab) return
-    const ext = currentTab === 'PPT Presentation' ? 'txt' : 'md'
-    const blob = new Blob([activeResult.output], { type: 'text/plain' })
-    const a = document.createElement('a')
-    a.href = URL.createObjectURL(blob)
-    a.download = `${currentTab.replace(/\s+/g, '_').toLowerCase()}_output.${ext}`
-    a.click()
+    setExportError(null)
+    const name = fileSlug(currentTab === 'PPT Presentation' ? 'Slide Deck' : currentTab)
+    try {
+      if (kind === 'pptx') {
+        saveFile(await buildPptx(activeResult.output, 'Slide Deck'), `${name}.pptx`)
+      } else if (kind === 'txt') {
+        saveFile(new Blob([toPlainText(activeResult.output)], { type: 'text/plain;charset=utf-8' }), `${name}.txt`)
+      } else {
+        saveFile(new Blob([activeResult.output], { type: 'text/markdown;charset=utf-8' }), `${name}.md`)
+      }
+    } catch (err) {
+      setExportError(err instanceof Error ? err.message : String(err))
+    }
   }
 
   /* ─── Regenerate (independent — only this tab) ──────────────────────────── */
@@ -126,23 +143,17 @@ export function RightPanel({ runs, runContext, parsedSource, tone, generating, s
     setRegenerating(false)
   }
 
-  /* ─── Export label ──────────────────────────────────────────────────────── */
-  const exportLabel = (() => {
-    if (!currentTab) return 'Export'
-    const map: Partial<Record<OutputFormat, string>> = {
-      'PPT Presentation': 'Export as .pptx (text)',
-      'Video': 'Export Script (.txt)',
-      'LinkedIn Post': 'Export as .md',
-      'Twitter/X Post': 'Export Thread (.txt)',
-    }
-    return map[currentTab] ?? 'Export as .md'
-  })()
+  const exportOptions: { kind: ExportKind; label: string; hint: string }[] = [
+    ...(currentTab === 'PPT Presentation' ? [{ kind: 'pptx' as const, label: 'PowerPoint', hint: '.pptx' }] : []),
+    { kind: 'md', label: 'Markdown', hint: '.md' },
+    { kind: 'txt', label: 'Plain text', hint: '.txt' },
+  ]
 
-  const noticeBanner = notice && (
+  const noticeBanner = (notice || exportError) && (
     <div role="alert" className="sk-rise absolute left-1/2 top-6 z-20 flex w-[min(640px,calc(100%-3rem))] -translate-x-1/2 items-start gap-3 rounded-2xl bg-white px-4 py-3.5 text-[13px] text-ink sk-float">
       <CircleAlert className="mt-0.5 h-4 w-4 shrink-0 text-red-600" />
-      <p className="flex-1 leading-relaxed">{notice}</p>
-      <button onClick={onDismissNotice} aria-label="Dismiss" className="rounded-full p-1 text-ink-mute hover:bg-paper-deep hover:text-ink">
+      <p className="flex-1 leading-relaxed">{exportError ?? notice}</p>
+      <button onClick={() => (exportError ? setExportError(null) : onDismissNotice())} aria-label="Dismiss" className="rounded-full p-1 text-ink-mute hover:bg-paper-deep hover:text-ink">
         <X className="h-3.5 w-3.5" />
       </button>
     </div>
@@ -150,6 +161,8 @@ export function RightPanel({ runs, runContext, parsedSource, tone, generating, s
 
   /* ─── Loading state ─────────────────────────────────────────────────────── */
   if (generating && tabs.length === 0) {
+    // Images are read by a vision model or on-device OCR before any writing starts, so they run longer.
+    const imageSource = !!status?.sourceLabel && /\.(png|jpe?g|webp)$/i.test(status.sourceLabel)
     return (
       <div className="flex min-h-0 flex-1 flex-col">
         <CanvasHeader
@@ -158,9 +171,19 @@ export function RightPanel({ runs, runContext, parsedSource, tone, generating, s
         />
         <div className="flex-1 overflow-y-auto px-6 py-10 sm:px-10">
           <div className="mx-auto w-full max-w-[640px]" aria-live="polite">
-            <p className="text-[14px] text-ink-mute">
-              {status?.sourceLabel && /\.(png|jpe?g|webp)$/i.test(status.sourceLabel) ? 'Reading the image, then writing' : 'Reading your source, then writing'} each format in parallel. This usually takes under a minute.
-            </p>
+            {imageSource ? (
+              <div className="flex items-start gap-3 rounded-xl bg-matcha/25 px-4 py-3.5 ring-1 ring-matcha-deep/60">
+                <Hourglass className="mt-0.5 h-4 w-4 shrink-0 text-ink" />
+                <div>
+                  <p className="text-[14px] font-semibold text-ink">It might take a while since this is an image.</p>
+                  <p className="mt-0.5 text-[13px] text-ink-soft">We read the image first, then write each format in parallel. Keep this tab open.</p>
+                </div>
+              </div>
+            ) : (
+              <p className="text-[14px] text-ink-mute">
+                Reading your source, then writing each format in parallel. This usually takes under a minute.
+              </p>
+            )}
             <ul className="mt-6 divide-y divide-line rounded-xl border border-line">
               {selectedFormats.map((f, i) => (
                 <li key={f} className="sk-rise flex items-center gap-4 px-4 py-3.5" style={{ animationDelay: `${i * 60}ms` }}>
@@ -342,9 +365,7 @@ export function RightPanel({ runs, runContext, parsedSource, tone, generating, s
           <IconButton label={copied ? 'Copied' : 'Copy'} onClick={handleCopy}>
             {copied ? <Check className="h-4 w-4 text-green-600" /> : <Copy className="h-4 w-4" />}
           </IconButton>
-          <IconButton label={exportLabel} onClick={handleExport}>
-            <Download className="h-4 w-4" />
-          </IconButton>
+          <DownloadMenu options={exportOptions} onPick={handleExport} disabled={!output || isError} />
         </div>
         )}
       </div>
@@ -484,6 +505,76 @@ function IconButton({ label, onClick, active, className = '', children }: {
   )
 }
 
+/** Download button with a small menu of file types; closes on pick, outside click or Escape. */
+function DownloadMenu({ options, onPick, disabled }: {
+  options: { kind: ExportKind; label: string; hint: string }[]
+  onPick: (kind: ExportKind) => Promise<void>
+  disabled?: boolean
+}) {
+  const [open, setOpen] = useState(false)
+  const [busy, setBusy] = useState<ExportKind | null>(null)
+  const ref = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!open) return
+    const onDown = (e: MouseEvent) => { if (!ref.current?.contains(e.target as Node)) setOpen(false) }
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setOpen(false) }
+    document.addEventListener('mousedown', onDown)
+    document.addEventListener('keydown', onKey)
+    return () => {
+      document.removeEventListener('mousedown', onDown)
+      document.removeEventListener('keydown', onKey)
+    }
+  }, [open])
+
+  const pick = async (kind: ExportKind) => {
+    setBusy(kind)
+    await onPick(kind)
+    setBusy(null)
+    setOpen(false)
+  }
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        disabled={disabled}
+        aria-haspopup="menu"
+        aria-expanded={open}
+        title="Download"
+        aria-label="Download"
+        className={`flex h-10 w-10 items-center justify-center rounded-full ring-1 transition-all duration-200 hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink/25 active:translate-y-0 disabled:pointer-events-none disabled:opacity-40 ${
+          open ? 'bg-ink text-paper ring-ink' : 'bg-white text-ink-soft ring-hair hover:text-ink hover:ring-ink/20'
+        }`}
+      >
+        <Download className="h-4 w-4" />
+      </button>
+
+      {open && (
+        <div role="menu" aria-label="Download as" className="sk-float sk-pop absolute right-0 top-full z-30 mt-2 w-56 overflow-hidden rounded-xl bg-white p-1.5">
+          <p className="px-2.5 pb-1.5 pt-1 text-[11.5px] font-medium text-ink-mute">Download as</p>
+          {options.map((o) => (
+            <button
+              key={o.kind}
+              role="menuitem"
+              type="button"
+              onClick={() => void pick(o.kind)}
+              disabled={busy !== null}
+              className="flex w-full items-center justify-between gap-3 rounded-lg px-2.5 py-2 text-left text-[13.5px] font-medium text-ink transition-colors hover:bg-paper-deep focus-visible:bg-paper-deep focus-visible:outline-none disabled:opacity-60"
+            >
+              {o.label}
+              {busy === o.kind
+                ? <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-ink/20 border-t-ink" aria-label="Preparing" />
+                : <span className="font-mono text-[11.5px] text-ink-mute">{o.hint}</span>}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
 /* ─── Mockup renderer ─────────────────────────────────────────────────────── */
 
 function MockupView({ format, content }: { format: OutputFormat; content: string }) {
@@ -493,7 +584,7 @@ function MockupView({ format, content }: { format: OutputFormat; content: string
     return (
       <div className="sk-sheet mx-auto max-w-[560px] rounded-2xl bg-white p-6">
         <div className="flex items-center gap-3">
-          <div className="flex h-11 w-11 items-center justify-center rounded-full bg-ink text-sm font-bold text-matcha">S</div>
+          <BrandMark className="h-11 w-11 rounded-full" />
           <div>
             <p className="text-[14px] font-semibold text-ink">Sankshep.ai</p>
             <p className="text-[11.5px] text-ink-mute">AI Content Platform · Just now</p>
@@ -511,7 +602,7 @@ function MockupView({ format, content }: { format: OutputFormat; content: string
         {tweets.map((tw, i) => (
           <div key={i} className="sk-sheet rounded-2xl bg-white p-5">
             <div className="flex items-center gap-2.5">
-              <div className="flex h-9 w-9 items-center justify-center rounded-full bg-ink text-xs font-bold text-matcha">S</div>
+              <BrandMark className="h-9 w-9 rounded-full" />
               <div>
                 <p className="text-[13.5px] font-semibold text-ink">Sankshep.ai</p>
                 <p className="font-mono text-[10.5px] text-ink-mute">@sankshepai</p>

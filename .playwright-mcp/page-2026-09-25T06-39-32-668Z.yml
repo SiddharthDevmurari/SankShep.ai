@@ -1,0 +1,229 @@
+- generic [ref=f1e23]:
+  - banner [ref=f1e24]:
+    - generic [ref=f1e25]:
+      - link "Sankshep home" [ref=f1e27] [cursor=pointer]:
+        - /url: /
+        - generic [ref=f1e29]: Sankshep
+      - navigation "Workspace sections" [ref=f1e30]:
+        - tablist [ref=f1e31]:
+          - tab "Transform" [selected] [ref=f1e32]
+          - tab "History" [ref=f1e40]
+          - tab "Analytics" [ref=f1e46]
+      - generic [ref=f1e49]:
+        - button "D demo@sankshep.ai demo" [ref=f1e51]:
+          - generic [ref=f1e52]: D
+          - generic [ref=f1e53]:
+            - generic [ref=f1e54]: demo@sankshep.ai
+            - generic [ref=f1e55]: demo
+        - button "Log out" [ref=f1e58]
+  - main [ref=f1e62]:
+    - generic [ref=f1e65]:
+      - generic [ref=f1e66]:
+        - generic [ref=f1e67]:
+          - paragraph [ref=f1e68]:
+            - generic [ref=f1e69]: Workspace
+            - generic [ref=f1e72]: Transform
+          - generic [ref=f1e73]:
+            - heading "Find exactly what you need." [level=1] [ref=f1e74]
+            - paragraph [ref=f1e75]: "Sankshep.ai : A gen-AI based Content Transformation Platform"
+        - generic "Session" [ref=f1e77]:
+          - generic [ref=f1e78]:
+            - generic [ref=f1e79]:
+              - term [ref=f1e80]: Engine
+              - definition [ref=f1e81]:
+                - generic "Groq · qwen3.8-27b" [ref=f1e84]: Ready
+            - generic [ref=f1e85]:
+              - term [ref=f1e86]: Drafts
+              - definition [ref=f1e87]: "2"
+            - generic [ref=f1e88]:
+              - term [ref=f1e89]: Last run
+              - definition [ref=f1e90]: 6.2s
+          - button "History" [ref=f1e93]
+      - generic [ref=f1e97]:
+        - complementary "Source and configuration" [ref=f1e98]:
+          - generic [ref=f1e99]:
+            - generic [ref=f1e100]:
+              - heading "Source & configuration" [level=2] [ref=f1e101]
+              - paragraph [ref=f1e102]: Five steps, then review and generate. Audience and engine start from defaults.
+            - generic [ref=f1e103]:
+              - region [ref=f1e104]:
+                - generic [ref=f1e106]:
+                  - generic [ref=f1e107]: "01"
+                  - generic [ref=f1e108]:
+                    - heading "Source" [level=3] [ref=f1e109]
+                    - paragraph [ref=f1e110]: What should we work from?
+                - tablist "Source type" [ref=f1e111]:
+                  - tab "Upload" [ref=f1e112]
+                  - tab "Link" [ref=f1e116]
+                  - tab "Paste" [selected] [ref=f1e120]
+                - generic [ref=f1e122]:
+                  - textbox "Source text" [ref=f1e123]:
+                    - /placeholder: Paste a report, article, research paper or notes…
+                    - text: "Quarterly Risk Review. Revenue grew 14.2% this quarter while average supplier delays rose to 9 days. The Surat logistics contract is the main bottleneck. Customer complaints about late delivery rose 22%. Recommended actions: renegotiate the Surat contract, add a second logistics partner in Ahmedabad, and publish weekly delivery metrics to the leadership team."
+                  - generic: 53 words
+              - region [ref=f1e124]:
+                - generic [ref=f1e125]:
+                  - generic [ref=f1e126]:
+                    - generic [ref=f1e127]: "02"
+                    - generic [ref=f1e128]:
+                      - heading "Outputs" [level=3] [ref=f1e129]
+                      - paragraph [ref=f1e130]: Each format is drafted in parallel.
+                  - button "Select all" [ref=f1e132]
+                - generic [ref=f1e133]:
+                  - button "Executive Summary C-suite brief" [pressed] [ref=f1e134]:
+                    - generic [ref=f1e138]:
+                      - generic [ref=f1e139]: Executive Summary
+                      - generic [ref=f1e140]: C-suite brief
+                  - button "LinkedIn Post Up to 3,000 chars" [ref=f1e144]:
+                    - generic [ref=f1e148]:
+                      - generic [ref=f1e149]: LinkedIn Post
+                      - generic [ref=f1e150]: Up to 3,000 chars
+                  - button "X / Twitter Hook + thread" [ref=f1e152]:
+                    - generic [ref=f1e156]:
+                      - generic [ref=f1e157]: X / Twitter
+                      - generic [ref=f1e158]: Hook + thread
+                  - button "Video Script & storyboard" [ref=f1e160]:
+                    - generic [ref=f1e166]:
+                      - generic [ref=f1e167]: Video
+                      - generic [ref=f1e168]: Script & storyboard
+                  - button "Slide Deck Slides + notes" [pressed] [ref=f1e170]:
+                    - generic [ref=f1e174]:
+                      - generic [ref=f1e175]: Slide Deck
+                      - generic [ref=f1e176]: Slides + notes
+                  - button "Blog Post SEO long-form" [ref=f1e178]:
+                    - generic [ref=f1e182]:
+                      - generic [ref=f1e183]: Blog Post
+                      - generic [ref=f1e184]: SEO long-form
+                  - button "Advisory Findings & actions" [ref=f1e186]:
+                    - generic [ref=f1e189]:
+                      - generic [ref=f1e190]: Advisory
+                      - generic [ref=f1e191]: Findings & actions
+                  - button "Infographic Stats & layout" [ref=f1e193]:
+                    - generic [ref=f1e197]:
+                      - generic [ref=f1e198]: Infographic
+                      - generic [ref=f1e199]: Stats & layout
+                  - button "Simplified Plain language" [ref=f1e201]:
+                    - generic [ref=f1e204]:
+                      - generic [ref=f1e205]: Simplified
+                      - generic [ref=f1e206]: Plain language
+                  - button "Translation Indian languages" [ref=f1e208]:
+                    - generic [ref=f1e213]:
+                      - generic [ref=f1e214]: Translation
+                      - generic [ref=f1e215]: Indian languages
+              - region [ref=f1e217]:
+                - generic [ref=f1e219]:
+                  - generic [ref=f1e220]: "03"
+                  - generic [ref=f1e221]:
+                    - heading "Voice" [level=3] [ref=f1e222]
+                    - paragraph [ref=f1e223]: Tone applies to every draft. Instructions are optional.
+                - radiogroup "Tone" [ref=f1e224]:
+                  - radio "Professional polished" [checked] [ref=f1e225]:
+                    - generic [ref=f1e226]: Professional
+                    - generic [ref=f1e227]: polished
+                  - radio "Technical precise" [ref=f1e228]:
+                    - generic [ref=f1e229]: Technical
+                    - generic [ref=f1e230]: precise
+                  - radio "Casual conversational" [ref=f1e231]:
+                    - generic [ref=f1e232]: Casual
+                    - generic [ref=f1e233]: conversational
+                  - radio "Academic scholarly" [ref=f1e234]:
+                    - generic [ref=f1e235]: Academic
+                    - generic [ref=f1e236]: scholarly
+                - generic [ref=f1e237]:
+                  - text: Custom instructions
+                  - generic [ref=f1e238]: Optional
+                - generic [ref=f1e239]:
+                  - textbox "Custom instructions Optional" [ref=f1e240]:
+                    - /placeholder: e.g. Start with a one-line verdict, then a risk table, then three recommendations…
+                  - generic [ref=f1e242]:
+                    - button "+ Risk table first" [ref=f1e243]
+                    - button "+ Bullets only" [ref=f1e244]
+                    - button "+ Action checklist" [ref=f1e245]
+              - region [ref=f1e246]:
+                - heading [level=3] [ref=f1e247]:
+                  - button "04 Audience No specific audience" [ref=f1e248]:
+                    - generic [ref=f1e249]: "04"
+                    - generic [ref=f1e250]:
+                      - generic [ref=f1e251]: Audience
+                      - generic [ref=f1e252]: No specific audience
+              - region [ref=f1e255]:
+                - heading [level=3] [ref=f1e256]:
+                  - button "05 AI engine & provider Groq · qwen3.8-27b" [ref=f1e257]:
+                    - generic [ref=f1e258]: "05"
+                    - generic [ref=f1e259]:
+                      - generic [ref=f1e260]: AI engine & provider
+                      - generic [ref=f1e261]: Groq · qwen3.8-27b
+            - generic [ref=f1e264]:
+              - generic "Generation summary" [ref=f1e265]:
+                - generic [ref=f1e266]:
+                  - term [ref=f1e267]: Source
+                  - definition [ref=f1e268]: 53 words pasted
+                - generic [ref=f1e269]:
+                  - term [ref=f1e270]: Drafts
+                  - definition [ref=f1e271]: 2 formats
+                - generic [ref=f1e272]:
+                  - term [ref=f1e273]: Voice
+                  - definition [ref=f1e274]: Professional
+                - generic [ref=f1e275]:
+                  - term [ref=f1e276]: Engine
+                  - definition [ref=f1e277]: Groq · qwen3.8-27b
+              - button "Generate 2 drafts" [ref=f1e365]:
+                - generic [aria-hidden] [ref=f1e366]:
+                  - generic [ref=f1e367]: Ctrl
+                  - generic [ref=f1e368]: ↵
+        - region "Output canvas" [ref=f1e283]:
+          - generic [ref=f1e284]:
+            - generic [ref=f1e353]:
+              - tablist "Generated formats" [ref=f1e369]:
+                - tab "Executive Summary" [selected] [ref=f1e370]
+                - tab "Slide Deck" [ref=f1e371]
+              - generic [ref=f1e372]:
+                - generic [ref=f1e373]:
+                  - button "Edit" [ref=f1e374]
+                  - button "Preview" [pressed] [ref=f1e377]
+                - button "Show parsed source" [ref=f1e381]
+                - button "Copy" [ref=f1e384]
+                - generic [ref=f1e388]:
+                  - button "Download" [expanded] [active] [ref=f1e389]
+                  - menu "Download as" [ref=f1e433]:
+                    - paragraph [ref=f1e434]: Download as
+                    - menuitem "Markdown .md" [ref=f1e435]:
+                      - text: Markdown
+                      - generic [ref=f1e436]: .md
+                    - menuitem "Plain text .txt" [ref=f1e437]:
+                      - text: Plain text
+                      - generic [ref=f1e438]: .txt
+            - generic [ref=f1e394]:
+              - generic [ref=f1e396]:
+                - generic [ref=f1e397]:
+                  - paragraph [ref=f1e398]: Executive brief
+                  - heading "Executive Summary" [level=2] [ref=f1e399]
+                - heading "Context" [level=3] [ref=f1e400]
+                - paragraph [ref=f1e401]: While the company achieved strong top-line growth of 14.2% this quarter, operational efficiency has degraded significantly. A critical bottleneck in the Surat logistics contract has driven a 22% surge in customer complaints, threatening brand reputation and long-term customer retention. Addressing this supply chain fragility is essential to protect our growth trajectory and maintain service-level standards.
+                - heading "Key Points" [level=3] [ref=f1e402]
+                - list [ref=f1e403]:
+                  - listitem [ref=f1e404]: Revenue increased by 14.2% quarter-over-quarter, demonstrating strong market demand and sales performance.
+                  - listitem [ref=f1e405]: Average supplier delays have risen to 9 days, signaling worsening upstream supply chain reliability.
+                  - listitem [ref=f1e406]: The Surat logistics contract is identified as the primary operational bottleneck for delivery timeliness.
+                  - listitem [ref=f1e407]: Customer complaints regarding late deliveries have increased by 22%, directly impacting customer satisfaction scores.
+                  - listitem [ref=f1e408]: Current single-source dependency in Surat creates significant risk exposure and limits operational flexibility.
+                  - listitem [ref=f1e409]: Immediate intervention is required to decouple revenue growth from deteriorating service quality metrics.
+                - heading "Financial / Strategic Impact" [level=3] [ref=f1e410]
+                - paragraph [ref=f1e411]: Failure to resolve the Surat bottleneck risks eroding the value of our 14.2% revenue growth. Increased complaints correlate with higher churn probabilities and potential loss of high-value accounts. Proactive diversification of logistics partners will mitigate single-point-of-failure risks and stabilize operating costs associated with expedited shipping or penalty fees.
+                - heading "Decision Required" [level=3] [ref=f1e412]
+                - paragraph [ref=f1e413]: Approve the immediate renegotiation of the Surat logistics contract terms and authorize the onboarding of a secondary logistics partner in Ahmedabad to diversify risk and improve delivery reliability.
+                - heading "Next Steps" [level=3] [ref=f1e414]
+                - list [ref=f1e415]:
+                  - listitem [ref=f1e416]:
+                    - strong [ref=f1e417]: "Procurement Lead:"
+                    - text: Initiate contract renegotiation with Surat logistics provider to enforce stricter SLAs and penalty clauses.
+                  - listitem [ref=f1e418]:
+                    - strong [ref=f1e419]: "Supply Chain Director:"
+                    - text: Identify and contract a qualified secondary logistics partner in Ahmedabad within 30 days.
+                  - listitem [ref=f1e420]:
+                    - strong [ref=f1e421]: "Operations Manager:"
+                    - text: Implement a dashboard publishing weekly delivery metrics to the leadership team for real-time visibility.
+              - generic [ref=f1e422]:
+                - 'textbox "Refine this Executive Summary: “shorter”, “add a risk table”…" [ref=f1e427]'
+                - generic [ref=f1e428]: this draft only
+                - button "Refine" [disabled] [ref=f1e429]

@@ -1,0 +1,3 @@
+allowBuilds:
+  # Its install script only prints a notice; OCR loads its worker at runtime.
+  tesseract.js: false

@@ -3,6 +3,7 @@ import { Navigate, useNavigate, useLocation, Link } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { DEMO_EMAIL, DEMO_PASSWORD } from '../lib/supabase'
 import { Eye, EyeOff, Zap } from 'lucide-react'
+import { BrandMark } from '../components/site/SiteChrome'
 
 const stroke = { fill: 'none', stroke: 'currentColor', strokeWidth: 1.6, strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const }
 
@@ -59,7 +60,8 @@ export default function LoginPage() {
   if (!authLoading && user && !loading) return <Navigate to={from} replace />
 
   return (
-    <div className="flex min-h-screen bg-paper">
+    // Sits under the capsule nav, so fill what's left of the viewport
+    <div className="flex min-h-[calc(100dvh-6rem)] bg-paper">
       {/* Left decorative panel — hidden on mobile */}
       <div className="hidden lg:flex lg:w-[44%] bg-ink flex-col justify-between p-12 relative overflow-hidden">
         <div
@@ -70,7 +72,10 @@ export default function LoginPage() {
           }}
         />
         <div className="relative">
-          <Link to="/" className="font-display text-[22px] text-paper">Sankshep.ai</Link>
+          <Link to="/" className="inline-flex items-center gap-3 rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-matcha" aria-label="Sankshep home">
+            <BrandMark className="h-12 w-12 rounded-full ring-1 ring-paper/15" />
+            <span className="font-display text-[22px] text-paper">Sankshep.ai</span>
+          </Link>
         </div>
         <div className="relative space-y-6">
           <h2 className="font-display text-[clamp(2.4rem,4vw,3.2rem)] text-paper leading-tight">
@@ -92,11 +97,6 @@ export default function LoginPage() {
       {/* Right form panel */}
       <div className="flex flex-1 flex-col items-center justify-center px-6 py-12">
         <div className="w-full max-w-[380px]">
-          {/* Mobile logo */}
-          <div className="mb-8 flex items-center gap-2 lg:hidden">
-            <Link to="/" className="font-display text-[18px] text-ink">Sankshep.ai</Link>
-          </div>
-
           <h1 className="text-[24px] font-semibold text-ink">
             {mode === 'login' ? 'Welcome back' : 'Create account'}
           </h1>

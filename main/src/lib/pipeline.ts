@@ -222,6 +222,13 @@ ${source}`,
 
 Include: Title slide, Agenda, 5-8 content slides, and Conclusion slide.
 
+Use exactly this layout for every slide, so the deck can be exported to PowerPoint:
+## Slide 1: <title>
+- <bullet>
+- <bullet>
+**Speaker notes:** <notes>
+**Visual:** <suggestion>
+
 Source content:
 ${source}`,
     },

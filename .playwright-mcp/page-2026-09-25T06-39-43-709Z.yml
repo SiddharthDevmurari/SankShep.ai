@@ -1,0 +1,302 @@
+- generic [ref=f1e23]:
+  - banner [ref=f1e24]:
+    - generic [ref=f1e25]:
+      - link "Sankshep home" [ref=f1e27] [cursor=pointer]:
+        - /url: /
+        - generic [ref=f1e29]: Sankshep
+      - navigation "Workspace sections" [ref=f1e30]:
+        - tablist [ref=f1e31]:
+          - tab "Transform" [selected] [ref=f1e32]
+          - tab "History" [ref=f1e40]
+          - tab "Analytics" [ref=f1e46]
+      - generic [ref=f1e49]:
+        - button "D demo@sankshep.ai demo" [ref=f1e51]:
+          - generic [ref=f1e52]: D
+          - generic [ref=f1e53]:
+            - generic [ref=f1e54]: demo@sankshep.ai
+            - generic [ref=f1e55]: demo
+        - button "Log out" [ref=f1e58]
+  - main [ref=f1e62]:
+    - generic [ref=f1e65]:
+      - generic [ref=f1e66]:
+        - generic [ref=f1e67]:
+          - paragraph [ref=f1e68]:
+            - generic [ref=f1e69]: Workspace
+            - generic [ref=f1e72]: Transform
+          - generic [ref=f1e73]:
+            - heading "Find exactly what you need." [level=1] [ref=f1e74]
+            - paragraph [ref=f1e75]: "Sankshep.ai : A gen-AI based Content Transformation Platform"
+        - generic "Session" [ref=f1e77]:
+          - generic [ref=f1e78]:
+            - generic [ref=f1e79]:
+              - term [ref=f1e80]: Engine
+              - definition [ref=f1e81]:
+                - generic "Groq · qwen3.8-27b" [ref=f1e84]: Ready
+            - generic [ref=f1e85]:
+              - term [ref=f1e86]: Drafts
+              - definition [ref=f1e87]: "2"
+            - generic [ref=f1e88]:
+              - term [ref=f1e89]: Last run
+              - definition [ref=f1e90]: 6.2s
+          - button "History" [ref=f1e93]
+      - generic [ref=f1e97]:
+        - complementary "Source and configuration" [ref=f1e98]:
+          - generic [ref=f1e99]:
+            - generic [ref=f1e100]:
+              - heading "Source & configuration" [level=2] [ref=f1e101]
+              - paragraph [ref=f1e102]: Five steps, then review and generate. Audience and engine start from defaults.
+            - generic [ref=f1e103]:
+              - region [ref=f1e104]:
+                - generic [ref=f1e106]:
+                  - generic [ref=f1e107]: "01"
+                  - generic [ref=f1e108]:
+                    - heading "Source" [level=3] [ref=f1e109]
+                    - paragraph [ref=f1e110]: What should we work from?
+                - tablist "Source type" [ref=f1e111]:
+                  - tab "Upload" [ref=f1e112]
+                  - tab "Link" [ref=f1e116]
+                  - tab "Paste" [selected] [ref=f1e120]
+                - generic [ref=f1e122]:
+                  - textbox "Source text" [ref=f1e123]:
+                    - /placeholder: Paste a report, article, research paper or notes…
+                    - text: "Quarterly Risk Review. Revenue grew 14.2% this quarter while average supplier delays rose to 9 days. The Surat logistics contract is the main bottleneck. Customer complaints about late delivery rose 22%. Recommended actions: renegotiate the Surat contract, add a second logistics partner in Ahmedabad, and publish weekly delivery metrics to the leadership team."
+                  - generic: 53 words
+              - region [ref=f1e124]:
+                - generic [ref=f1e125]:
+                  - generic [ref=f1e126]:
+                    - generic [ref=f1e127]: "02"
+                    - generic [ref=f1e128]:
+                      - heading "Outputs" [level=3] [ref=f1e129]
+                      - paragraph [ref=f1e130]: Each format is drafted in parallel.
+                  - button "Select all" [ref=f1e132]
+                - generic [ref=f1e133]:
+                  - button "Executive Summary C-suite brief" [pressed] [ref=f1e134]:
+                    - generic [ref=f1e138]:
+                      - generic [ref=f1e139]: Executive Summary
+                      - generic [ref=f1e140]: C-suite brief
+                  - button "LinkedIn Post Up to 3,000 chars" [ref=f1e144]:
+                    - generic [ref=f1e148]:
+                      - generic [ref=f1e149]: LinkedIn Post
+                      - generic [ref=f1e150]: Up to 3,000 chars
+                  - button "X / Twitter Hook + thread" [ref=f1e152]:
+                    - generic [ref=f1e156]:
+                      - generic [ref=f1e157]: X / Twitter
+                      - generic [ref=f1e158]: Hook + thread
+                  - button "Video Script & storyboard" [ref=f1e160]:
+                    - generic [ref=f1e166]:
+                      - generic [ref=f1e167]: Video
+                      - generic [ref=f1e168]: Script & storyboard
+                  - button "Slide Deck Slides + notes" [pressed] [ref=f1e170]:
+                    - generic [ref=f1e174]:
+                      - generic [ref=f1e175]: Slide Deck
+                      - generic [ref=f1e176]: Slides + notes
+                  - button "Blog Post SEO long-form" [ref=f1e178]:
+                    - generic [ref=f1e182]:
+                      - generic [ref=f1e183]: Blog Post
+                      - generic [ref=f1e184]: SEO long-form
+                  - button "Advisory Findings & actions" [ref=f1e186]:
+                    - generic [ref=f1e189]:
+                      - generic [ref=f1e190]: Advisory
+                      - generic [ref=f1e191]: Findings & actions
+                  - button "Infographic Stats & layout" [ref=f1e193]:
+                    - generic [ref=f1e197]:
+                      - generic [ref=f1e198]: Infographic
+                      - generic [ref=f1e199]: Stats & layout
+                  - button "Simplified Plain language" [ref=f1e201]:
+                    - generic [ref=f1e204]:
+                      - generic [ref=f1e205]: Simplified
+                      - generic [ref=f1e206]: Plain language
+                  - button "Translation Indian languages" [ref=f1e208]:
+                    - generic [ref=f1e213]:
+                      - generic [ref=f1e214]: Translation
+                      - generic [ref=f1e215]: Indian languages
+              - region [ref=f1e217]:
+                - generic [ref=f1e219]:
+                  - generic [ref=f1e220]: "03"
+                  - generic [ref=f1e221]:
+                    - heading "Voice" [level=3] [ref=f1e222]
+                    - paragraph [ref=f1e223]: Tone applies to every draft. Instructions are optional.
+                - radiogroup "Tone" [ref=f1e224]:
+                  - radio "Professional polished" [checked] [ref=f1e225]:
+                    - generic [ref=f1e226]: Professional
+                    - generic [ref=f1e227]: polished
+                  - radio "Technical precise" [ref=f1e228]:
+                    - generic [ref=f1e229]: Technical
+                    - generic [ref=f1e230]: precise
+                  - radio "Casual conversational" [ref=f1e231]:
+                    - generic [ref=f1e232]: Casual
+                    - generic [ref=f1e233]: conversational
+                  - radio "Academic scholarly" [ref=f1e234]:
+                    - generic [ref=f1e235]: Academic
+                    - generic [ref=f1e236]: scholarly
+                - generic [ref=f1e237]:
+                  - text: Custom instructions
+                  - generic [ref=f1e238]: Optional
+                - generic [ref=f1e239]:
+                  - textbox "Custom instructions Optional" [ref=f1e240]:
+                    - /placeholder: e.g. Start with a one-line verdict, then a risk table, then three recommendations…
+                  - generic [ref=f1e242]:
+                    - button "+ Risk table first" [ref=f1e243]
+                    - button "+ Bullets only" [ref=f1e244]
+                    - button "+ Action checklist" [ref=f1e245]
+              - region [ref=f1e246]:
+                - heading [level=3] [ref=f1e247]:
+                  - button "04 Audience No specific audience" [ref=f1e248]:
+                    - generic [ref=f1e249]: "04"
+                    - generic [ref=f1e250]:
+                      - generic [ref=f1e251]: Audience
+                      - generic [ref=f1e252]: No specific audience
+              - region [ref=f1e255]:
+                - heading [level=3] [ref=f1e256]:
+                  - button "05 AI engine & provider Groq · qwen3.8-27b" [ref=f1e257]:
+                    - generic [ref=f1e258]: "05"
+                    - generic [ref=f1e259]:
+                      - generic [ref=f1e260]: AI engine & provider
+                      - generic [ref=f1e261]: Groq · qwen3.8-27b
+            - generic [ref=f1e264]:
+              - generic "Generation summary" [ref=f1e265]:
+                - generic [ref=f1e266]:
+                  - term [ref=f1e267]: Source
+                  - definition [ref=f1e268]: 53 words pasted
+                - generic [ref=f1e269]:
+                  - term [ref=f1e270]: Drafts
+                  - definition [ref=f1e271]: 2 formats
+                - generic [ref=f1e272]:
+                  - term [ref=f1e273]: Voice
+                  - definition [ref=f1e274]: Professional
+                - generic [ref=f1e275]:
+                  - term [ref=f1e276]: Engine
+                  - definition [ref=f1e277]: Groq · qwen3.8-27b
+              - button "Generate 2 drafts" [ref=f1e365]:
+                - generic [aria-hidden] [ref=f1e366]:
+                  - generic [ref=f1e367]: Ctrl
+                  - generic [ref=f1e368]: ↵
+        - region "Output canvas" [ref=f1e283]:
+          - generic [ref=f1e284]:
+            - generic [ref=f1e353]:
+              - tablist "Generated formats" [ref=f1e369]:
+                - tab "Executive Summary" [ref=f1e370]
+                - tab "Slide Deck" [active] [selected] [ref=f1e371]
+              - generic [ref=f1e372]:
+                - generic [ref=f1e373]:
+                  - button "Edit" [ref=f1e374]
+                  - button "Preview" [pressed] [ref=f1e377]
+                - button "Show parsed source" [ref=f1e381]
+                - button "Copy" [ref=f1e384]
+                - button "Download" [ref=f1e389]
+            - generic [ref=f1e394]:
+              - article [ref=f1e439]:
+                - text: PPT Presentation
+                - generic [ref=f1e440]:
+                  - 'heading "Slide 1: Q3 Quarterly Risk Review" [level=2] [ref=f1e441]'
+                  - list [ref=f1e442]:
+                    - listitem [ref=f1e443]: Executive summary of operational performance
+                    - listitem [ref=f1e444]: Identification of critical supply chain risks
+                    - listitem [ref=f1e445]: Proposed mitigation strategies for Q4
+                    - listitem [ref=f1e446]: Alignment with company growth targets
+                    - listitem [ref=f1e447]: Next steps and accountability assignment
+                  - paragraph [ref=f1e448]:
+                    - strong [ref=f1e449]: "Speaker notes:"
+                    - text: Welcome to the quarterly risk review. Today, we will analyze our recent performance metrics, specifically focusing on the emerging bottlenecks in our logistics network. We will present data-driven insights and propose immediate actions to secure our growth trajectory.
+                    - strong [ref=f1e450]: "Visual:"
+                    - text: Minimalist title slide with company logo and "Quarterly Risk Review" in bold, sans-serif font.
+                  - 'heading "Slide 2: Agenda" [level=2] [ref=f1e451]'
+                  - list [ref=f1e452]:
+                    - listitem [ref=f1e453]: Review of revenue growth metrics
+                    - listitem [ref=f1e454]: Analysis of supplier delay trends
+                    - listitem [ref=f1e455]: Deep dive into Surat logistics issues
+                    - listitem [ref=f1e456]: Presentation of recommended corrective actions
+                    - listitem [ref=f1e457]: Q&A and final strategic decisions
+                  - paragraph [ref=f1e458]:
+                    - strong [ref=f1e459]: "Speaker notes:"
+                    - text: "Our agenda covers three key areas: financial performance, operational risks, and strategic solutions. We will start with the positive revenue growth, then pivot to the logistical challenges. Finally, we will discuss the specific actions required to resolve these issues."
+                    - strong [ref=f1e460]: "Visual:"
+                    - text: Clean, numbered list layout or a horizontal timeline graphic showing the meeting flow.
+                  - 'heading "Slide 3: Financial Performance Overview" [level=2] [ref=f1e461]'
+                  - list [ref=f1e462]:
+                    - listitem [ref=f1e463]: Revenue increased by 14.2% this quarter
+                    - listitem [ref=f1e464]: Strong demand drives continued market share gain
+                    - listitem [ref=f1e465]: Growth outpaces previous quarterly projections
+                    - listitem [ref=f1e466]: Financial health remains robust overall
+                    - listitem [ref=f1e467]: Positive trend supports expansion initiatives
+                  - paragraph [ref=f1e468]:
+                    - strong [ref=f1e469]: "Speaker notes:"
+                    - text: We started the quarter on a strong note with a 14.2% increase in revenue. This growth validates our market positioning and product demand. However, we must ensure our operational capacity scales to support this financial success.
+                    - strong [ref=f1e470]: "Visual:"
+                    - text: Bar chart comparing Q2 and Q3 revenue, highlighting the 14.2% growth arrow in green.
+                  - 'heading "Slide 4: Operational Risk Assessment" [level=2] [ref=f1e471]'
+                  - list [ref=f1e472]:
+                    - listitem [ref=f1e473]: Average supplier delays extended to nine days
+                    - listitem [ref=f1e474]: Logistics inefficiency creates operational friction
+                    - listitem [ref=f1e475]: Supply chain resilience requires immediate attention
+                    - listitem [ref=f1e476]: Delay trends threaten service level agreements
+                    - listitem [ref=f1e477]: Proactive management is essential to prevent loss
+                  - paragraph [ref=f1e478]:
+                    - strong [ref=f1e479]: "Speaker notes:"
+                    - text: Despite revenue gains, our operational metrics show concerning signals. Average supplier delays have increased to nine days, which is well outside our target range. This inefficiency is creating friction that could erode our customer trust if left unaddressed.
+                    - strong [ref=f1e480]: "Visual:"
+                    - text: Line graph showing the trend of supplier delays over the last three quarters, with the current quarter highlighted in red.
+                  - 'heading "Slide 5: Critical Bottleneck: Surat Logistics" [level=2] [ref=f1e481]'
+                  - list [ref=f1e482]:
+                    - listitem [ref=f1e483]: Surat contract is primary delivery bottleneck
+                    - listitem [ref=f1e484]: Late delivery complaints rose by 22%
+                    - listitem [ref=f1e485]: Customer satisfaction metrics are under pressure
+                    - listitem [ref=f1e486]: Single vendor dependency increases risk exposure
+                    - listitem [ref=f1e487]: Operational failure directly impacts brand reputation
+                  - paragraph [ref=f1e488]:
+                    - strong [ref=f1e489]: "Speaker notes:"
+                    - text: The Surat logistics contract has emerged as our primary bottleneck. This single point of failure has contributed to a 22% rise in customer complaints regarding late deliveries. This direct correlation between logistics performance and customer sentiment is our most urgent risk.
+                    - strong [ref=f1e490]: "Visual:"
+                    - text: Funnel diagram showing how Surat delays lead to increased customer complaints, with the 22% statistic highlighted.
+                  - 'heading "Slide 6: Recommended Action: Contract Renegotiation" [level=2] [ref=f1e491]'
+                  - list [ref=f1e492]:
+                    - listitem [ref=f1e493]: Renegotiate Surat logistics contract terms
+                    - listitem [ref=f1e494]: Impose stricter penalties for delivery delays
+                    - listitem [ref=f1e495]: Define clear service level agreement benchmarks
+                    - listitem [ref=f1e496]: Reduce dependency on single logistics partner
+                    - listitem [ref=f1e497]: Secure better pricing through volume leverage
+                  - paragraph [ref=f1e498]:
+                    - strong [ref=f1e499]: "Speaker notes:"
+                    - text: Our first recommended action is to renegotiate the Surat contract. We must impose stricter penalties for delays and define clear service level benchmarks. This will hold the vendor accountable and reduce our dependency on a single partner.
+                    - strong [ref=f1e500]: "Visual:"
+                    - text: Icon-based list with a handshake icon for negotiation and a gavel icon for penalties.
+                  - 'heading "Slide 7: Recommended Action: Diversify Logistics" [level=2] [ref=f1e501]'
+                  - list [ref=f1e502]:
+                    - listitem [ref=f1e503]: Add second logistics partner in Ahmedabad
+                    - listitem [ref=f1e504]: Create redundancy in supply chain network
+                    - listitem [ref=f1e505]: Mitigate single point of failure risks
+                    - listitem [ref=f1e506]: Enhance delivery speed and reliability metrics
+                    - listitem [ref=f1e507]: Ensure business continuity during disruptions
+                  - paragraph [ref=f1e508]:
+                    - strong [ref=f1e509]: "Speaker notes:"
+                    - text: To mitigate risk, we recommend adding a second logistics partner in Ahmedabad. This creates redundancy in our network and reduces our reliance on Surat. It will also enhance delivery speed and ensure business continuity during potential disruptions.
+                    - strong [ref=f1e510]: "Visual:"
+                    - text: Map of India highlighting Surat and Ahmedabad, with arrows showing diversified logistics routes.
+                  - 'heading "Slide 8: Recommended Action: Transparency & Metrics" [level=2] [ref=f1e511]'
+                  - list [ref=f1e512]:
+                    - listitem [ref=f1e513]: Publish weekly delivery metrics to leadership
+                    - listitem [ref=f1e514]: Increase visibility into operational performance
+                    - listitem [ref=f1e515]: Enable data-driven decision making processes
+                    - listitem [ref=f1e516]: Foster accountability across logistics teams
+                    - listitem [ref=f1e517]: Monitor progress toward recovery targets
+                  - paragraph [ref=f1e518]:
+                    - strong [ref=f1e519]: "Speaker notes:"
+                    - text: Finally, we will publish weekly delivery metrics to the leadership team. This transparency will enable data-driven decisions and foster accountability. We need to monitor progress closely to ensure our recovery targets are met.
+                    - strong [ref=f1e520]: "Visual:"
+                    - text: Dashboard mockup showing key performance indicators (KPIs) with green and red status indicators.
+                  - 'heading "Slide 9: Conclusion & Next Steps" [level=2] [ref=f1e521]'
+                  - list [ref=f1e522]:
+                    - listitem [ref=f1e523]: Approve Surat contract renegotiation strategy
+                    - listitem [ref=f1e524]: Authorize selection of Ahmedabad logistics partner
+                    - listitem [ref=f1e525]: Implement weekly metrics reporting framework
+                    - listitem [ref=f1e526]: Assign owners for each action item
+                    - listitem [ref=f1e527]: Re-evaluate progress in 30 days
+                  - paragraph [ref=f1e528]:
+                    - strong [ref=f1e529]: "Speaker notes:"
+                    - text: In conclusion, we request approval for the renegotiation strategy and the selection of a new partner. We will assign specific owners for each action item. We will re-evaluate our progress in 30 days to ensure we are on track.
+                    - strong [ref=f1e530]: "Visual:"
+                    - text: Checkmark list of next steps with assigned owner titles and dates.
+              - generic [ref=f1e422]:
+                - 'textbox "Refine this Slide Deck: “shorter”, “add a risk table”…" [ref=f1e531]'
+                - generic [ref=f1e428]: this draft only
+                - button "Refine" [disabled] [ref=f1e429]

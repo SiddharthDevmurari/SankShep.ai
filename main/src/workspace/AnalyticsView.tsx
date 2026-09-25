@@ -76,7 +76,7 @@ export function AnalyticsView({ onOpenHistory }: { onOpenHistory?: () => void })
   return (
     <div className={PAGE_FRAME}>
       <PageHeader
-        eyebrow="Workspace insights"
+        eyebrow="Insights"
         title="Analytics"
         subtitle="Usage across formats, word counts, and recent activity."
         actions={
@@ -93,12 +93,12 @@ export function AnalyticsView({ onOpenHistory }: { onOpenHistory?: () => void })
       />
 
       {schemaMissing ? (
-        <div className="mt-8"><SchemaNotice /></div>
+        <div className="mt-5"><SchemaNotice /></div>
       ) : error ? (
-        <div className="mt-8"><ErrorNotice message={`Couldn't load your analytics: ${error}`} onRetry={() => void load()} /></div>
+        <div className="mt-5"><ErrorNotice message={`Couldn't load your analytics: ${error}`} onRetry={() => void load()} /></div>
       ) : (
         <>
-          <section aria-label="Totals" className="mt-8 grid gap-4 sm:grid-cols-2 lg:mt-10 xl:grid-cols-4 xl:gap-5">
+          <section aria-label="Totals" className="mt-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-4 xl:gap-5">
             <MetricCard
               label="Transformations"
               icon={Layers}
@@ -147,7 +147,7 @@ function MetricCard({ label, icon: Icon, value, foot, hint, accent }: {
   accent?: boolean
 }) {
   return (
-    <div className="sk-elevated relative flex flex-col overflow-hidden rounded-2xl border border-line bg-white" title={hint}>
+    <div className="sk-elevated relative flex flex-col overflow-hidden rounded-xl border border-edge bg-white" title={hint}>
       {accent && <span className="absolute inset-x-0 top-0 h-[3px] bg-matcha-deep" aria-hidden />}
       <div className="flex items-center justify-between px-6 pt-5">
         <p className="text-[13.5px] font-medium text-ink-soft">{label}</p>
@@ -182,7 +182,7 @@ function FormatUsage({ data }: { data: Analytics | null }) {
   const max = data?.formats[0]?.count ?? 0
 
   return (
-    <section aria-label="Most-used formats" className="sk-elevated flex flex-col overflow-hidden rounded-2xl border border-line bg-white">
+    <section aria-label="Most-used formats" className="sk-elevated flex flex-col overflow-hidden rounded-xl border border-edge bg-white">
       <CardHeader
         title="Most-used formats"
         meta={data && data.drafts > 0 && <><span className="font-mono font-medium text-ink tabular-nums">{NUMBER.format(data.drafts)}</span> drafts</>}
@@ -259,7 +259,7 @@ function UnusedFormats({ used }: { used: string[] }) {
 
 function RecentActivity({ data, onOpenHistory }: { data: Analytics | null; onOpenHistory?: () => void }) {
   return (
-    <section aria-label="Recent activity" className="sk-elevated flex flex-col overflow-hidden rounded-2xl border border-line bg-white">
+    <section aria-label="Recent activity" className="sk-elevated flex flex-col overflow-hidden rounded-xl border border-edge bg-white">
       <CardHeader title="Recent activity" meta="Last 5 drafts" />
       {!data ? (
         <ul className="divide-y divide-line" aria-hidden>

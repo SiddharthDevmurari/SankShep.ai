@@ -58,7 +58,6 @@ export const PROVIDERS: ProviderInfo[] = [
       { id: 'gemini-3.5-flash-lite', kind: 'vision' },
       { id: 'gemini-3.8-flash', kind: 'vision' },
       { id: 'gemini-2.5-flash', kind: 'vision' },
-      { id: 'gemini-2.5-flash-lite', kind: 'vision' },
     ],
   },
   {
@@ -73,7 +72,6 @@ export const PROVIDERS: ProviderInfo[] = [
       { id: 'mistral-small-latest', kind: 'vision' },
       { id: 'open-mistral-nemo', kind: 'chat' },
       { id: 'codestral-latest', kind: 'chat' },
-      { id: 'pixtral-large-latest', kind: 'vision' },
     ],
   },
 ]

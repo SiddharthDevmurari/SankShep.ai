@@ -1,0 +1,20 @@
+- banner [ref=f1e4]:
+  - navigation "Main" [ref=f1e6]:
+    - link "Sankshep home" [ref=f1e7] [cursor=pointer]:
+      - /url: /
+      - generic [ref=f1e9]: Sankshep
+    - generic [ref=f1e10]:
+      - link "How it works" [ref=f1e11] [cursor=pointer]:
+        - /url: /how-it-works
+      - link "About" [ref=f1e12] [cursor=pointer]:
+        - /url: /about
+      - link "T&C" [ref=f1e13] [cursor=pointer]:
+        - /url: /terms-and-conditions
+      - link "Privacy Policy" [ref=f1e14] [cursor=pointer]:
+        - /url: /privacy-policy
+      - generic [ref=f1e15]: demo@sankshep.ai
+      - button "Logout" [ref=f1e16]
+    - link "Sankshep.ai source code on GitHub" [ref=f1e17] [cursor=pointer]:
+      - /url: https://github.com/SiddharthDevmurari/SankShep.ai.git
+    - link "Open Workspace" [ref=f1e20] [cursor=pointer]:
+      - /url: /workspace

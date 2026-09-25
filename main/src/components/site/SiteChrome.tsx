@@ -3,6 +3,7 @@
 import { useEffect, type ReactNode } from 'react'
 import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
+import logoUrl from '../../assets/logo.jpeg'
 
 export const GITHUB_URL = 'https://github.com/SiddharthDevmurari/SankShep.ai.git'
 
@@ -19,19 +20,32 @@ export const ArrowRight = ({ className }: { className?: string }) => (
   </svg>
 )
 
-export const BrandMark = () => (
-  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-ink">
-    <svg viewBox="0 0 24 24" className="h-[18px] w-[18px] text-matcha" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden>
-      <path d="M2 12h2M6 8v8M10 5v14M14 8v8M18 6v12M22 12h-2" />
-    </svg>
-  </span>
+// Pass size and radius together, e.g. "h-9 w-9 rounded-full"
+export const BrandMark = ({ className = 'h-9 w-9 rounded-xl' }: { className?: string }) => (
+  <img src={logoUrl} alt="" aria-hidden className={`${className} shrink-0 bg-[#213833] object-cover`} />
+)
+
+// Double-border highlight shared by every capsule: hair ring, ink ring, hair ring, soft drop shadow
+export const CAPSULE_SHADOW = '0 0 0 1px #e7e4d9, 0 0 0 3px #0f100f, 0 0 0 5px #e7e4d9, 0 4px 24px -6px rgba(15,16,15,0.14)'
+
+/** Logo + wordmark in the landing-nav capsule, linking home. */
+export const BrandCapsule = ({ className = '' }: { className?: string }) => (
+  <Link
+    to="/"
+    aria-label="Sankshep home"
+    className={`group inline-flex shrink-0 items-center gap-2.5 rounded-full bg-white/95 py-1.5 pl-1.5 pr-4 backdrop-blur-md transition-transform duration-300 hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink/30 ${className}`}
+    style={{ boxShadow: CAPSULE_SHADOW }}
+  >
+    <BrandMark className="h-8 w-8 rounded-full" />
+    <span className="font-display text-[17px] text-ink">Sankshep</span>
+  </Link>
 )
 
 const NAV_LINKS = [
   { label: 'How it works', to: '/how-it-works' },
-  { label: 'Formats', to: '/#formats' },
-  { label: 'Security', to: '/#security' },
   { label: 'About', to: '/about' },
+  { label: 'T&C', to: '/terms-and-conditions' },
+  { label: 'Privacy Policy', to: '/privacy-policy' },
 ]
 
 const PILL_LINK = 'rounded-full px-4 py-2 text-[14px] text-ink-soft transition-colors hover:bg-paper-deep hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink/30'
@@ -48,14 +62,13 @@ export function SiteNav() {
   return (
     <header className="sticky top-0 z-50 px-4 pb-3 pt-5">
       <div className="flex justify-center">
-        {/* Double-border highlight: hair ring, ink ring, hair ring, soft drop shadow */}
         <nav
           aria-label="Main"
           className="flex items-center gap-3 rounded-full bg-white/95 px-5 py-3 backdrop-blur-md"
-          style={{ boxShadow: '0 0 0 1px #e7e4d9, 0 0 0 3px #0f100f, 0 0 0 5px #e7e4d9, 0 4px 24px -6px rgba(15,16,15,0.14)' }}
+          style={{ boxShadow: CAPSULE_SHADOW }}
         >
           <Link to="/" className="mr-2 flex items-center gap-2.5 rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink/30" aria-label="Sankshep home">
-            <BrandMark />
+            <BrandMark className="h-9 w-9 rounded-full" />
             <span className="font-display text-[17px] text-ink">Sankshep</span>
           </Link>
 

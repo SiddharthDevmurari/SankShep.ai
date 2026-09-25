@@ -4,8 +4,11 @@
 @theme {
   --color-paper: #faf9f5;
   --color-paper-deep: #f2f0e8;
-  /* Workspace canvas: one step deeper than paper-deep so white sheets read as objects. ink-mute holds 5.2:1 on it. */
-  --color-canvas: #ebe8de;
+  /* Workspace canvas: a cooler, deeper stone than the marketing paper, so the app reads as its own surface
+     and white windows pop. ink-mute holds 4.9:1 on it. */
+  --color-canvas: #e0e0dc;
+  /* Window edge on the canvas: a crisp 1px line, darker than hair/line so it survives the deeper ground. */
+  --color-edge: #c9c8c1;
   --color-ink: #0f100f;
   --color-ink-soft: #33352f;
   /* Secondary text. 6.4:1 on white, 5.6:1 on paper-deep — replaces ink-soft/40–60, which failed AA. */
@@ -204,20 +207,22 @@ body {
     0 12px 40px -14px rgba(15, 16, 15, 0.22);
 }
 
-/* Workspace canvas: warm ground with a microscopic dot grid, so the margins read as a surface, not a void. */
+/* Workspace canvas: cool stone with a microscopic dot grid, so the margins read as a desk, not a void. */
 .sk-canvas {
   background-color: var(--color-canvas);
-  background-image: radial-gradient(rgba(15, 16, 15, 0.09) 1px, transparent 1px);
-  background-size: 18px 18px;
+  background-image: radial-gradient(rgba(15, 16, 15, 0.075) 1px, transparent 1px);
+  background-size: 16px 16px;
 }
 
-/* The two primary workspace sheets: crisp edge, ink-tinted contact shadow plus a long soft drop. */
+/* Workspace windows: layered like a native app window. Tight contact shadow for the edge,
+   a mid shadow for lift, and a long soft drop so the sheet floats off the canvas. */
 .sk-elevated {
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.9),
-    0 1px 2px rgba(38, 36, 24, 0.06),
-    0 4px 10px -4px rgba(38, 36, 24, 0.08),
-    0 28px 60px -32px rgba(38, 36, 24, 0.32);
+    inset 0 1px 0 rgba(255, 255, 255, 1),
+    0 1px 1px rgba(20, 22, 20, 0.06),
+    0 2px 4px -1px rgba(20, 22, 20, 0.07),
+    0 12px 24px -10px rgba(20, 22, 20, 0.16),
+    0 36px 72px -28px rgba(20, 22, 20, 0.30);
 }
 
 /* Bordered workspace cards: warm-tinted, subtle lift. */
