@@ -51,15 +51,22 @@ Organisations spend hours turning the same source material into briefs, posts, d
 git clone https://github.com/SiddharthDevmurari/SankShep.ai.git
 cd SankShep.ai/main
 npm install
+npm run dev
 ```
 
-**Add the API keys** (needed for the app to generate without users pasting their own key). Copy the example file:
+Open <http://localhost:8443>, click **Use Demo Credentials** on the sign-in page, and you're in. That's all: no keys or `.env` file to set up.
+
+> **Where the AI keys come from.** The local dev server forwards AI requests to the deployed site's `/api/chat`, which holds the project's shared keys as Vercel environment variables. The keys never appear in this repository. Users can also paste their own key in the **AI engine** step.
+>
+> **No Supabase setup needed.** Every copy of the app connects to the same central Supabase project, pinned in [`src/lib/supabase.ts`](main/src/lib/supabase.ts). Accounts and activity are shared across all machines.
+
+#### Optional: use your own keys locally
+
+To run AI requests on your machine with your own keys instead of through the deployed site, copy the example file and fill it in:
 
 ```bash
 cp .env.local.example .env.local      # Windows: copy .env.local.example .env.local
 ```
-
-Then open `main/.env.local` and fill in the keys, several per provider separated by commas:
 
 ```bash
 GROQ_API_KEYS=gsk_first_key,gsk_second_key
@@ -67,29 +74,18 @@ GEMINI_API_KEYS=your_gemini_key
 MISTRAL_API_KEYS=first_key,second_key
 ```
 
-Get keys from [Groq](https://console.groq.com/keys), [Google AI Studio](https://aistudio.google.com/apikey) and [Mistral](https://console.mistral.ai/api-keys). `.env.local` is git-ignored, so never commit it; share the keys with teammates privately.
-
-**Run it:**
-
-```bash
-npm run dev
-```
-
-Open <http://localhost:8443>, click **Use Demo Credentials** on the sign-in page, and you're in.
-
-> **No Supabase setup needed.** Every copy of the app connects to the same central Supabase project, pinned in [`src/lib/supabase.ts`](main/src/lib/supabase.ts). Accounts and activity are shared across all machines.
->
-> **No keys?** The app still runs. Users paste their own key in the **AI engine** step of the workspace.
+Get keys from [Groq](https://console.groq.com/keys), [Google AI Studio](https://aistudio.google.com/apikey) and [Mistral](https://console.mistral.ai/api-keys). `.env.local` is git-ignored; never commit keys.
 
 ### Environment variables
 
-These are read only by the server route [`api/chat.ts`](main/api/chat.ts), never by the browser, so they don't end up in the website's code.
+All optional for local development. Set them in Vercel for the deployed site (see [Deploy](#deploy)). They are read only by the server route [`api/chat.ts`](main/api/chat.ts), never by the browser, so they don't end up in the website's code.
 
 | Variable | Purpose |
 |---|---|
 | `GROQ_API_KEYS` | Shared Groq keys, comma-separated, tried in turn |
 | `GEMINI_API_KEYS` | Shared Gemini keys |
 | `MISTRAL_API_KEYS` | Shared Mistral keys |
+| `SANKSHEP_API_ORIGIN` | Local dev only: the site whose `/api/chat` to use when there are no local keys (defaults to the deployed site) |
 
 Don't name provider keys with a `VITE_` prefix: Vite builds every `VITE_` variable into the public website.
 
@@ -108,7 +104,7 @@ Run these inside `main/`:
 
 | What you see | Fix |
 |---|---|
-| "System API keys are exhausted" | `.env.local` is missing, has a typo in a variable name, or its keys are invalid. Restart `npm run dev` after editing it. |
+| "System API keys are exhausted" | The deployed site's keys are used up or invalid (update them in Vercel), or, if you use a local `.env.local`, a variable name has a typo. Restart `npm run dev` after editing it. |
 | "Port 8443 is already in use" | Another copy of the dev server is running. Close it, or run `npx vite --port 5173`. |
 | A Mistral model says it isn't available | The Mistral plan behind the key doesn't include that model. Pick `open-mistral-nemo` or another provider. |
 | A long document is slow | Free Groq keys allow about 8,000 tokens a minute; the app waits and retries rather than failing. Gemini handles long sources fastest. |

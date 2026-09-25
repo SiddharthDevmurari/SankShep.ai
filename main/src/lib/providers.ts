@@ -209,7 +209,7 @@ export async function chat(ref: ModelRef, messages: ChatMessage[], keys: ApiKeys
     throw new Error(`Your ${info.name} API key was rejected, and the system API keys are exhausted. Check your key in the AI engine step.`)
   }
   if (sharedOut) throw new Error(`System API keys are exhausted. Please enter your own valid ${info.name} API key in the AI engine step.`)
-  throw new Error(`${info.name} is busy: every available key is rate-limited. Wait a minute and generate again, or pick another model.`)
+  throw new Error(`${info.name} is busy right now (overloaded or rate-limited). Wait a minute and generate again, or pick another model.`)
 }
 
 /** Reasoning models may put their scratch work inline; only the answer belongs in a draft. */
