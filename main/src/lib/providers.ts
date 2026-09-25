@@ -10,8 +10,11 @@
 
 export type ProviderId = 'groq' | 'gemini' | 'mistral'
 
-/** What a model can do. Only `chat` and `vision` models can write drafts. */
-export type ModelKind = 'chat' | 'vision' | 'speech-to-text' | 'text-to-speech' | 'safety-classifier'
+/**
+ * What a model reads: text only, or text and images. Only models that can write
+ * drafts are listed; speech, text-to-speech and safety-classifier models are left out.
+ */
+export type ModelKind = 'chat' | 'vision'
 
 export interface ModelInfo {
   id: string
@@ -36,15 +39,9 @@ export const PROVIDERS: ProviderInfo[] = [
     host: 'api.groq.com',
     models: [
       { id: 'qwen/qwen3.8-27b', kind: 'chat' },
-      { id: 'canopylabs/orpheus-arabic-saudi', kind: 'text-to-speech' },
-      { id: 'canopylabs/orpheus-v1-english', kind: 'text-to-speech' },
-      { id: 'meta-llama/llama-prompt-guard-2-22m', kind: 'safety-classifier' },
-      { id: 'meta-llama/llama-prompt-guard-2-86m', kind: 'safety-classifier' },
       { id: 'openai/gpt-oss-120b', kind: 'chat' },
       { id: 'openai/gpt-oss-20b', kind: 'chat' },
       { id: 'openai/gpt-oss-safeguard-20b', kind: 'chat' },
-      { id: 'whisper-large-v3', kind: 'speech-to-text' },
-      { id: 'whisper-large-v3-turbo', kind: 'speech-to-text' },
     ],
   },
   {

@@ -6,7 +6,7 @@ import {
 } from 'lucide-react'
 import { ArrowRight, SitePage } from '../components/site/SiteChrome'
 import { ALL_FORMATS, MAX_COMPARE, MAX_FILE_BYTES, MAX_IMAGE_BYTES } from '../workspace/LeftPanel'
-import { PROVIDERS, canWrite } from '../lib/providers'
+import { PROVIDERS } from '../lib/providers'
 
 /*
  * Design read: an explainer for people deciding whether to trust the tool, in the
@@ -709,7 +709,7 @@ function DataFlow() {
 /* ─── Numbers read from the code ─────────────────────────────────────────── */
 
 function FromTheCode() {
-  const draftingModels = PROVIDERS.flatMap((p) => p.models).filter((m) => canWrite(m.kind)).length
+  const draftingModels = PROVIDERS.flatMap((p) => p.models).length
   const facts: { value: string; label: ReactNode }[] = [
     { value: String(ALL_FORMATS.length), label: <>output formats, plus one you describe yourself</> },
     { value: String(draftingModels), label: <>drafting models across {PROVIDERS.length} providers</> },

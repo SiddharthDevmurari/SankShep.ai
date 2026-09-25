@@ -6,7 +6,7 @@ import {
 import { AUDIENCE_PRESETS, type Audience, type EngineConfig, type EngineMode, type OutputFormat, type ToneOption } from '../lib/pipeline'
 import type { InputType } from '../lib/activity'
 import {
-  DEFAULT_MODEL, PROVIDERS, canWrite, hasKey, modelInfo, parseRefKey, providerInfo, refKey,
+  DEFAULT_MODEL, PROVIDERS, hasKey, modelInfo, parseRefKey, providerInfo, refKey,
   type ApiKeys, type ImageInput, type ModelKind, type ProviderId,
 } from '../lib/providers'
 import { describeReader, pickImageReader } from '../lib/ingest'
@@ -82,9 +82,6 @@ export const MAX_COMPARE = 3
 const KIND_LABEL: Record<ModelKind, string> = {
   chat: 'text',
   vision: 'text + images',
-  'speech-to-text': 'speech-to-text, can’t draft',
-  'text-to-speech': 'text-to-speech, can’t draft',
-  'safety-classifier': 'safety classifier, can’t draft',
 }
 
 const isMac = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform)
@@ -1124,12 +1121,12 @@ export function StepNumber({ n, done }: { n: string; done?: boolean }) {
   )
 }
 
-/** First drafting model not already in the comparison, so "Add a third model" never adds a duplicate. */
+/** First model not already in the comparison, so "Add a third model" never adds a duplicate. */
 function nextFreeModel(taken: string[]) {
   for (const p of PROVIDERS) {
     for (const m of p.models) {
       const key = refKey({ provider: p.id, model: m.id })
-      if (canWrite(m.kind) && !taken.includes(key)) return key
+      if (!taken.includes(key)) return key
     }
   }
   return taken[0]
@@ -1157,10 +1154,9 @@ function ModelSelect({ label, hideLabel, value, taken = [], onChange }: {
             <optgroup key={p.id} label={p.name}>
               {p.models.map((m) => {
                 const key = refKey({ provider: p.id, model: m.id })
-                const drafts = canWrite(m.kind)
                 return (
-                  <option key={key} value={key} disabled={!drafts || taken.includes(key)}>
-                    {m.id}{drafts ? '' : ` (${KIND_LABEL[m.kind]})`}{taken.includes(key) ? ' (already chosen)' : ''}
+                  <option key={key} value={key} disabled={taken.includes(key)}>
+                    {m.id}{taken.includes(key) ? ' (already chosen)' : ''}
                   </option>
                 )
               })}
