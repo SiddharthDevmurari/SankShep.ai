@@ -3,7 +3,7 @@
   "short_name": "Sankshep",
   "description": "Turn one report, article or advisory into summaries, posts, slides, scripts and translations.",
   "id": "/",
-  "start_url": "/workspace",
+  "start_url": "/",
   "scope": "/",
   "display": "standalone",
   "orientation": "any",
