@@ -281,7 +281,7 @@ export function RightPanel({ runs, runContext, parsedSource, tone, generating, s
                     onClick={() => focusStep(s.id)}
                     className="group flex w-full items-center gap-4 px-4 py-3.5 text-left transition-colors hover:bg-paper focus-visible:bg-paper focus-visible:outline-none"
                   >
-                    <StepNumber n={s.n} done={s.done} />
+                    <StepNumber n={s.n} />
                     <span className="min-w-0 flex-1">
                       <span className="block text-[14px] font-semibold text-ink">{s.title}</span>
                       <span className="block truncate text-[13px] text-ink-mute">{s.value}</span>
@@ -689,7 +689,7 @@ function CompareColumn({ run, format, letter }: { run: ModelRun; format: OutputF
   return (
     <article aria-label={`Model ${letter}: ${run.ref.model}`} className="sk-sheet flex min-w-0 flex-col self-start rounded-2xl bg-white">
       <header className="flex items-start gap-3 border-b border-hair px-5 py-4">
-        <StepNumber n={letter} done />
+        <StepNumber n={letter} />
         <div className="min-w-0 flex-1">
           <p className="text-[12.5px] font-semibold text-ink-mute">{providerInfo(run.ref.provider).name}</p>
           <p className="truncate font-mono text-[13px] text-ink" title={result?.model ?? run.ref.model}>{result?.model ?? run.ref.model}</p>

@@ -481,7 +481,7 @@ export function LeftPanel({ onGenerate, generating, onStatusChange }: Props) {
       <div className="flex-1 divide-y divide-line lg:overflow-y-auto">
 
         {/* ── 01 Source ──────────────────────────────────────────────────── */}
-        <Step id={STEP_IDS.source} n="01" title="Source" hint="What should we work from?" done={!!sourceLabel}>
+        <Step id={STEP_IDS.source} n="01" title="Source" hint="What should we work from?">
           <div role="tablist" aria-label="Source type" className="grid grid-cols-3 gap-1 rounded-xl border border-line bg-white p-1">
             {INPUT_MODES.map(({ id, label, icon: Icon }) => {
               const active = inputMode === id
@@ -606,7 +606,6 @@ export function LeftPanel({ onGenerate, generating, onStatusChange }: Props) {
           n="02"
           title="Outputs"
           hint="Each format is drafted in parallel. Instructions shape every draft."
-          done={outputCount > 0}
           action={
             <button
               type="button"
@@ -712,7 +711,7 @@ export function LeftPanel({ onGenerate, generating, onStatusChange }: Props) {
         </Step>
 
         {/* ── 03 Voice ───────────────────────────────────────────────────── */}
-        <Step id={STEP_IDS.voice} n="03" title="Voice" hint="Tone applies to every draft." done>
+        <Step id={STEP_IDS.voice} n="03" title="Voice" hint="Tone applies to every draft.">
           <div role="radiogroup" aria-label="Tone" className="grid grid-cols-2 gap-2 xl:grid-cols-4">
             {TONES.map(({ value, note }) => {
               const active = tone === value
@@ -741,7 +740,6 @@ export function LeftPanel({ onGenerate, generating, onStatusChange }: Props) {
           n="04"
           title="Audience"
           hint="Who will read, watch or receive the final content. Optional."
-          done={audienceReady}
           collapsible={{
             open: audienceOpen,
             onToggle: () => setAudienceOpen((v) => !v),
@@ -909,7 +907,6 @@ export function LeftPanel({ onGenerate, generating, onStatusChange }: Props) {
           n="05"
           title="AI engine & provider"
           hint="Your model, your key."
-          done={engineReady}
           collapsible={{
             open: engineOpen,
             onToggle: () => setEngineOpen((v) => !v),
@@ -1046,12 +1043,11 @@ function SummaryCell({ label, value, missing }: { label: string; value: string; 
   )
 }
 
-function Step({ id, n, title, hint, done, action, collapsible, children }: {
+function Step({ id, n, title, hint, action, collapsible, children }: {
   id: string
   n: string
   title: string
   hint?: string
-  done?: boolean
   action?: React.ReactNode
   /** Folds the step to one summary line; used for the optional steps so the panel stays short. */
   collapsible?: { open: boolean; onToggle: () => void; summary: string; warn?: boolean }
@@ -1076,7 +1072,7 @@ function Step({ id, n, title, hint, done, action, collapsible, children }: {
             aria-controls={`${id}-body`}
             className="group flex w-full items-start gap-3 px-6 py-5 text-left transition-colors hover:bg-paper focus-visible:bg-paper focus-visible:outline-none lg:px-7"
           >
-            <StepNumber n={n} done={done} />
+            <StepNumber n={n} />
             <span className="min-w-0 flex-1">
               <span className="block text-[15.5px] font-semibold leading-7 text-ink">{title}</span>
               <span className={`block truncate text-[13px] ${warn && !open ? 'font-medium text-red-700' : 'text-ink-mute'}`}>
@@ -1099,7 +1095,7 @@ function Step({ id, n, title, hint, done, action, collapsible, children }: {
     <section id={id} aria-labelledby={`${id}-title`} tabIndex={-1} className="scroll-mt-4 px-6 py-6 outline-none lg:px-7">
       <header className="mb-4 flex items-start justify-between gap-3">
         <div className="flex items-start gap-3">
-          <StepNumber n={n} done={done} />
+          <StepNumber n={n} />
           <div>
             <h3 id={`${id}-title`} className="text-[15.5px] font-semibold leading-7 text-ink">{title}</h3>
             {hint && <p className="text-[13px] text-ink-mute">{hint}</p>}
@@ -1114,16 +1110,12 @@ function Step({ id, n, title, hint, done, action, collapsible, children }: {
 
 /**
  * Shared by the config panel and the empty canvas so both read as the same steps.
- * Every badge is the same solid pill; only the numeral's colour marks a finished step.
- * What is still missing is said in words next to it ("Go to step", the step's summary).
+ * Every badge looks the same; what is still missing is said in words next to it
+ * ("Go to step", the step's summary), not by the badge.
  */
-export function StepNumber({ n, done }: { n: string; done?: boolean }) {
+export function StepNumber({ n }: { n: string }) {
   return (
-    <span
-      className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-ink font-mono text-[12px] font-semibold tabular-nums ${
-        done ? 'text-matcha' : 'text-paper'
-      }`}
-    >
+    <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-ink font-mono text-[12px] font-semibold tabular-nums text-matcha">
       {n}
     </span>
   )
