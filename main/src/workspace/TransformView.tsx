@@ -21,7 +21,7 @@ export function TransformView({ onOpenHistory }: { onOpenHistory?: () => void })
   const [parsedSource, setParsedSource] = useState('')
   const [selectedFormats, setSelectedFormats] = useState<OutputFormat[]>([])
   const [tone, setTone] = useState<ToneOption>('Professional')
-  const [notice, setNotice] = useState<string | null>(null)
+  const [notice, setNotice] = useState<{ text: string; kind: 'error' | 'info' } | null>(null)
   const [status, setStatus] = useState<LeftPanelStatus | null>(null)
   // Drafts written since the workspace opened, and how long the last run took.
   const [session, setSession] = useState<{ drafts: number; lastMs: number | null }>({ drafts: 0, lastMs: null })
@@ -52,6 +52,7 @@ export function TransformView({ onOpenHistory }: { onOpenHistory?: () => void })
       const output = await runPipeline({
         content: cfg.content,
         images: cfg.images,
+        url: cfg.url,
         formats: cfg.formats,
         tone: cfg.tone,
         customSchema: cfg.customSchema,
@@ -62,9 +63,10 @@ export function TransformView({ onOpenHistory }: { onOpenHistory?: () => void })
       setParsedSource(output.parsedSource)
       setRuns(output.runs)
       setRunContext({ engine: cfg.engine, audience: cfg.audience, imageReadBy: output.imageReadBy })
+      if (output.sourceNote) setNotice({ text: output.sourceNote, kind: 'info' })
 
       // One activity row per model, so History lists every model's drafts separately.
-      // An image source has no text of its own; size it by what was read from the image.
+      // An image or link source has no text of its own; size it by what was read from it.
       const source = cfg.content.trim() ? cfg.content : output.parsedSource
       let written = 0
       for (const run of output.runs) {
@@ -95,7 +97,7 @@ export function TransformView({ onOpenHistory }: { onOpenHistory?: () => void })
         error_message: err instanceof Error ? err.message : String(err),
         duration_ms: Date.now() - t0,
       })
-      setNotice(`Generation failed: ${err instanceof Error ? err.message : String(err)}`)
+      setNotice({ text: `Generation failed: ${err instanceof Error ? err.message : String(err)}`, kind: 'error' })
     } finally {
       setGenerating(false)
     }

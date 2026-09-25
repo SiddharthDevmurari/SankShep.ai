@@ -1,0 +1,270 @@
+- generic [ref=e4]:
+  - banner [ref=e5]:
+    - navigation "Main" [ref=e7]:
+      - link "Sankshep home" [ref=e8] [cursor=pointer]:
+        - /url: /
+        - generic [ref=e10]: Sankshep
+      - generic [ref=e11]:
+        - link "How it works" [ref=e12] [cursor=pointer]:
+          - /url: /how-it-works
+        - link "About" [ref=e13] [cursor=pointer]:
+          - /url: /about
+        - link "T&C" [ref=e14] [cursor=pointer]:
+          - /url: /terms-and-conditions
+        - link "Privacy Policy" [ref=e15] [cursor=pointer]:
+          - /url: /privacy-policy
+        - link "Log in / Sign up" [ref=e16] [cursor=pointer]:
+          - /url: /login
+      - link "Sankshep.ai source code on GitHub" [ref=e17] [cursor=pointer]:
+        - /url: https://github.com/SiddharthDevmurari/SankShep.ai.git
+      - link "Open Workspace" [ref=e20] [cursor=pointer]:
+        - /url: /workspace
+  - main [ref=e23]:
+    - generic [ref=e25]:
+      - generic [ref=e26]:
+        - generic [ref=e27]: AI Content Transformation
+        - heading "Turn long, messy reports into ready-to-share content." [level=1] [ref=e28]:
+          - generic [ref=e29]: Turn
+          - generic [ref=e30]: long,
+          - generic [ref=e31]: messy
+          - generic [ref=e32]: reports
+          - generic [ref=e33]: into
+          - generic [ref=e34]: ready-to-share
+          - generic [ref=e35]: content.
+        - paragraph [ref=e36]: Drop in research papers, policy briefs, YouTube links, or rough notes. Sankshep instantly creates clean summaries, video scripts, LinkedIn posts, and slide decks — keeping your data safe and private.
+        - generic [ref=e37]:
+          - link "Launch Workspace" [ref=e38] [cursor=pointer]:
+            - /url: /workspace
+          - link "See How It Works" [ref=e41] [cursor=pointer]:
+            - /url: "#how-it-works"
+        - generic [ref=e42]:
+          - generic [ref=e43]: No credit card
+          - generic [ref=e46]: Private by default
+      - generic [ref=e50]:
+        - generic [ref=e51]: How Sankshep works
+        - generic [ref=e57]:
+          - paragraph [ref=e58]: Step 1 — Ingest
+          - generic [ref=e60]:
+            - generic [ref=e61]:
+              - paragraph [ref=e66]: Q3_Report.pdf
+              - paragraph [ref=e67]: 42 MB · 84 pages
+            - generic [ref=e68]:
+              - generic [ref=e69]: PDF
+              - generic [ref=e70]: DOCX
+              - generic [ref=e71]: MP4
+              - generic [ref=e72]: YouTube
+              - generic [ref=e73]: Web URL
+        - generic [ref=e74]:
+          - generic [ref=e75]:
+            - button "Scene 1" [ref=e76]
+            - button "Scene 2" [ref=e78]
+            - button "Scene 3" [ref=e79]
+            - button "Scene 4" [ref=e80]
+          - generic [ref=e81]:
+            - button "Pause" [ref=e82]
+            - paragraph [ref=e86]: Drop in any report, paper, or link.
+            - generic [ref=e87]: 0:00 / 0:12
+    - generic [ref=e89]:
+      - generic [ref=e90]:
+        - text: Privacy first
+        - heading "Built for teams that care about privacy." [level=2] [ref=e91]:
+          - generic [ref=e92]: Built
+          - generic [ref=e93]: for
+          - generic [ref=e94]: teams
+          - generic [ref=e95]: that
+          - generic [ref=e96]: care
+          - generic [ref=e97]: about
+          - generic [ref=e98]: privacy.
+      - generic [ref=e99]:
+        - generic [ref=e100]:
+          - heading "Runs locally & on-premise" [level=3] [ref=e104]
+          - paragraph [ref=e105]: Deploy inside your own perimeter. Nothing leaves your infrastructure.
+        - generic [ref=e106]:
+          - heading "Zero training on your data" [level=3] [ref=e110]
+          - paragraph [ref=e111]: Your documents are never used to train models. Ever.
+        - generic [ref=e112]:
+          - heading "100% source verification" [level=3] [ref=e115]
+          - paragraph [ref=e116]: Every claim links back to the exact passage in your source.
+    - generic [ref=e118]:
+      - generic [ref=e119]:
+        - generic [ref=e120]: The pipeline
+        - heading "How Sankshep turns one source into every format." [level=2] [ref=e122]:
+          - generic [ref=e123]: How
+          - generic [ref=e124]: Sankshep
+          - generic [ref=e125]: turns
+          - generic [ref=e126]: one
+          - generic [ref=e127]: source
+          - generic [ref=e128]: into
+          - generic [ref=e129]: every
+          - generic [ref=e130]: format.
+        - paragraph [ref=e131]: One canonical understanding of your content feeds a private, agentic engine — so every deliverable stays consistent, verifiable, and on-brand.
+      - generic [ref=e132]:
+        - generic [ref=e134]:
+          - generic [ref=e138]: Step 1/8
+          - generic [ref=e139]: · Q3_Report.pdf uploaded — 42 MB accepted.
+        - generic [ref=e140]:
+          - generic [ref=e141]:
+            - button "01 Ingest Drop in PDFs, docs, audio, video, or just paste a link — from anywhere you keep your content. PDF Audio Video URL" [ref=e142]:
+              - generic [ref=e144]: "01"
+              - heading "Ingest" [level=3] [ref=e149]
+              - paragraph [ref=e150]: Drop in PDFs, docs, audio, video, or just paste a link — from anywhere you keep your content.
+              - generic [ref=e151]:
+                - generic [ref=e152]: PDF
+                - generic [ref=e153]: Audio
+                - generic [ref=e154]: Video
+                - generic [ref=e155]: URL
+            - button "02 Parse We read the layout, tables, and even spoken words, then turn everything into clean, usable text. LlamaParse Unstructured Whisper" [ref=e159]:
+              - generic [ref=e160]: "02"
+              - heading "Parse" [level=3] [ref=e166]
+              - paragraph [ref=e167]: We read the layout, tables, and even spoken words, then turn everything into clean, usable text.
+              - generic [ref=e168]:
+                - generic [ref=e169]: LlamaParse
+                - generic [ref=e170]: Unstructured
+                - generic [ref=e171]: Whisper
+            - button "03 Chunk The text is broken into bite-sized pieces that each keep their full meaning and context. Semantic" [ref=e175]:
+              - generic [ref=e176]: "03"
+              - heading "Chunk" [level=3] [ref=e181]
+              - paragraph [ref=e182]: The text is broken into bite-sized pieces that each keep their full meaning and context.
+              - generic [ref=e183]: Semantic
+            - button "04 Embed & store Everything is saved in one searchable place, so the right passage is always easy to find. pgvector" [ref=e188]:
+              - generic [ref=e189]: "04"
+              - heading "Embed & store" [level=3] [ref=e195]
+              - paragraph [ref=e196]: Everything is saved in one searchable place, so the right passage is always easy to find.
+              - generic [ref=e197]: pgvector
+          - generic [ref=e202]:
+            - button "08 Deliver You get polished, ready-to-share files — with every claim linked back to the source. Deck PDF Word Social" [ref=e203]:
+              - generic [ref=e204]: "08"
+              - heading "Deliver" [level=3] [ref=e209]
+              - paragraph [ref=e210]: You get polished, ready-to-share files — with every claim linked back to the source.
+              - generic [ref=e211]:
+                - generic [ref=e212]: Deck
+                - generic [ref=e213]: PDF
+                - generic [ref=e214]: Word
+                - generic [ref=e215]: Social
+            - button "07 Validate Every draft is fact-checked against your source and rewritten until it holds up. Pydantic Reflection" [ref=e219]:
+              - generic [ref=e220]: "07"
+              - heading "Validate" [level=3] [ref=e226]
+              - paragraph [ref=e227]: Every draft is fact-checked against your source and rewritten until it holds up.
+              - generic [ref=e228]:
+                - generic [ref=e229]: Pydantic
+                - generic [ref=e230]: Reflection
+            - button "06 Generate Your summary, slide deck, video script, and social posts are all drafted at the same time. vLLM Llama-3" [ref=e234]:
+              - generic [ref=e235]: "06"
+              - heading "Generate" [level=3] [ref=e240]
+              - paragraph [ref=e241]: Your summary, slide deck, video script, and social posts are all drafted at the same time.
+              - generic [ref=e242]:
+                - generic [ref=e243]: vLLM
+                - generic [ref=e244]: Llama-3
+            - button "05 Orchestrate Smart assistants take over and decide exactly what to build and in what order. LangGraph Router" [ref=e248]:
+              - generic [ref=e249]: "05"
+              - heading "Orchestrate" [level=3] [ref=e255]
+              - paragraph [ref=e256]: Smart assistants take over and decide exactly what to build and in what order.
+              - generic [ref=e257]:
+                - generic [ref=e258]: LangGraph
+                - generic [ref=e259]: Router
+      - generic [ref=e260]:
+        - generic [ref=e261]:
+          - paragraph [ref=e262]: No waiting around
+          - paragraph [ref=e265]: Upload big files and keep working — Sankshep processes them in the background and never times out.
+        - generic [ref=e266]:
+          - paragraph [ref=e267]: Everything in one place
+          - paragraph [ref=e270]: Your content and its meaning live together in one spot, so answers stay consistent and never drift.
+        - generic [ref=e271]:
+          - paragraph [ref=e272]: Checks its own work
+          - paragraph [ref=e275]: Sankshep drafts, then reviews and fixes itself — so every output stays true to your original source.
+    - generic [ref=e277]:
+      - generic [ref=e278]:
+        - text: Sankshep Chat
+        - heading "Edit anything by just asking." [level=2] [ref=e279]:
+          - generic [ref=e280]: Edit
+          - generic [ref=e281]: anything
+          - generic [ref=e282]: by
+          - generic [ref=e283]: just
+          - generic [ref=e284]: asking.
+        - paragraph [ref=e285]: Need to change the tone or shorten a 10-page brief? Just type your request below the output, and Sankshep rewrites it in seconds.
+      - generic [ref=e288]:
+        - generic [ref=e289]:
+          - generic [ref=e290]: S
+          - text: Sankshep Chat
+          - generic [ref=e292]: generating
+        - generic [ref=e294]:
+          - text: Turn this
+          - mark [ref=e295]: 20-page security advisory
+          - text: into a
+          - mark [ref=e296]: 3-bullet quick brief
+          - text: .
+        - generic [ref=e297]:
+          - generic [ref=e298]: Ask Sankshep to refine…
+          - button "Regenerate" [ref=e299]
+    - generic [ref=e302]:
+      - generic [ref=e303]:
+        - generic [ref=e304]:
+          - text: How it works
+          - heading "From raw source to polished deliverable in three steps." [level=2] [ref=e305]:
+            - generic [ref=e306]: From
+            - generic [ref=e307]: raw
+            - generic [ref=e308]: source
+            - generic [ref=e309]: to
+            - generic [ref=e310]: polished
+            - generic [ref=e311]: deliverable
+            - generic [ref=e312]: in
+            - generic [ref=e313]: three
+            - generic [ref=e314]: steps.
+        - link "Explore all formats" [ref=e315] [cursor=pointer]:
+          - /url: /workspace
+      - generic [ref=e318]:
+        - article [ref=e319]:
+          - generic [ref=e320]: "01"
+          - generic [ref=e324]:
+            - paragraph [ref=e328]: Drop files or paste a URL
+            - paragraph [ref=e329]: PDF · DOCX · MP4 · Web
+          - heading "Drop in any content up to 30 MB" [level=3] [ref=e330]
+          - paragraph [ref=e331]: Drag & drop PDFs, docs, and images, or paste web URLs. Sankshep reads them all.
+        - article [ref=e332]:
+          - generic [ref=e333]: "02"
+          - generic [ref=e336]:
+            - generic [ref=e337]: Summary
+            - generic [ref=e338]: Advisory
+            - generic [ref=e339]: Slides
+            - generic [ref=e340]: Video
+            - generic [ref=e341]: LinkedIn
+            - generic [ref=e342]: Twitter/X
+          - heading "Pick every format you need" [level=3] [ref=e343]
+          - paragraph [ref=e344]: Choose from Summaries, Advisories, Slides, Video Scripts, or Social posts — all at once.
+        - article [ref=e345]:
+          - generic [ref=e346]: "03"
+          - generic [ref=e349]:
+            - generic [ref=e350]: Prompt › "A one-column brief with a risk table and 3 action items."
+            - generic [ref=e351]: Building custom template…
+          - heading "Design custom formats with AI" [level=3] [ref=e354]
+          - paragraph [ref=e355]: Describe how you want the output arranged, and AI builds a custom template instantly.
+    - generic [ref=e358]:
+      - heading "Give your reports a second life." [level=2] [ref=e359]:
+        - generic [ref=e360]: Give
+        - generic [ref=e361]: your
+        - generic [ref=e362]: reports
+        - generic [ref=e363]: a
+        - generic [ref=e364]: second
+        - generic [ref=e365]: life.
+      - paragraph [ref=e366]: Private, multi-format content creation — from the same trusted source.
+      - link "Open Workspace" [ref=e367] [cursor=pointer]:
+        - /url: /workspace
+  - contentinfo [ref=e370]:
+    - paragraph [aria-hidden] [ref=e372]: Sankshep.ai
+    - generic [ref=e374]:
+      - paragraph [ref=e375]: © 2026 Sankshep.ai · Neural Ninjas VGEC
+      - navigation "Footer" [ref=e376]:
+        - link "Terms and Conditions" [ref=e377] [cursor=pointer]:
+          - /url: /terms-and-conditions
+        - link "Privacy Policy" [ref=e378] [cursor=pointer]:
+          - /url: /privacy-policy
+        - link "Github" [ref=e379] [cursor=pointer]:
+          - /url: https://github.com/SiddharthDevmurari/SankShep.ai.git
+        - link "Workspace" [ref=e380] [cursor=pointer]:
+          - /url: /workspace
+        - link "How it works" [ref=e381] [cursor=pointer]:
+          - /url: /how-it-works
+        - link "The Pipeline" [ref=e382] [cursor=pointer]:
+          - /url: /#how-it-works
+        - link "About Us" [ref=e383] [cursor=pointer]:
+          - /url: /about

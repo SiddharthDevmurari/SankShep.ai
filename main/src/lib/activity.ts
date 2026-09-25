@@ -6,7 +6,7 @@
 
 import { supabase, isMissingSchemaError } from './supabase'
 import type { FormatResult, OutputFormat } from './pipeline'
-import type { ProviderId } from './providers'
+import { PROVIDERS, type ProviderId } from './providers'
 
 export type ActivityAction = 'signup' | 'login' | 'logout' | 'generate' | 'regenerate'
 export type InputType = 'file' | 'url' | 'text'
@@ -96,13 +96,19 @@ export function summariseResults(results: Partial<Record<OutputFormat, FormatRes
   const models: Record<string, string> = {}
   for (const r of list) {
     if (r.status === 'success') outputs[r.format] = r.output
-    // Stored as "provider:model"; rows from before BYOK hold a bare Groq model id.
-    if (r.model) models[r.format] = r.provider ? `${r.provider}:${r.model}` : r.model
+    const stored = storedModel(r)
+    if (stored) models[r.format] = stored
   }
   const status: ActivityStatus =
     errorCount === 0 ? 'success' : successCount === 0 ? 'error' : 'partial'
   const errorMessage = list.find((r) => r.status === 'error')?.error ?? null
   return { successCount, errorCount, outputs, models, status, errorMessage }
+}
+
+/** "provider:model" for the models column; rows from before BYOK hold a bare Groq model id. */
+export function storedModel(r: Pick<FormatResult, 'model' | 'provider'>): string | null {
+  if (!r.model) return null
+  return r.provider ? `${r.provider}:${r.model}` : r.model
 }
 
 export function previewOf(content: string) {
@@ -171,7 +177,8 @@ export interface DraftEntry {
   key: string
   action: ActivityAction
   format: string
-  provider: ProviderId
+  /** Null when the row carries no model record (logged before the models column existed). */
+  provider: ProviderId | null
   model: string | null
   inputWords: number | null
   inputEstimated: boolean
@@ -182,10 +189,16 @@ export interface DraftEntry {
   createdAt: string
 }
 
-/** Rows store "provider:model"; older rows hold a bare model id, and everything before BYOK ran on Groq. */
-function splitStoredModel(value: string | null | undefined): { provider: ProviderId; model: string | null } {
-  const match = value ? /^(groq|gemini|mistral):(.+)$/.exec(value) : null
-  return match ? { provider: match[1] as ProviderId, model: match[2] } : { provider: 'groq', model: value ?? null }
+/**
+ * Rows store "provider:model". Older rows hold a bare model id, whose provider is looked up in the
+ * catalogue (Groq before BYOK). Rows with nothing stored stay unknown rather than guessed.
+ */
+function splitStoredModel(value: string | null | undefined): { provider: ProviderId | null; model: string | null } {
+  if (!value) return { provider: null, model: null }
+  const match = /^(groq|gemini|mistral):(.+)$/.exec(value)
+  if (match) return { provider: match[1] as ProviderId, model: match[2] }
+  const owner = PROVIDERS.find((p) => p.models.some((m) => m.id === value))
+  return { provider: owner?.id ?? 'groq', model: value }
 }
 
 export function toDraftEntries(log: ActivityLog): DraftEntry[] {

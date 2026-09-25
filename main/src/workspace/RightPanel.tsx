@@ -1,10 +1,10 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import {
-  ArrowUp, Check, CircleAlert, Copy, Download, Eye, Hourglass, PanelLeft, PanelLeftClose, PenLine, WandSparkles, X,
+  ArrowUp, Check, CircleAlert, Copy, Download, Eye, Hourglass, Info, PanelLeft, PanelLeftClose, PenLine, WandSparkles, X,
 } from 'lucide-react'
 import type { OutputFormat, FormatResult, ModelRun } from '../lib/pipeline'
 import { regenerateFormat } from '../lib/pipeline'
-import { logActivity, previewOf } from '../lib/activity'
+import { logActivity, previewOf, storedModel } from '../lib/activity'
 import { providerInfo } from '../lib/providers'
 import type { ToneOption } from '../lib/pipeline'
 import { RichText } from './RichText'
@@ -21,7 +21,8 @@ interface Props {
   tone: ToneOption
   generating: boolean
   selectedFormats: OutputFormat[]
-  notice: string | null
+  /** A failed run, or information about how the run went (e.g. a long source was sampled). */
+  notice: { text: string; kind: 'error' | 'info' } | null
   onDismissNotice: () => void
   status: LeftPanelStatus | null
 }
@@ -123,6 +124,7 @@ export function RightPanel({ runs, runContext, parsedSource, tone, generating, s
       runContext.engine.keys,
       runContext.audience,
     )
+    const model = storedModel(result)
     void logActivity({
       action: 'regenerate',
       ...previewOf(parsedSource),
@@ -130,7 +132,7 @@ export function RightPanel({ runs, runContext, parsedSource, tone, generating, s
       tone,
       refinement: refinement.trim() || null,
       outputs: result.status === 'success' ? { [currentTab]: result.output } : null,
-      models: result.model ? { [currentTab]: result.model } : null,
+      models: model ? { [currentTab]: model } : null,
       status: result.status,
       success_count: result.status === 'success' ? 1 : 0,
       error_count: result.status === 'success' ? 0 : 1,
@@ -151,8 +153,10 @@ export function RightPanel({ runs, runContext, parsedSource, tone, generating, s
 
   const noticeBanner = (notice || exportError) && (
     <div role="alert" className="sk-rise absolute left-1/2 top-6 z-20 flex w-[min(640px,calc(100%-3rem))] -translate-x-1/2 items-start gap-3 rounded-2xl bg-white px-4 py-3.5 text-[13px] text-ink sk-float">
-      <CircleAlert className="mt-0.5 h-4 w-4 shrink-0 text-red-600" />
-      <p className="flex-1 leading-relaxed">{exportError ?? notice}</p>
+      {exportError || notice?.kind === 'error'
+        ? <CircleAlert className="mt-0.5 h-4 w-4 shrink-0 text-red-600" />
+        : <Info className="mt-0.5 h-4 w-4 shrink-0 text-ink-mute" />}
+      <p className="flex-1 leading-relaxed">{exportError ?? notice?.text}</p>
       <button onClick={() => (exportError ? setExportError(null) : onDismissNotice())} aria-label="Dismiss" className="rounded-full p-1 text-ink-mute hover:bg-paper-deep hover:text-ink">
         <X className="h-3.5 w-3.5" />
       </button>

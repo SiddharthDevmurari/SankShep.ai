@@ -10,7 +10,7 @@
  */
 
 import { chat, type ApiKeys, type ImageInput, type ModelRef, type ProviderId } from './providers'
-import { describeReader, pickImageReader, readImage } from './ingest'
+import { describeReader, pickImageReader, readImages } from './ingest'
 
 export type OutputFormat =
   | 'Video'
@@ -49,8 +49,9 @@ export interface EngineConfig {
 }
 
 export interface PipelineInput {
-  content: string          // source text or file-extracted text (may be empty when images carry the source)
+  content: string          // source text or file-extracted text (may be empty when images or a link carry the source)
   images?: ImageInput[]
+  url?: string             // a web page to read as the source
   formats: OutputFormat[]
   tone: ToneOption
   customSchema?: string
@@ -80,38 +81,109 @@ export interface PipelineOutput {
   durationMs: number
   /** Which reader turned the uploaded image into text, when there was one. */
   imageReadBy: string | null
+  /** Set when the source was longer than a model takes in one request and only passages of it were sent. */
+  sourceNote: string | null
 }
 
 // ─── Node: Ingest ────────────────────────────────────────────────────────────
 
-async function ingestNode(input: PipelineInput): Promise<{ text: string; readBy: string | null }> {
-  if (!input.images?.length) return { text: input.content, readBy: null }
-  const reader = pickImageReader(input.engine.models, input.engine.keys)
-  const extracted = await Promise.all(input.images.map((img) => readImage(img, reader, input.engine.keys)))
-  return {
-    text: [input.content.trim(), ...extracted].filter(Boolean).join('\n\n'),
-    readBy: describeReader(reader),
+/**
+ * Reads a web page as Markdown through Jina Reader, which fetches server-side and allows CORS.
+ * Models can't open links themselves; without this they would invent the page.
+ */
+async function readUrl(raw: string): Promise<string> {
+  const url = /^https?:\/\//i.test(raw.trim()) ? raw.trim() : `https://${raw.trim()}`
+  let res: Response
+  try {
+    res = await fetch(`https://r.jina.ai/${url}`, { headers: { Accept: 'text/plain' }, signal: AbortSignal.timeout(60_000) })
+  } catch {
+    throw new Error(`Couldn't open ${url}. Check the link, or paste the page's text instead.`)
   }
+  const text = res.ok ? (await res.text()).trim() : ''
+  // The reader prefixes Title / URL Source / Markdown Content headers; the body is what matters.
+  const marker = 'Markdown Content:'
+  const body = text.includes(marker) ? text.slice(text.indexOf(marker) + marker.length).trim() : text
+  if (!body) throw new Error(`Couldn't read ${url} (${res.status}). The page may need a login. Paste its text instead.`)
+  // Keep link text but drop images and URLs: they use up the model's source budget and say nothing.
+  return body
+    .replace(/!\[[^\]]*\]\([^)]*\)/g, '')
+    .replace(/\[([^\]]*)\]\([^)]*\)/g, '$1')
+}
+
+async function ingestNode(input: PipelineInput): Promise<{ text: string; readBy: string | null }> {
+  const parts = [input.content.trim()]
+  if (input.url?.trim()) parts.push(await readUrl(input.url))
+  let readBy: string | null = null
+  if (input.images?.length) {
+    const reader = pickImageReader(input.engine.models, input.engine.keys)
+    parts.push(await readImages(input.images, reader, input.engine.keys))
+    readBy = describeReader(reader)
+  }
+  return { text: parts.filter(Boolean).join('\n\n'), readBy }
 }
 
 // ─── Node: Parse ─────────────────────────────────────────────────────────────
 
-async function parseNode(raw: string, ref: ModelRef, keys: ApiKeys): Promise<string> {
-  // For URL/file content already extracted to text, this is a light cleaning pass
-  const result = await chat(
-    ref,
-    [
-      {
-        role: 'system',
-        content:
-          'You are a document parser. Clean and structure the provided raw content into well-formatted paragraphs. Remove noise, fix formatting, preserve all factual content. Output only the cleaned text.',
-      },
-      { role: 'user', content: raw.slice(0, 12000) },
-    ],
-    keys,
-  )
-  return result.content
+/**
+ * Normalises extracted text locally. An earlier version had a model rewrite the
+ * source, which cut it at 12,000 characters and spent the rate limit before any draft.
+ */
+function parseNode(raw: string): string {
+  return raw
+    .replace(/\r\n?/g, '\n')
+    // eslint-disable-next-line no-control-regex
+    .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g, '')
+    .replace(/[ \t ]+/g, ' ')
+    .replace(/ *\n */g, '\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim()
 }
+
+/**
+ * Characters of source each provider gets per draft. Groq's free tier allows 8,000 tokens a
+ * minute across prompt and draft, so one request must stay well under that; Mistral and
+ * Gemini take far more.
+ */
+const SOURCE_BUDGET: Record<ProviderId, number> = { groq: 12_000, mistral: 60_000, gemini: 200_000 }
+
+/** Parallel drafts per provider. More than this only trips per-minute limits sooner. */
+const CONCURRENCY: Record<ProviderId, number> = { groq: 2, mistral: 2, gemini: 3 }
+
+const SAMPLE_WINDOWS = 6
+
+/** Fits a long source into `budget` by taking the opening of evenly spaced sections, so the whole document is represented. */
+function fitSource(text: string, budget: number): string {
+  if (text.length <= budget) return text
+  const window = text.length / SAMPLE_WINDOWS
+  const take = Math.floor(budget / SAMPLE_WINDOWS) - 10
+  const pieces: string[] = []
+  for (let i = 0; i < SAMPLE_WINDOWS; i++) {
+    const from = Math.floor(i * window)
+    let piece = text.slice(from, from + take)
+    // End on a sentence or line break so no piece stops mid-word.
+    const cut = Math.max(piece.lastIndexOf('\n'), piece.lastIndexOf('. '))
+    if (cut > take * 0.6) piece = piece.slice(0, cut + 1)
+    pieces.push(piece.trim())
+  }
+  return pieces.join('\n\n[…]\n\n')
+}
+
+/** Runs `tasks` with at most `limit` in flight, keeping results in order. */
+async function withLimit<T>(tasks: (() => Promise<T>)[], limit: number): Promise<T[]> {
+  const results: T[] = new Array(tasks.length)
+  let next = 0
+  const worker = async () => {
+    while (next < tasks.length) {
+      const i = next++
+      results[i] = await tasks[i]()
+    }
+  }
+  await Promise.all(Array.from({ length: Math.min(limit, tasks.length) }, worker))
+  return results
+}
+
+const WORDS = new Intl.NumberFormat('en-US')
+const wordCount = (text: string) => text.match(/\S+/g)?.length ?? 0
 
 // ─── Node: Format Generator ──────────────────────────────────────────────────
 
@@ -258,15 +330,17 @@ ${source}`,
 Source content:
 ${source}`,
     },
+    // Sent once per chunk by translateNode, so a long document is translated in full.
     'Language Translation': {
-      system: `You are a professional translator and cultural adaptation specialist.${schemaInstr}`,
-      user: `Translate the following content into ${targetLanguage ?? 'Hindi'}. Requirements:
-- Maintain the original meaning, tone, and structure
-- Use natural, idiomatic phrasing (not literal translation)
-- Preserve technical terms with their ${targetLanguage ?? 'Hindi'} equivalent (add English in brackets if no equivalent)
-- Output the full translation
+      system: `You are a professional translator. Translate the ENTIRE provided text strictly line-by-line. Do not summarize, truncate, or omit any sections. The text may be one part of a longer document: translate exactly this part, with no introduction or closing remarks.${schemaInstr}`,
+      user: `Translate the following text into ${targetLanguage ?? 'Hindi'}. Requirements:
+- Translate every line, heading, list item and table cell, in the original order
+- Keep the line breaks, Markdown and numbering exactly as in the source
+- Use natural, idiomatic ${targetLanguage ?? 'Hindi'}, keeping the original meaning and tone
+- Keep technical terms, adding the English in brackets when there is no ${targetLanguage ?? 'Hindi'} equivalent
+- Output only the translation
 
-Source content:
+Text to translate:
 ${source}`,
     },
     'Custom Format': {
@@ -296,6 +370,10 @@ async function formatNode(
   ref: ModelRef,
 ): Promise<FormatResult> {
   try {
+    if (format === 'Language Translation') {
+      const { text, model } = await translateNode(parsedSource, input, ref)
+      return { format, output: text, status: 'success', model, provider: ref.provider }
+    }
     const { system, user } = buildPrompt(format, parsedSource, input.tone, input.customSchema ?? '', input.targetLanguage)
     const result = await chat(
       ref,
@@ -315,6 +393,65 @@ async function formatNode(
       error: err instanceof Error ? err.message : String(err),
     }
   }
+}
+
+// ─── Node: Translate ─────────────────────────────────────────────────────────
+
+/**
+ * Source characters per translation request. The translation comes out longer than the source
+ * (Indic scripts take 2–4× the tokens of English), so a chunk must leave its translation room
+ * inside TRANSLATION_MAX_TOKENS.
+ */
+const TRANSLATION_CHUNK: Record<ProviderId, number> = { groq: 2_500, mistral: 4_000, gemini: 8_000 }
+const TRANSLATION_MAX_TOKENS = 6_000
+/** Below this a chunk that still overflows is sent as it is, rather than split again. */
+const MIN_SPLIT_CHARS = 300
+
+/** Splits text into chunks of at most `size` characters, at paragraph, line or sentence breaks. */
+function chunkText(text: string, size: number): string[] {
+  if (text.length <= size) return [text]
+  const chunks: string[] = []
+  let rest = text
+  while (rest.length > size) {
+    const window = rest.slice(0, size)
+    const cut = [window.lastIndexOf('\n\n'), window.lastIndexOf('\n'), window.lastIndexOf('. ')].find((i) => i > size * 0.4)
+    const end = cut !== undefined ? cut + 1 : size
+    chunks.push(rest.slice(0, end).trim())
+    rest = rest.slice(end)
+  }
+  if (rest.trim()) chunks.push(rest.trim())
+  return chunks
+}
+
+/**
+ * Translates the whole source, not a sample: chunk by chunk in order, joined back together.
+ * A chunk whose translation hits the output limit is halved and retried, so nothing is cut off.
+ */
+async function translateNode(source: string, input: PipelineInput, ref: ModelRef): Promise<{ text: string; model: string }> {
+  let model = ref.model
+  const translate = async (chunk: string): Promise<string> => {
+    const { system, user } = buildPrompt('Language Translation', chunk, input.tone, input.customSchema ?? '', input.targetLanguage)
+    const result = await chat(
+      ref,
+      [
+        { role: 'system', content: system + audienceInstruction(input.audience) },
+        { role: 'user', content: user },
+      ],
+      input.engine.keys,
+      { maxTokens: TRANSLATION_MAX_TOKENS, temperature: 0.2 },
+    )
+    model = result.model
+    if (!result.truncated || chunk.length < MIN_SPLIT_CHARS) return result.content
+    const halves = chunkText(chunk, Math.ceil(chunk.length / 2))
+    const parts: string[] = []
+    for (const half of halves) parts.push(await translate(half))
+    return parts.join('\n\n')
+  }
+
+  const parts: string[] = []
+  // In order, one at a time: the parts must line up, and the provider's rate limit is shared.
+  for (const chunk of chunkText(source, TRANSLATION_CHUNK[ref.provider])) parts.push(await translate(chunk))
+  return { text: parts.join('\n\n'), model }
 }
 
 // ─── Regenerate a single format (independent, no side-effects) ───────────────
@@ -343,7 +480,8 @@ export async function regenerateFormat(
         },
       ],
       keys,
-      { maxTokens: 2048, temperature: 0.65 },
+      // A refined translation is rewritten whole, so it needs the translation's room, not a draft's.
+      { maxTokens: format === 'Language Translation' ? TRANSLATION_MAX_TOKENS : 2048, temperature: 0.65 },
     )
     return { format, output: result.content, status: 'success', model: result.model, provider: ref.provider }
   } catch (err) {
@@ -360,18 +498,13 @@ export async function regenerateFormat(
 
 export async function runPipeline(input: PipelineInput): Promise<PipelineOutput> {
   const t0 = Date.now()
-  const [primary] = input.engine.models
 
-  // Node 1: Ingest. An image that can't be read stops the run: there is no source without it.
+  // Node 1: Ingest. A source that can't be read stops the run: there is nothing to draft from.
   const ingested = await ingestNode(input)
 
-  // Node 2: Parse once with the first model; every model then drafts from the same cleaned source.
-  let parsedSource: string
-  try {
-    parsedSource = await parseNode(ingested.text, primary, input.engine.keys)
-  } catch {
-    parsedSource = ingested.text // fallback to raw if parse fails
-  }
+  // Node 2: Parse locally; every model drafts from the same cleaned source.
+  const parsedSource = parseNode(ingested.text)
+  if (!parsedSource) throw new Error('The source has no readable text. Try another file, or paste the text.')
 
   // When no standard formats are selected but a custom schema is provided,
   // treat it as a standalone Custom Format generation.
@@ -380,20 +513,27 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineOutput>
       ? ['Custom Format']
       : input.formats
 
-  // Node 3+: every (model, format) pair in parallel
+  // Node 3+: every (model, format) pair, a few at a time per provider so rate limits hold.
+  // Models from the same provider share its limit, so they queue behind each other.
+  const queues = new Map<ProviderId, Promise<unknown>>()
   const runs = await Promise.all(
     input.engine.models.map(async (ref): Promise<ModelRun> => {
-      const settled = await Promise.allSettled(formatsToRun.map((fmt) => formatNode(fmt, parsedSource, input, ref)))
+      const source = fitSource(parsedSource, SOURCE_BUDGET[ref.provider])
+      // Translation works through the full source in chunks; every other format drafts from the fitted sample.
+      const tasks = formatsToRun.map((fmt) => () => formatNode(fmt, fmt === 'Language Translation' ? parsedSource : source, input, ref))
+      const drafts = (queues.get(ref.provider) ?? Promise.resolve()).then(() => withLimit(tasks, CONCURRENCY[ref.provider]))
+      queues.set(ref.provider, drafts)
       const results: Record<string, FormatResult> = {}
-      settled.forEach((s, i) => {
-        const fmt = formatsToRun[i]
-        results[fmt] = s.status === 'fulfilled'
-          ? s.value
-          : { format: fmt, output: '', status: 'error', error: s.reason?.message ?? 'Unknown error' }
-      })
+      for (const r of await drafts) results[r.format] = r
       return { ref, results: results as Record<OutputFormat, FormatResult> }
     }),
   )
 
-  return { parsedSource, runs, durationMs: Date.now() - t0, imageReadBy: ingested.readBy }
+  const smallest = Math.min(...input.engine.models.map((r) => SOURCE_BUDGET[r.provider]))
+  const sampled = formatsToRun.some((f) => f !== 'Language Translation')
+  const sourceNote = sampled && parsedSource.length > smallest
+    ? `The source is ${WORDS.format(wordCount(parsedSource))} words, more than ${input.engine.models.length > 1 ? 'some of these models' : 'this model'} can take in one request, so the drafts were written from passages spread across the whole document (about ${WORDS.format(wordCount(fitSource(parsedSource, smallest)))} words)${formatsToRun.includes('Language Translation') ? '. The translation covers the full text' : ''}. Gemini models read much longer sources.`
+    : null
+
+  return { parsedSource, runs, durationMs: Date.now() - t0, imageReadBy: ingested.readBy, sourceNote }
 }

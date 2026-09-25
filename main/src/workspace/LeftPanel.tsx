@@ -11,11 +11,13 @@ import {
 } from '../lib/providers'
 import { hasGroqKey } from '../lib/groq'
 import { describeReader, pickImageReader } from '../lib/ingest'
-import { extractDocumentText, isDocumentFile } from '../lib/documents'
+import { extractDocument, isDocumentFile } from '../lib/documents'
 
 export interface LeftPanelConfig {
   content: string
   images: ImageInput[]
+  /** A link to read as the source; fetched when the run starts. */
+  url?: string
   formats: OutputFormat[]
   tone: ToneOption
   customSchema: string
@@ -90,6 +92,11 @@ function isTextFile(file: File) {
   return file.type.startsWith('text/') || /\.(txt|csv|json|md)$/i.test(file.name)
 }
 
+/** Legacy Word files use a binary format the in-browser parser can't read. */
+function isLegacyOfficeFile(file: File) {
+  return /\.(doc|ppt|xls)$/i.test(file.name)
+}
+
 function isImageFile(file: File) {
   return file.type.startsWith('image/') || /\.(png|jpe?g|webp)$/i.test(file.name)
 }
@@ -143,7 +150,9 @@ export function LeftPanel({ onGenerate, generating, onStatusChange }: Props) {
   const [dragOver, setDragOver] = useState(false)
   const [uploadedFile, setUploadedFile] = useState<File | null>(null)
   const [extractedText, setExtractedText] = useState('')
-  const [image, setImage] = useState<ImageInput | null>(null)
+  // An uploaded image, or a scanned PDF's pages; read at generate time.
+  const [images, setImages] = useState<ImageInput[]>([])
+  const [scanNote, setScanNote] = useState<string | null>(null)
   // True while a PDF/DOCX is being turned into text; Generate waits for it.
   const [parsing, setParsing] = useState(false)
   // Bumped on every new file or clear, so a slow parse can't land on top of a newer choice.
@@ -163,7 +172,7 @@ export function LeftPanel({ onGenerate, generating, onStatusChange }: Props) {
   // 05 Engine
   const [engineMode, setEngineMode] = useState<EngineMode>('single')
   const [singleModel, setSingleModel] = useState(refKey(DEFAULT_MODEL))
-  const [compareModels, setCompareModels] = useState<string[]>([refKey(DEFAULT_MODEL), 'groq:openai/gpt-oss-120b'])
+  const [compareModels, setCompareModels] = useState<string[]>([refKey(DEFAULT_MODEL), 'groq:openai/gpt-oss-20b'])
   const [keys, setKeys] = useState<ApiKeys>({})
   const [engineOpen, setEngineOpen] = useState(false)
 
@@ -190,39 +199,61 @@ export function LeftPanel({ onGenerate, generating, onStatusChange }: Props) {
       return
     }
     const token = ++fileToken.current
-    setFormError(null)
-    setUploadedFile(file)
-    setImage(null)
-    setParsing(false)
-    if (isImageFile(file)) {
-      // Images are read at generate time by a vision model or on-device OCR (lib/ingest.ts).
-      setExtractedText('')
-      try {
-        setImage(await readAsImageInput(file))
-      } catch {
-        setUploadedFile(null)
-        setFormError(`Couldn't read “${file.name}”. Try saving it again as PNG or JPG.`)
-      }
-    } else if (isTextFile(file)) {
-      setExtractedText(await file.text())
-    } else if (isDocumentFile(file)) {
-      // PDF/DOCX are parsed to plain text here, so the pipeline never sees the binary file (lib/documents.ts).
-      setExtractedText('')
-      setParsing(true)
-      try {
-        const text = await extractDocumentText(file)
-        if (token === fileToken.current) setExtractedText(text)
-      } catch (err) {
-        if (token !== fileToken.current) return
-        setUploadedFile(null)
-        setFormError(err instanceof Error ? err.message : String(err))
-      } finally {
-        if (token === fileToken.current) setParsing(false)
-      }
-    } else {
+    const current = () => token === fileToken.current
+    const reject = (message: string) => {
+      if (!current()) return
       setUploadedFile(null)
       setExtractedText('')
-      setFormError(`“${file.name}” isn't a supported file. Upload a PDF, DOCX, TXT, CSV, JSON, Markdown or image file.`)
+      setImages([])
+      setFormError(message)
+    }
+    setFormError(null)
+    setUploadedFile(file)
+    setExtractedText('')
+    setImages([])
+    setScanNote(null)
+    setParsing(false)
+
+    if (isImageFile(file)) {
+      // Images are read at generate time by a vision model or on-device OCR (lib/ingest.ts).
+      try {
+        const img = await readAsImageInput(file)
+        if (current()) setImages([img])
+      } catch {
+        reject(`Couldn't read “${file.name}”. Try saving it again as PNG or JPG.`)
+      }
+    } else if (isTextFile(file)) {
+      try {
+        const text = (await file.text()).trim()
+        if (!text) return reject(`“${file.name}” is empty.`)
+        if (current()) setExtractedText(text)
+      } catch {
+        reject(`Couldn't read “${file.name}”. Try saving it again as UTF-8 text.`)
+      }
+    } else if (isDocumentFile(file)) {
+      // PDF/DOCX are parsed here, so the pipeline never sees the binary file (lib/documents.ts).
+      setParsing(true)
+      try {
+        const doc = await extractDocument(file)
+        if (!current()) return
+        setExtractedText(doc.text)
+        setImages(doc.pageImages)
+        if (doc.pageImages.length) {
+          setScanNote(
+            doc.pageCount > doc.pageImages.length
+              ? `scanned, first ${doc.pageImages.length} of ${doc.pageCount} pages will be read`
+              : `scanned, ${doc.pageImages.length} ${doc.pageImages.length === 1 ? 'page' : 'pages'} will be read`,
+          )
+        }
+      } catch (err) {
+        reject(err instanceof Error ? err.message : String(err))
+      } finally {
+        if (current()) setParsing(false)
+      }
+    } else if (isLegacyOfficeFile(file)) {
+      reject(`“${file.name}” is an old Office format. Save it as .docx or PDF and upload it again.`)
+    } else {
+      reject(`“${file.name}” isn't a supported file. Upload a PDF, DOCX, TXT, CSV, JSON, Markdown or image file.`)
     }
   }, [])
 
@@ -244,7 +275,8 @@ export function LeftPanel({ onGenerate, generating, onStatusChange }: Props) {
     setParsing(false)
     setUploadedFile(null)
     setExtractedText('')
-    setImage(null)
+    setImages([])
+    setScanNote(null)
   }
 
   /* ─── Format toggle ─────────────────────────────────────────────────────── */
@@ -268,12 +300,8 @@ export function LeftPanel({ onGenerate, generating, onStatusChange }: Props) {
 
   const resolveContent = (): string => {
     if (inputMode === 'text') return rawText
-    if (inputMode === 'url') {
-      return urlValue.trim()
-        ? `[URL: ${urlValue}]\n\nPlease extract and summarise the content from this URL: ${urlValue}`
-        : ''
-    }
-    return extractedText || rawText
+    if (inputMode === 'url') return ''
+    return extractedText
   }
 
   /* ─── Generate ──────────────────────────────────────────────────────────── */
@@ -290,8 +318,13 @@ export function LeftPanel({ onGenerate, generating, onStatusChange }: Props) {
       return
     }
     const content = resolveContent()
-    const images = inputMode === 'file' && image ? [image] : []
-    if (!content.trim() && images.length === 0) {
+    const sourceImages = inputMode === 'file' ? images : []
+    const url = inputMode === 'url' ? urlValue.trim() : ''
+    if (url && !/^(https?:\/\/)?[^\s/]+\.[^\s]{2,}/i.test(url)) {
+      setFormError('That doesn’t look like a web address. Paste the full link, starting with https://.')
+      return
+    }
+    if (!content.trim() && sourceImages.length === 0 && !url) {
       setFormError(
         inputMode === 'file' ? 'Upload a file to use as your source.'
         : inputMode === 'url' ? 'Paste a link to use as your source.'
@@ -326,7 +359,7 @@ export function LeftPanel({ onGenerate, generating, onStatusChange }: Props) {
       : inputMode === 'file' ? uploadedFile?.name ?? null
       : null
     onGenerate({
-      content, images, formats, tone, customSchema, targetLanguage, inputType: inputMode, sourceName, audience,
+      content, images: sourceImages, url: url || undefined, formats, tone, customSchema, targetLanguage, inputType: inputMode, sourceName, audience,
       engine: { mode: engineMode, models: selectedRefs, keys },
     })
   }
@@ -358,7 +391,7 @@ export function LeftPanel({ onGenerate, generating, onStatusChange }: Props) {
     onStatusChange?.({ sourceLabel, formats, hasCustomSchema, tone, targetLanguage: langForStatus, audienceLabel, engineLabel, engineReady })
   }, [onStatusChange, sourceLabel, formats, hasCustomSchema, tone, langForStatus, audienceLabel, engineLabel, engineReady])
 
-  const imageReader = image ? describeReader(pickImageReader(selectedRefs, keys)) : null
+  const imageReader = images.length ? describeReader(pickImageReader(selectedRefs, keys)) : null
 
   return (
     <div className="flex min-h-0 flex-1 flex-col" onKeyDown={onPanelKeyDown}>
@@ -411,7 +444,7 @@ export function LeftPanel({ onGenerate, generating, onStatusChange }: Props) {
                     <p className="truncate text-[14px] font-medium text-ink">{uploadedFile.name}</p>
                     <p className="mt-0.5 text-[12.5px] text-ink-mute">
                       {formatBytes(uploadedFile.size)} · {
-                        imageReader ? <>image, read with <span className="font-mono text-[12px] text-ink">{imageReader}</span></>
+                        imageReader ? <>{scanNote ?? 'image'}, read with <span className="font-mono text-[12px] text-ink">{imageReader}</span></>
                         : parsing ? 'reading text…'
                         : `${extractedText.length.toLocaleString()} characters read`
                       }

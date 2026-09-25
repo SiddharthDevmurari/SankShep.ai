@@ -38,7 +38,7 @@ function computeAnalytics(logs: ActivityLog[]) {
     outputWords,
     avgOutput: written.length ? Math.round(outputWords / written.length) : 0,
     models: new Set(entries.map((e) => e.model).filter(Boolean)).size,
-    usedProviders: [...new Set(entries.map((e) => e.provider))],
+    usedProviders: [...new Set(entries.flatMap((e) => (e.provider ? [e.provider] : [])))],
     drafts: entries.length,
     formats,
     recent: entries.slice(0, 5),
@@ -284,7 +284,7 @@ function RecentActivity({ data, onOpenHistory }: { data: Analytics | null; onOpe
                 <span className="min-w-0 flex-1">
                   <span className="block truncate text-[14px] font-medium text-ink">{short}</span>
                   <span className="block truncate text-[12.5px] text-ink-mute">
-                    {e.failed ? <span className="text-red-700">Failed</span> : e.outputWords != null ? `${NUMBER.format(e.outputWords)} words` : providerInfo(e.provider).name}
+                    {e.failed ? <span className="text-red-700">Failed</span> : e.outputWords != null ? `${NUMBER.format(e.outputWords)} words` : e.provider ? providerInfo(e.provider).name : null}
                     {e.model && <span className="font-mono text-[11.5px]"> · {shortModel(e.model)}</span>}
                   </span>
                 </span>

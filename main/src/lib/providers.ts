@@ -7,7 +7,7 @@
  * only in memory and are never logged or sent to Supabase.
  */
 
-import { nextWorkspaceGroqKey } from './groq'
+import { hasGroqKey as hasWorkspaceGroqKey, nextWorkspaceGroqKey } from './groq'
 
 export type ProviderId = 'groq' | 'gemini' | 'mistral'
 
@@ -83,7 +83,9 @@ export interface ModelRef {
 
 export type ApiKeys = Partial<Record<ProviderId, string>>
 
-export const DEFAULT_MODEL: ModelRef = { provider: 'groq', model: 'qwen/qwen3.8-27b' }
+// gpt-oss-120b, not Qwen: on the workspace key Qwen is capped at 1,000 output tokens a minute,
+// which fails every format after the first.
+export const DEFAULT_MODEL: ModelRef = { provider: 'groq', model: 'openai/gpt-oss-120b' }
 
 export function providerInfo(id: ProviderId) {
   return PROVIDERS.find((p) => p.id === id)!
@@ -132,6 +134,8 @@ export interface ChatResult {
   content: string
   /** The model id the provider reports having used. */
   model: string
+  /** The model stopped at maxTokens, so the text is cut off. */
+  truncated: boolean
 }
 
 interface ChatOptions {
@@ -139,14 +143,43 @@ interface ChatOptions {
   temperature?: number
 }
 
+/** A failed request that may succeed if sent again: rate limits, overloaded or unreachable servers. */
+class RetryableError extends Error {
+  constructor(message: string, readonly waitMs: number) {
+    super(message)
+  }
+}
+
+const MAX_ATTEMPTS = 6
+const MAX_WAIT_MS = 65_000
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
+
 export async function chat(ref: ModelRef, messages: ChatMessage[], keys: ApiKeys, opts: ChatOptions = {}): Promise<ChatResult> {
   const info = providerInfo(ref.provider)
-  const key = resolveKey(ref.provider, keys)
-  if (!key) throw new Error(`Add your ${info.name} API key in the AI engine step to use ${ref.model}.`)
+  if (!hasKey(ref.provider, keys, hasWorkspaceGroqKey)) {
+    throw new Error(`Add your ${info.name} API key in the AI engine step to use ${ref.model}.`)
+  }
   if (!canWrite(modelInfo(ref)?.kind)) {
     throw new Error(`${ref.model} is a ${modelInfo(ref)?.kind ?? 'non-text'} model and can't write drafts.`)
   }
-  return ref.provider === 'gemini' ? geminiChat(ref.model, messages, key, opts) : openAiStyleChat(info, ref.model, messages, key, opts)
+  // Free-tier limits are per minute, so waiting out a 429 almost always gets the draft through.
+  for (let attempt = 1; ; attempt++) {
+    const key = resolveKey(ref.provider, keys)!
+    try {
+      const result = ref.provider === 'gemini'
+        ? await geminiChat(ref.model, messages, key, opts)
+        : await openAiStyleChat(info, ref.model, messages, key, opts)
+      return { ...result, content: stripThinking(result.content) }
+    } catch (err) {
+      if (!(err instanceof RetryableError) || attempt >= MAX_ATTEMPTS) throw err
+      await sleep(Math.min(err.waitMs, MAX_WAIT_MS) + Math.random() * 500)
+    }
+  }
+}
+
+/** Reasoning models may put their scratch work inline; only the answer belongs in a draft. */
+function stripThinking(text: string) {
+  return text.replace(/<think>[\s\S]*?<\/think>/gi, '').trim()
 }
 
 /** Groq and Mistral both speak the OpenAI chat-completions dialect. */
@@ -168,12 +201,18 @@ async function openAiStyleChat(info: ProviderInfo, model: string, messages: Chat
     ),
     max_tokens: opts.maxTokens ?? 2048,
     temperature: opts.temperature ?? 0.7,
+    // gpt-oss reasons before answering and the reasoning shares max_tokens; keep it short so the draft fits.
+    ...(info.id === 'groq' && model.startsWith('openai/gpt-oss') && { reasoning_effort: 'low' }),
   }
   const res = await send(info, url, { Authorization: `Bearer ${key}` }, body)
   const data = await res.json()
-  const content: string | undefined = data.choices?.[0]?.message?.content
-  if (!content) throw new Error(`${info.name} returned an empty response from ${model}.`)
-  return { content, model: data.model ?? model }
+  const choice = data.choices?.[0]
+  const content: string | undefined = choice?.message?.content
+  if (!content?.trim()) {
+    if (choice?.finish_reason === 'length') throw new Error(`${model} ran out of room before writing the draft. Try again, or pick another model.`)
+    throw new RetryableError(`${info.name} returned an empty response from ${model}.`, 2000)
+  }
+  return { content, model: data.model ?? model, truncated: choice?.finish_reason === 'length' }
 }
 
 async function geminiChat(model: string, messages: ChatMessage[], key: string, opts: ChatOptions): Promise<ChatResult> {
@@ -205,21 +244,49 @@ async function geminiChat(model: string, messages: ChatMessage[], key: string, o
     const reason = candidate?.finishReason ?? data.promptFeedback?.blockReason ?? 'no text'
     throw new Error(`Gemini returned no text from ${model} (${reason}).`)
   }
-  return { content, model: data.modelVersion ?? model }
+  return { content, model: data.modelVersion ?? model, truncated: candidate?.finishReason === 'MAX_TOKENS' }
 }
+
+const REQUEST_TIMEOUT_MS = 120_000
 
 async function send(info: ProviderInfo, url: string, auth: Record<string, string>, body: unknown): Promise<Response> {
   let res: Response
   try {
-    res = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json', ...auth }, body: JSON.stringify(body) })
+    res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...auth },
+      body: JSON.stringify(body),
+      signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+    })
   } catch (err) {
-    throw new Error(`Couldn't reach ${info.host}: ${err instanceof Error ? err.message : String(err)}`)
+    const reason = err instanceof Error && err.name === 'TimeoutError' ? 'no answer after 2 minutes' : err instanceof Error ? err.message : String(err)
+    throw new RetryableError(`Couldn't reach ${info.host}: ${reason}`, 3000)
   }
   if (res.ok) return res
   const text = (await res.text()).slice(0, 400)
   // Gemini reports a bad key as 400 "API key not valid".
   if (res.status === 401 || res.status === 403 || (res.status === 400 && /api key/i.test(text))) throw new Error(`${info.name} rejected the API key (${res.status}). Check the key in the AI engine step.`)
-  if (res.status === 429) throw new Error(`${info.name} rate limit reached. Wait a minute or use another model. ${text}`)
+  if (res.status === 413 || /request too large|context.length|maximum context|too many tokens/i.test(text)) {
+    throw new Error(`The source is too long for this model on ${info.name}. Pick a model with a larger limit (Gemini reads the most), or shorten the source.`)
+  }
+  if (res.status === 429) {
+    // Daily quotas don't reset within a minute; retrying only burns time.
+    if (/per day|daily|quota exceeded/i.test(text) && !/per minute/i.test(text)) {
+      throw new Error(`${info.name} daily limit reached for this key. Use another model or your own key. ${text}`)
+    }
+    throw new RetryableError(`${info.name} rate limit reached. Wait a minute or use another model. ${text}`, retryDelayMs(res, text))
+  }
+  if (res.status === 408 || res.status >= 500) throw new RetryableError(`${info.name} API ${res.status}: ${text}`, 3000)
   if (res.status === 404) throw new Error(`${info.name} doesn't offer this model to your key (404). ${text}`)
   throw new Error(`${info.name} API ${res.status}: ${text}`)
+}
+
+/** How long the provider asks us to wait: the Retry-After header, or Groq's "try again in 6.3s" / "1m2.5s". */
+function retryDelayMs(res: Response, text: string) {
+  const header = Number(res.headers.get('retry-after'))
+  if (header > 0) return header * 1000
+  const m = /try again in (?:(\d+)m)?([\d.]+)(ms|s)/i.exec(text)
+  if (m) return (Number(m[1] ?? 0) * 60 + Number(m[2]) / (m[3] === 'ms' ? 1000 : 1)) * 1000
+  const gemini = /retry in ([\d.]+)s/i.exec(text)
+  return gemini ? Number(gemini[1]) * 1000 : 10_000
 }

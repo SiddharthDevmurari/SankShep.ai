@@ -28,35 +28,48 @@ export function pickImageReader(selected: ModelRef[], keys: ApiKeys): ImageReade
 const TRANSCRIBE_PROMPT =
   'You extract source material from images. First transcribe every piece of text in the image verbatim, keeping its structure: headings, lists, and tables as Markdown tables. Then, under a line "Visual content:", describe each chart, diagram or photo with the facts, numbers and trends it conveys. Output only the extracted material, no commentary.'
 
-export async function readImage(image: ImageInput, reader: ImageReader, keys: ApiKeys): Promise<string> {
+/**
+ * Reads every image (an upload, or a scanned PDF's pages) into one source text.
+ * Images go one at a time: vision calls stay under per-minute rate limits and
+ * OCR reuses a single engine. Pages with nothing legible are skipped.
+ */
+export async function readImages(images: ImageInput[], reader: ImageReader, keys: ApiKeys): Promise<string> {
+  const pages: string[] = []
   if (reader.method === 'vision') {
-    const result = await chat(
-      reader.ref,
-      [
-        { role: 'system', content: TRANSCRIBE_PROMPT },
-        { role: 'user', content: 'Extract the content of this image.', images: [image] },
-      ],
-      keys,
-      { maxTokens: 4096, temperature: 0.1 },
-    )
-    return result.content.trim()
-  }
-
-  // Loaded on demand: the OCR engine and English model download only when an image needs them.
-  const { createWorker } = await import('tesseract.js')
-  const worker = await createWorker('eng')
-  try {
-    const { data } = await worker.recognize(`data:${image.mimeType};base64,${image.data}`)
-    const text = data.text.trim()
-    if (!text) {
-      throw new Error(
-        'No readable text was found in the image. On-device OCR only reads printed text; to read charts or photos, pick a Gemini or Mistral vision model and add its key.',
+    for (const image of images) {
+      const result = await chat(
+        reader.ref,
+        [
+          { role: 'system', content: TRANSCRIBE_PROMPT },
+          { role: 'user', content: 'Extract the content of this image.', images: [image] },
+        ],
+        keys,
+        { maxTokens: 4096, temperature: 0.1 },
       )
+      pages.push(result.content.trim())
     }
-    return text
-  } finally {
-    await worker.terminate()
+  } else {
+    // Loaded on demand: the OCR engine and English model download only when an image needs them.
+    const { createWorker } = await import('tesseract.js')
+    const worker = await createWorker('eng')
+    try {
+      for (const image of images) {
+        const { data } = await worker.recognize(`data:${image.mimeType};base64,${image.data}`)
+        pages.push(data.text.trim())
+      }
+    } finally {
+      await worker.terminate()
+    }
   }
+  const text = pages.filter(Boolean).join('\n\n')
+  if (!text) {
+    throw new Error(
+      reader.method === 'ocr'
+        ? 'No readable text was found in the image. On-device OCR only reads printed text; to read charts, photos or handwriting, pick a Gemini or Mistral vision model and add its key.'
+        : `${reader.ref.model} found nothing to read in the image.`,
+    )
+  }
+  return text
 }
 
 export function describeReader(reader: ImageReader) {

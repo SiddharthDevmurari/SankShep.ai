@@ -1,0 +1,55 @@
+- generic [ref=f1e3]:
+  - banner [ref=f1e4]:
+    - navigation "Main" [ref=f1e6]:
+      - link "Sankshep home" [ref=f1e7] [cursor=pointer]:
+        - /url: /
+        - generic [ref=f1e9]: Sankshep
+      - generic [ref=f1e10]:
+        - link "How it works" [ref=f1e11] [cursor=pointer]:
+          - /url: /how-it-works
+        - link "About" [ref=f1e12] [cursor=pointer]:
+          - /url: /about
+        - link "T&C" [ref=f1e13] [cursor=pointer]:
+          - /url: /terms-and-conditions
+        - link "Privacy Policy" [ref=f1e14] [cursor=pointer]:
+          - /url: /privacy-policy
+        - link "Log in / Sign up" [ref=f1e15] [cursor=pointer]:
+          - /url: /login
+      - link "Sankshep.ai source code on GitHub" [ref=f1e16] [cursor=pointer]:
+        - /url: https://github.com/SiddharthDevmurari/SankShep.ai.git
+      - link "Open Workspace" [ref=f1e19] [cursor=pointer]:
+        - /url: /workspace
+  - generic [ref=f1e22]:
+    - generic [ref=f1e23]:
+      - link "Sankshep home" [ref=f1e25] [cursor=pointer]:
+        - /url: /
+        - generic [ref=f1e27]: Sankshep.ai
+      - generic [ref=f1e28]:
+        - heading "Transform any content into every format." [level=2] [ref=f1e29]: Transform any contentinto every format.
+        - paragraph [ref=f1e30]: Upload reports, paste text, or drop a link. Get executive summaries, slide decks, LinkedIn posts and more — in seconds.
+        - generic [ref=f1e31]:
+          - generic [ref=f1e32]: Executive Summary
+          - generic [ref=f1e33]: 5-Slide Deck
+          - generic [ref=f1e34]: LinkedIn Post
+          - generic [ref=f1e35]: Video Script
+          - generic [ref=f1e36]: Advisory
+      - paragraph [ref=f1e37]: © 2026 Sankshep.ai · NTRO SIH
+    - generic [ref=f1e39]:
+      - heading "Welcome back" [level=1] [ref=f1e40]
+      - paragraph [ref=f1e41]: Sign in to access your workspace.
+      - button "[ Use Demo Credentials ]" [ref=f1e42]
+      - generic [ref=f1e45]:
+        - generic [ref=f1e46]:
+          - text: Email
+          - textbox "Email" [ref=f1e47]:
+            - /placeholder: you@example.com
+        - generic [ref=f1e48]:
+          - text: Password
+          - generic [ref=f1e49]:
+            - textbox "Password" [ref=f1e50]:
+              - /placeholder: ••••••••
+            - button [ref=f1e51]
+        - button "Sign in" [ref=f1e55]
+      - paragraph [ref=f1e56]:
+        - text: Don't have an account?
+        - button "Sign up" [ref=f1e57]

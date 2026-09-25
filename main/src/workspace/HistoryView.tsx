@@ -156,7 +156,7 @@ function HistoryRow({ entry, index }: { entry: DraftEntry; index: number }) {
 
       <div className="col-span-2 min-w-0 md:col-span-1">
         <span className="inline-flex max-w-full items-center gap-2 rounded-full border border-line bg-paper py-1 pl-2.5 pr-2.5 text-[12px]">
-          <span className="font-medium text-ink">{providerInfo(entry.provider).name}</span>
+          <span className={entry.provider ? 'font-medium text-ink' : 'text-ink-mute'}>{entry.provider ? providerInfo(entry.provider).name : 'Not recorded'}</span>
           {entry.model && (
             <>
               <span className="h-3 w-px shrink-0 bg-line" aria-hidden />
