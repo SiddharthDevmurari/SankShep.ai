@@ -1,9 +1,9 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import {
-  ArrowUp, Check, CircleAlert, Copy, Download, Eye, Hourglass, Info, PanelLeft, PanelLeftClose, PenLine, WandSparkles, X,
+  ArrowUp, Check, CircleAlert, Copy, Download, Eye, Hourglass, Info, PanelLeft, PanelLeftClose, PenLine, TriangleAlert, WandSparkles, X,
 } from 'lucide-react'
 import type { OutputFormat, FormatResult, ModelRun } from '../lib/pipeline'
-import { regenerateFormat } from '../lib/pipeline'
+import { keyFallbackNotice, regenerateFormat } from '../lib/pipeline'
 import { logActivity, previewOf, storedModel } from '../lib/activity'
 import { providerInfo } from '../lib/providers'
 import type { ToneOption } from '../lib/pipeline'
@@ -13,6 +13,15 @@ import type { RunContext } from './TransformView'
 import { BrandMark } from '../components/site/SiteChrome'
 import { buildPptx, fileSlug, saveFile, toPlainText, type ExportKind } from '../lib/exporters'
 
+/**
+ * A banner over the canvas. `warning` means the work went through but not the way the user set it up
+ * (their own API key failed and the shared key stood in); `error` means it did not go through.
+ */
+export interface Notice {
+  text: string
+  kind: 'error' | 'warning' | 'info'
+}
+
 interface Props {
   /** One run per model; more than one means the user is comparing models. */
   runs: ModelRun[]
@@ -21,8 +30,8 @@ interface Props {
   tone: ToneOption
   generating: boolean
   selectedFormats: OutputFormat[]
-  /** A failed run, or information about how the run went (e.g. a long source was sampled). */
-  notice: { text: string; kind: 'error' | 'info' } | null
+  /** A failed run, or information about how the run went (e.g. a long source was sampled, or the user's key failed). */
+  notice: Notice | null
   onDismissNotice: () => void
   status: LeftPanelStatus | null
 }
@@ -88,12 +97,13 @@ export function RightPanel({ runs, runContext, parsedSource, tone, generating, s
   }
 
   /* ─── Download ──────────────────────────────────────────────────────────── */
-  const [exportError, setExportError] = useState<string | null>(null)
-  useEffect(() => { setExportError(null) }, [currentTab, runs])
+  // This panel's own banner (a failed export, or a refine that fell back to the shared key); it shows over `notice`.
+  const [localNotice, setLocalNotice] = useState<Notice | null>(null)
+  useEffect(() => { setLocalNotice(null) }, [currentTab, runs])
 
   const handleExport = async (kind: ExportKind) => {
     if (!activeResult?.output || !currentTab) return
-    setExportError(null)
+    setLocalNotice(null)
     const name = fileSlug(currentTab === 'PPT Presentation' ? 'Slide Deck' : currentTab)
     try {
       if (kind === 'pptx') {
@@ -104,7 +114,7 @@ export function RightPanel({ runs, runContext, parsedSource, tone, generating, s
         saveFile(new Blob([activeResult.output], { type: 'text/markdown;charset=utf-8' }), `${name}.md`)
       }
     } catch (err) {
-      setExportError(err instanceof Error ? err.message : String(err))
+      setLocalNotice({ text: err instanceof Error ? err.message : String(err), kind: 'error' })
     }
   }
 
@@ -112,6 +122,7 @@ export function RightPanel({ runs, runContext, parsedSource, tone, generating, s
   const handleRegenerate = async () => {
     if (!currentTab || !activeResult || !refinement.trim() || regenerating || !runContext) return
     setRegenerating(true)
+    setLocalNotice(null)
     const t0 = Date.now()
     // Refine with the model and key that wrote the draft (refining is single-model only).
     const result = await regenerateFormat(
@@ -141,6 +152,9 @@ export function RightPanel({ runs, runContext, parsedSource, tone, generating, s
     })
     // Only update the current tab — all other tabs are untouched
     setLocalResults((prev) => ({ ...prev, [currentTab]: result }))
+    if (result.ownKeyFailure) {
+      setLocalNotice({ text: keyFallbackNotice(runs[0].ref.provider, result.ownKeyFailure, 'this refined draft was written'), kind: 'warning' })
+    }
     setRefinement('')
     setRegenerating(false)
   }
@@ -151,13 +165,16 @@ export function RightPanel({ runs, runContext, parsedSource, tone, generating, s
     { kind: 'txt', label: 'Plain text', hint: '.txt' },
   ]
 
-  const noticeBanner = (notice || exportError) && (
+  const banner = localNotice ?? notice
+  const noticeBanner = banner && (
     <div role="alert" className="sk-rise absolute left-1/2 top-6 z-20 flex w-[min(640px,calc(100%-3rem))] -translate-x-1/2 items-start gap-3 rounded-2xl bg-white px-4 py-3.5 text-[13px] text-ink sk-float">
-      {exportError || notice?.kind === 'error'
+      {banner.kind === 'error'
         ? <CircleAlert className="mt-0.5 h-4 w-4 shrink-0 text-red-600" />
-        : <Info className="mt-0.5 h-4 w-4 shrink-0 text-ink-mute" />}
-      <p className="flex-1 leading-relaxed">{exportError ?? notice?.text}</p>
-      <button onClick={() => (exportError ? setExportError(null) : onDismissNotice())} aria-label="Dismiss" className="rounded-full p-1 text-ink-mute hover:bg-paper-deep hover:text-ink">
+        : banner.kind === 'warning'
+          ? <TriangleAlert className="mt-0.5 h-4 w-4 shrink-0 text-amber-700" />
+          : <Info className="mt-0.5 h-4 w-4 shrink-0 text-ink-mute" />}
+      <p className="flex-1 whitespace-pre-line leading-relaxed">{banner.text}</p>
+      <button onClick={() => (localNotice ? setLocalNotice(null) : onDismissNotice())} aria-label="Dismiss" className="rounded-full p-1 text-ink-mute hover:bg-paper-deep hover:text-ink">
         <X className="h-3.5 w-3.5" />
       </button>
     </div>
@@ -213,20 +230,20 @@ export function RightPanel({ runs, runContext, parsedSource, tone, generating, s
       },
       {
         n: '02', id: STEP_IDS.outputs, title: 'Outputs',
-        value: status && (status.formats.length || status.hasCustomSchema)
-          ? `${status.formats.length || 1} ${(status.formats.length || 1) === 1 ? 'format' : 'formats'} selected`
-          : 'Choose at least one format',
+        value: status?.formats.length
+          ? `${status.formats.length} ${status.formats.length === 1 ? 'format' : 'formats'} selected${status.hasCustomSchema ? ' · custom instructions' : ''}`
+          : status?.hasCustomSchema ? 'Custom format from your instructions' : 'Choose at least one format',
         done: !!status && (status.formats.length > 0 || status.hasCustomSchema),
       },
       {
         n: '03', id: STEP_IDS.voice, title: 'Voice',
-        value: status ? `${toneLabel(status.tone)} tone${status.hasCustomSchema ? ' · custom instructions' : ''}` : 'Professional tone',
+        value: status ? `${toneLabel(status.tone)} tone` : 'Professional tone',
         done: true,
       },
       {
         n: '04', id: STEP_IDS.audience, title: 'Audience',
-        value: status?.audienceLabel ?? 'No specific audience',
-        done: !!status?.audienceLabel,
+        value: status && !status.audienceReady ? 'Custom profile needs a name' : status?.audienceLabel ?? 'No specific audience',
+        done: status?.audienceReady ?? true,
       },
       {
         n: '05', id: STEP_IDS.engine, title: 'AI engine',

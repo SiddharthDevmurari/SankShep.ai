@@ -35,12 +35,18 @@ const TRANSCRIBE_PROMPT =
  * Images go one at a time: vision calls stay under per-minute rate limits and
  * OCR reuses a single engine. Pages with nothing legible are skipped. If the
  * vision model can't be reached, on-device OCR reads the images instead.
- * Returns the text and the reader that actually produced it.
+ * Returns the text, the reader that actually produced it, and why the user's own key failed
+ * when the shared keys read the image instead (see ChatResult.ownKeyFailure).
  */
-export async function readImages(images: ImageInput[], reader: ImageReader, keys: ApiKeys): Promise<{ text: string; reader: ImageReader }> {
+export async function readImages(
+  images: ImageInput[],
+  reader: ImageReader,
+  keys: ApiKeys,
+): Promise<{ text: string; reader: ImageReader; ownKeyFailure?: string }> {
   if (reader.method === 'vision') {
     try {
       const pages: string[] = []
+      let ownKeyFailure: string | undefined
       for (const image of images) {
         const result = await chat(
           reader.ref,
@@ -52,10 +58,11 @@ export async function readImages(images: ImageInput[], reader: ImageReader, keys
           { maxTokens: 4096, temperature: 0.1 },
         )
         pages.push(result.content.trim())
+        ownKeyFailure ??= result.ownKeyFailure
       }
       const text = pages.filter(Boolean).join('\n\n')
       if (!text) throw new Error(`${reader.ref.model} found nothing to read in the image.`)
-      return { text, reader }
+      return { text, reader, ownKeyFailure }
     } catch (err) {
       console.warn('[ingest] vision read failed, falling back to on-device OCR:', err)
     }

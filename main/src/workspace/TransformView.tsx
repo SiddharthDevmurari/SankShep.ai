@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { ArrowUpRight } from 'lucide-react'
 import { LeftPanel, type LeftPanelConfig, type LeftPanelStatus } from './LeftPanel'
-import { RightPanel } from './RightPanel'
+import { RightPanel, type Notice } from './RightPanel'
 import { PageHeader } from './PageHeader'
 import { runPipeline, type Audience, type EngineConfig, type ModelRun, type OutputFormat } from '../lib/pipeline'
 import type { ToneOption } from '../lib/pipeline'
@@ -21,7 +21,7 @@ export function TransformView({ onOpenHistory }: { onOpenHistory?: () => void })
   const [parsedSource, setParsedSource] = useState('')
   const [selectedFormats, setSelectedFormats] = useState<OutputFormat[]>([])
   const [tone, setTone] = useState<ToneOption>('Professional')
-  const [notice, setNotice] = useState<{ text: string; kind: 'error' | 'info' } | null>(null)
+  const [notice, setNotice] = useState<Notice | null>(null)
   const [status, setStatus] = useState<LeftPanelStatus | null>(null)
   // Drafts written since the workspace opened, and how long the last run took.
   const [session, setSession] = useState<{ drafts: number; lastMs: number | null }>({ drafts: 0, lastMs: null })
@@ -63,7 +63,9 @@ export function TransformView({ onOpenHistory }: { onOpenHistory?: () => void })
       setParsedSource(output.parsedSource)
       setRuns(output.runs)
       setRunContext({ engine: cfg.engine, audience: cfg.audience, imageReadBy: output.imageReadBy })
-      if (output.sourceNote) setNotice({ text: output.sourceNote, kind: 'info' })
+      // A failed own key comes first and outranks the sampling note, which still follows it.
+      const notes = [...output.keyNotices, output.sourceNote].filter((n): n is string => !!n)
+      if (notes.length) setNotice({ text: notes.join('\n\n'), kind: output.keyNotices.length ? 'warning' : 'info' })
 
       // One activity row per model, so History lists every model's drafts separately.
       // An image or link source has no text of its own; size it by what was read from it.

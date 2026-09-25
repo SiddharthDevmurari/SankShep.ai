@@ -32,6 +32,8 @@ export interface LeftPanelConfig {
 /** Live view of the form, so the output canvas can mirror the same steps. */
 export interface LeftPanelStatus {
   audienceLabel: string | null
+  /** The audience choice is usable as is: none, a preset, or a saved or named custom profile. */
+  audienceReady: boolean
   engineLabel: string
   /** Every selected provider has a key to use. */
   engineReady: boolean
@@ -456,13 +458,15 @@ export function LeftPanel({ onGenerate, generating, onStatusChange }: Props) {
   const hasCustomSchema = !!customSchema.trim()
   const langForStatus = showLangField ? targetLanguage : null
   const audienceLabel = audience?.name.trim() || null
+  // "No specific audience" is a valid choice; only a custom profile without a name is unfinished.
+  const audienceReady = audienceChoice === null || !!audience
   const engineLabel = engineMode === 'single'
     ? `${providerInfo(selectedRefs[0].provider).name} · ${shortModelId(selectedRefs[0].model)}`
     : `Comparing ${selectedRefs.length} models`
   const engineReady = !missingKey
   useEffect(() => {
-    onStatusChange?.({ sourceLabel, formats, hasCustomSchema, tone, targetLanguage: langForStatus, audienceLabel, engineLabel, engineReady })
-  }, [onStatusChange, sourceLabel, formats, hasCustomSchema, tone, langForStatus, audienceLabel, engineLabel, engineReady])
+    onStatusChange?.({ sourceLabel, formats, hasCustomSchema, tone, targetLanguage: langForStatus, audienceLabel, audienceReady, engineLabel, engineReady })
+  }, [onStatusChange, sourceLabel, formats, hasCustomSchema, tone, langForStatus, audienceLabel, audienceReady, engineLabel, engineReady])
 
   const imageReader = images.length ? describeReader(pickImageReader(selectedRefs, keys)) : null
 
@@ -601,7 +605,7 @@ export function LeftPanel({ onGenerate, generating, onStatusChange }: Props) {
           id={STEP_IDS.outputs}
           n="02"
           title="Outputs"
-          hint="Each format is drafted in parallel."
+          hint="Each format is drafted in parallel. Instructions shape every draft."
           done={outputCount > 0}
           action={
             <button
@@ -667,30 +671,6 @@ export function LeftPanel({ onGenerate, generating, onStatusChange }: Props) {
               </div>
             </fieldset>
           )}
-        </Step>
-
-        {/* ── 03 Voice ───────────────────────────────────────────────────── */}
-        <Step id={STEP_IDS.voice} n="03" title="Voice" hint="Tone applies to every draft. Instructions are optional." done>
-          <div role="radiogroup" aria-label="Tone" className="grid grid-cols-2 gap-2 xl:grid-cols-4">
-            {TONES.map(({ value, note }) => {
-              const active = tone === value
-              return (
-                <button
-                  key={value}
-                  type="button"
-                  role="radio"
-                  aria-checked={active}
-                  onClick={() => setTone(value)}
-                  className={`rounded-xl border px-3 py-2.5 text-left transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink/30 ${
-                    active ? 'border-ink bg-white text-ink ring-1 ring-ink' : 'border-line bg-white text-ink-soft hover:border-ink/40 hover:text-ink'
-                  }`}
-                >
-                  <span className="block text-[13.5px] font-semibold">{toneLabel(value)}</span>
-                  <span className="block font-serif text-[14px] text-ink-mute">{note}</span>
-                </button>
-              )
-            })}
-          </div>
 
           <label htmlFor="ws-custom-format" className="mt-5 flex items-baseline justify-between text-[13px] font-semibold text-ink">
             Custom instructions
@@ -722,12 +702,36 @@ export function LeftPanel({ onGenerate, generating, onStatusChange }: Props) {
                 <button
                   type="button"
                   onClick={() => setCustomSchema('')}
-                  className="shrink-0 rounded-md text-[12.5px] font-medium text-ink-soft underline decoration-ink/30 underline-offset-4 hover:text-ink"
+                  className="shrink-0 rounded-md text-[12.5px] font-medium text-ink-soft underline decoration-ink/30 underline-offset-4 hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink/30"
                 >
                   Clear
                 </button>
               )}
             </div>
+          </div>
+        </Step>
+
+        {/* ── 03 Voice ───────────────────────────────────────────────────── */}
+        <Step id={STEP_IDS.voice} n="03" title="Voice" hint="Tone applies to every draft." done>
+          <div role="radiogroup" aria-label="Tone" className="grid grid-cols-2 gap-2 xl:grid-cols-4">
+            {TONES.map(({ value, note }) => {
+              const active = tone === value
+              return (
+                <button
+                  key={value}
+                  type="button"
+                  role="radio"
+                  aria-checked={active}
+                  onClick={() => setTone(value)}
+                  className={`rounded-xl border px-3 py-2.5 text-left transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink/30 ${
+                    active ? 'border-ink bg-white text-ink ring-1 ring-ink' : 'border-line bg-white text-ink-soft hover:border-ink/40 hover:text-ink'
+                  }`}
+                >
+                  <span className="block text-[13.5px] font-semibold">{toneLabel(value)}</span>
+                  <span className="block font-serif text-[14px] text-ink-mute">{note}</span>
+                </button>
+              )
+            })}
           </div>
         </Step>
 
@@ -737,12 +741,12 @@ export function LeftPanel({ onGenerate, generating, onStatusChange }: Props) {
           n="04"
           title="Audience"
           hint="Who will read, watch or receive the final content. Optional."
-          done={!!audience}
+          done={audienceReady}
           collapsible={{
             open: audienceOpen,
             onToggle: () => setAudienceOpen((v) => !v),
             summary: audienceChoice === 'custom' && !audience ? 'Custom profile needs a name' : audience?.name ?? 'No specific audience',
-            warn: audienceChoice === 'custom' && !audience,
+            warn: !audienceReady,
           }}
         >
           <div className="grid grid-cols-2 gap-2" role="group" aria-label="Target audience">

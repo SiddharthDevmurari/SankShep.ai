@@ -127,6 +127,11 @@ export interface ChatResult {
   model: string
   /** The model stopped at maxTokens, so the text is cut off. */
   truncated: boolean
+  /**
+   * Set only when the user gave their own key, it failed, and the shared keys then wrote this
+   * answer: why their key failed, e.g. "rejected with 401" or "rate-limited".
+   */
+  ownKeyFailure?: string
 }
 
 interface ChatOptions {
@@ -144,9 +149,12 @@ class RetryableError extends Error {
   }
 }
 
-/** The key is the problem, not the request: rejected (invalid, out of quota) or rate-limited for `waitMs`. */
+/**
+ * The key is the problem, not the request: rejected (invalid, out of quota) or rate-limited for `waitMs`.
+ * `reason` is the short form shown to the user when the shared keys stand in for their key.
+ */
 class KeyError extends Error {
-  constructor(message: string, readonly kind: 'rejected' | 'rate-limited', readonly waitMs = 0) {
+  constructor(message: string, readonly kind: 'rejected' | 'rate-limited', readonly reason: string, readonly waitMs = 0) {
     super(message)
   }
 }
@@ -171,6 +179,7 @@ export async function chat(ref: ModelRef, messages: ChatMessage[], keys: ApiKeys
   }
   const own = keys[ref.provider]?.trim()
   let ownProblem: string | null = null
+  let ownReason: string | null = null
   let sharedOut = false
 
   for (let round = 1; round <= MAX_ROUNDS; round++) {
@@ -186,12 +195,19 @@ export async function chat(ref: ModelRef, messages: ChatMessage[], keys: ApiKeys
         const result = ref.provider === 'gemini'
           ? await geminiChat(ref.model, messages, route, opts)
           : await openAiStyleChat(info, ref.model, messages, route, opts)
-        return { ...result, content: stripThinking(result.content) }
+        return {
+          ...result,
+          content: stripThinking(result.content),
+          ...(route.kind === 'shared' && own && ownReason && { ownKeyFailure: ownReason }),
+        }
       } catch (err) {
         if (err instanceof SharedKeysExhausted) {
           sharedOut = true
         } else if (err instanceof KeyError) {
-          if (route.kind === 'own') ownProblem = `${err.kind}: ${err.message}`
+          if (route.kind === 'own') {
+            ownProblem = `${err.kind}: ${err.message}`
+            ownReason = err.reason
+          }
           if (err.kind === 'rate-limited') shortestWait = Math.min(shortestWait, err.waitMs)
         } else if (err instanceof RetryableError) {
           shortestWait = Math.min(shortestWait, err.waitMs)
@@ -308,16 +324,16 @@ async function send(info: ProviderInfo, model: string, route: Route, url: string
     if (!/^\s*\{/.test(text)) throw new SharedKeysExhausted('Shared-key service unavailable.')
     if (res.status === 404) throw new Error(`${model} isn't available on the shared ${info.name} keys. Pick another model, or add your own ${info.name} key.`)
     if (res.status === 503 && /keys_exhausted/.test(text)) throw new SharedKeysExhausted(text)
-    if (res.status === 429) throw new KeyError(`${info.name} shared keys are rate-limited.`, 'rate-limited', retryDelayMs(res, text))
+    if (res.status === 429) throw new KeyError(`${info.name} shared keys are rate-limited.`, 'rate-limited', 'rate-limited', retryDelayMs(res, text))
   } else {
     // Gemini reports a bad key as 400 "API key not valid".
-    if (res.status === 401 || res.status === 403 || (res.status === 400 && /api.key/i.test(text))) throw new KeyError(`${info.name} rejected the API key (${res.status}).`, 'rejected')
+    if (res.status === 401 || res.status === 403 || (res.status === 400 && /api.key/i.test(text))) throw new KeyError(`${info.name} rejected the API key (${res.status}).`, 'rejected', `rejected with ${res.status}`)
     if (res.status === 429) {
       // Daily quotas don't reset within a minute; hand over to the shared keys instead of waiting.
-      if (/per day|daily|quota exceeded/i.test(text) && !/per minute/i.test(text)) throw new KeyError(`${info.name} daily limit reached for your key.`, 'rejected')
-      throw new KeyError(`${info.name} rate limit reached.`, 'rate-limited', retryDelayMs(res, text))
+      if (/per day|daily|quota exceeded/i.test(text) && !/per minute/i.test(text)) throw new KeyError(`${info.name} daily limit reached for your key.`, 'rejected', 'daily limit reached')
+      throw new KeyError(`${info.name} rate limit reached.`, 'rate-limited', 'rate-limited', retryDelayMs(res, text))
     }
-    if (res.status === 404) throw new KeyError(`${info.name} doesn't offer ${model} to your key (404).`, 'rejected')
+    if (res.status === 404) throw new KeyError(`${info.name} doesn't offer ${model} to your key (404).`, 'rejected', `no access to ${model}`)
   }
   if (res.status === 413 || /request too large|context.length|maximum context|too many tokens/i.test(text)) {
     throw new Error(`The source is too long for this model on ${info.name}. Pick a model with a larger limit (Gemini reads the most), or shorten the source.`)

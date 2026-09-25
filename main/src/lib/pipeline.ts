@@ -9,7 +9,7 @@
  * provider directly with the user's own key (lib/providers.ts).
  */
 
-import { chat, type ApiKeys, type ImageInput, type ModelRef, type ProviderId } from './providers'
+import { chat, providerInfo, type ApiKeys, type ImageInput, type ModelRef, type ProviderId } from './providers'
 import { describeReader, pickImageReader, readImages } from './ingest'
 
 export type OutputFormat =
@@ -73,6 +73,8 @@ export interface FormatResult {
   error?: string
   model?: string           // the model id the provider reports for this draft
   provider?: ProviderId
+  /** The user's own key failed and the shared keys wrote this draft: why their key failed (see ChatResult). */
+  ownKeyFailure?: string
 }
 
 /** One model's full set of drafts. */
@@ -89,6 +91,17 @@ export interface PipelineOutput {
   imageReadBy: string | null
   /** Set when the source was longer than a model takes in one request and only passages of it were sent. */
   sourceNote: string | null
+  /** One message per provider whose own key failed while the shared keys stood in. Empty when none did. */
+  keyNotices: string[]
+}
+
+/**
+ * Tells the user their own key failed and the shared key was used instead. `clauses` says what
+ * the shared key did, e.g. "these drafts were written".
+ */
+export function keyFallbackNotice(provider: ProviderId, reason: string, clauses: string): string {
+  const check = reason === 'rate-limited' ? '' : ' Check your key in the AI engine step.'
+  return `Your ${providerInfo(provider).name} API key didn't work (${reason}), so ${clauses} with Sankshep's shared key.${check}`
 }
 
 // ─── Node: Ingest ────────────────────────────────────────────────────────────
@@ -116,16 +129,23 @@ async function readUrl(raw: string): Promise<string> {
     .replace(/\[([^\]]*)\]\([^)]*\)/g, '$1')
 }
 
-async function ingestNode(input: PipelineInput): Promise<{ text: string; readBy: string | null }> {
+type KeyFailure = { provider: ProviderId; reason: string }
+
+async function ingestNode(input: PipelineInput): Promise<{ text: string; readBy: string | null; imageKeyFailure: KeyFailure | null }> {
   const parts = [input.content.trim()]
   if (input.url?.trim()) parts.push(await readUrl(input.url))
   let readBy: string | null = null
+  // Set when the image was read with the shared keys because the user's own key failed.
+  let imageKeyFailure: KeyFailure | null = null
   if (input.images?.length) {
     const read = await readImages(input.images, pickImageReader(input.engine.models, input.engine.keys), input.engine.keys)
     parts.push(read.text)
     readBy = describeReader(read.reader)
+    if (read.ownKeyFailure && read.reader.method === 'vision') {
+      imageKeyFailure = { provider: read.reader.ref.provider, reason: read.ownKeyFailure }
+    }
   }
-  return { text: parts.filter(Boolean).join('\n\n'), readBy }
+  return { text: parts.filter(Boolean).join('\n\n'), readBy, imageKeyFailure }
 }
 
 // ─── Node: Parse ─────────────────────────────────────────────────────────────
@@ -393,8 +413,8 @@ async function formatNode(
 ): Promise<FormatResult> {
   try {
     if (format === 'Language Translation') {
-      const { text, model } = await translateNode(parsedSource, input, ref)
-      return { format, output: text, status: 'success', model, provider: ref.provider }
+      const { text, model, ownKeyFailure } = await translateNode(parsedSource, input, ref)
+      return { format, output: text, status: 'success', model, provider: ref.provider, ownKeyFailure }
     }
     const { system, user } = buildPrompt(format, parsedSource, input.tone, input.customSchema ?? '', input.targetLanguage)
     const result = await chat(
@@ -406,7 +426,7 @@ async function formatNode(
       input.engine.keys,
       { maxTokens: 2048, temperature: 0.72 },
     )
-    return { format, output: result.content, status: 'success', model: result.model, provider: ref.provider }
+    return { format, output: result.content, status: 'success', model: result.model, provider: ref.provider, ownKeyFailure: result.ownKeyFailure }
   } catch (err) {
     return {
       format,
@@ -449,8 +469,9 @@ function chunkText(text: string, size: number): string[] {
  * Translates the whole source, not a sample: chunk by chunk in order, joined back together.
  * A chunk whose translation hits the output limit is halved and retried, so nothing is cut off.
  */
-async function translateNode(source: string, input: PipelineInput, ref: ModelRef): Promise<{ text: string; model: string }> {
+async function translateNode(source: string, input: PipelineInput, ref: ModelRef): Promise<{ text: string; model: string; ownKeyFailure?: string }> {
   let model = ref.model
+  let ownKeyFailure: string | undefined
   const translate = async (chunk: string): Promise<string> => {
     const { system, user } = buildPrompt('Language Translation', chunk, input.tone, input.customSchema ?? '', input.targetLanguage)
     const result = await chat(
@@ -463,6 +484,7 @@ async function translateNode(source: string, input: PipelineInput, ref: ModelRef
       { maxTokens: TRANSLATION_MAX_TOKENS, temperature: 0.2 },
     )
     model = result.model
+    ownKeyFailure ??= result.ownKeyFailure
     if (!result.truncated || chunk.length < MIN_SPLIT_CHARS) return result.content
     const halves = chunkText(chunk, Math.ceil(chunk.length / 2))
     const parts: string[] = []
@@ -473,7 +495,7 @@ async function translateNode(source: string, input: PipelineInput, ref: ModelRef
   const parts: string[] = []
   // In order, one at a time: the parts must line up, and the provider's rate limit is shared.
   for (const chunk of chunkText(source, TRANSLATION_CHUNK[ref.provider])) parts.push(await translate(chunk))
-  return { text: parts.join('\n\n'), model }
+  return { text: parts.join('\n\n'), model, ownKeyFailure }
 }
 
 // ─── Regenerate a single format (independent, no side-effects) ───────────────
@@ -505,7 +527,7 @@ export async function regenerateFormat(
       // A refined translation is rewritten whole, so it needs the translation's room, not a draft's.
       { maxTokens: format === 'Language Translation' ? TRANSLATION_MAX_TOKENS : 2048, temperature: 0.65 },
     )
-    return { format, output: result.content, status: 'success', model: result.model, provider: ref.provider }
+    return { format, output: result.content, status: 'success', model: result.model, provider: ref.provider, ownKeyFailure: result.ownKeyFailure }
   } catch (err) {
     return {
       format,
@@ -557,5 +579,36 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineOutput>
     ? `The source is ${WORDS.format(wordCount(parsedSource))} words, more than ${input.engine.models.length > 1 ? 'some of these models' : 'this model'} can take in one request, so the drafts were written from passages spread across the whole document (about ${WORDS.format(wordCount(fitSource(parsedSource, smallest)))} words)${formatsToRun.includes('Language Translation') ? '. The translation covers the full text' : ''}. Gemini models read much longer sources.`
     : null
 
-  return { parsedSource, runs, durationMs: Date.now() - t0, imageReadBy: ingested.readBy, sourceNote }
+  const keyNotices = keyNoticesFor(runs, ingested.imageKeyFailure)
+  return { parsedSource, runs, durationMs: Date.now() - t0, imageReadBy: ingested.readBy, sourceNote, keyNotices }
+}
+
+/** One notice per provider whose own key failed, saying whether the image, all its drafts or only some fell back. */
+function keyNoticesFor(runs: ModelRun[], imageKeyFailure: KeyFailure | null): string[] {
+  const byProvider = new Map<ProviderId, { reason: string; image: boolean; fellBack: number; written: number }>()
+  const entry = (provider: ProviderId, reason: string) => {
+    const e = byProvider.get(provider) ?? { reason, image: false, fellBack: 0, written: 0 }
+    byProvider.set(provider, e)
+    return e
+  }
+  if (imageKeyFailure) entry(imageKeyFailure.provider, imageKeyFailure.reason).image = true
+  for (const run of runs) {
+    for (const r of Object.values(run.results)) {
+      if (r.ownKeyFailure) entry(run.ref.provider, r.ownKeyFailure).fellBack++
+    }
+  }
+  const comparing = runs.length > 1
+  return [...byProvider].map(([provider, e]) => {
+    for (const run of runs) {
+      if (run.ref.provider === provider) e.written += Object.values(run.results).filter((r) => r.status === 'success').length
+    }
+    const name = providerInfo(provider).name
+    const drafts = e.fellBack < e.written
+      ? `some of ${comparing ? `the ${name}` : 'these'} drafts were written`
+      : e.fellBack === 1
+        ? `${comparing ? `the ${name}` : 'this'} draft was written`
+        : `${comparing ? `the ${name}` : 'these'} drafts were written`
+    const clauses = [e.image && 'your image was read', e.fellBack > 0 && drafts].filter(Boolean).join(' and ')
+    return keyFallbackNotice(provider, e.reason, clauses)
+  })
 }
