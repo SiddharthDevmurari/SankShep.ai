@@ -127,18 +127,19 @@ export function TransformView({ onOpenHistory }: { onOpenHistory?: () => void })
         />
 
         {/* Two app windows on the canvas: the control desk and the output canvas.
-            Height = viewport minus app header (4rem), toolbar (~7rem incl. gap) and a bottom margin. */}
-        <div className="mt-5 grid gap-5 lg:grid-cols-[minmax(420px,5fr)_minmax(0,7fr)] lg:gap-6 2xl:gap-8">
+            The desk grows with its content and the page scrolls; the canvas keeps a viewport-sized
+            height (viewport minus app header, toolbar and a margin) and stays pinned beside it. */}
+        <div className="mt-5 grid gap-5 lg:grid-cols-[minmax(420px,5fr)_minmax(0,7fr)] lg:items-start lg:gap-6 2xl:gap-8">
           <aside
             aria-label="Source and configuration"
-            className="sk-elevated flex flex-col rounded-xl border border-edge bg-white lg:h-[max(620px,calc(100dvh-13rem))] lg:overflow-hidden"
+            className="sk-elevated flex h-fit flex-col rounded-xl border border-edge bg-white"
           >
             <LeftPanel onGenerate={handleGenerate} generating={generating} onStatusChange={setStatus} />
           </aside>
 
           <section
             aria-label="Output canvas"
-            className="sk-elevated relative flex min-h-[640px] flex-col overflow-hidden rounded-xl border border-ink bg-white lg:h-[max(620px,calc(100dvh-13rem))] lg:min-h-0"
+            className="sk-elevated relative flex min-h-[640px] flex-col overflow-hidden rounded-xl border border-ink bg-white lg:sticky lg:top-5 lg:h-[max(620px,calc(100dvh-7rem))] lg:min-h-0"
           >
             <RightPanel
               runs={runs}

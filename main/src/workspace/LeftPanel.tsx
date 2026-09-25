@@ -478,7 +478,7 @@ export function LeftPanel({ onGenerate, generating, onStatusChange }: Props) {
         <p className="mt-1.5 text-[13.5px] text-ink-mute">Five steps, then review and generate. Audience and engine start from defaults.</p>
       </div>
 
-      <div className="flex-1 divide-y divide-line lg:overflow-y-auto">
+      <div className="divide-y divide-line">
 
         {/* ── 01 Source ──────────────────────────────────────────────────── */}
         <Step id={STEP_IDS.source} n="01" title="Source" hint="What should we work from?">
@@ -993,7 +993,7 @@ export function LeftPanel({ onGenerate, generating, onStatusChange }: Props) {
       </div>
 
       {/* ── Review + generate ────────────────────────────────────────────── */}
-      <div className="shrink-0 border-t border-line bg-paper-deep px-6 pb-6 pt-5 lg:px-7">
+      <div className="rounded-b-xl border-t border-line bg-paper-deep px-6 pb-6 pt-5 lg:px-7">
         {formError && (
           <p role="alert" className="sk-rise mb-3 rounded-lg border border-red-200 bg-red-50 px-3.5 py-2.5 text-[13px] text-red-800">
             {formError}
