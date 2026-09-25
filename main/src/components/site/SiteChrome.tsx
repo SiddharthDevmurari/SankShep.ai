@@ -44,6 +44,7 @@ export const BrandCapsule = ({ className = '' }: { className?: string }) => (
 const NAV_LINKS = [
   { label: 'How it works', to: '/how-it-works' },
   { label: 'About', to: '/about' },
+  { label: 'Contact', to: '/contact' },
   { label: 'T&C', to: '/terms-and-conditions' },
   { label: 'Privacy Policy', to: '/privacy-policy' },
 ]
@@ -73,7 +74,7 @@ export function SiteNav() {
             <span className="hidden font-display text-[17px] text-ink sm:inline">Sankshep</span>
           </Link>
 
-          <div className="hidden items-center gap-1 lg:flex">
+          <div className="hidden items-center gap-1 xl:flex">
             {NAV_LINKS.map((l) =>
               l.to.includes('#') ? (
                 <Link key={l.label} to={l.to} className={PILL_LINK}>{l.label}</Link>
@@ -97,7 +98,7 @@ export function SiteNav() {
             href={GITHUB_URL}
             target="_blank"
             rel="noopener noreferrer"
-            className="ml-1 flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-ink-soft transition-colors hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink/30 lg:h-9 lg:w-9"
+            className="ml-1 flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-ink-soft transition-colors hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink/30 xl:h-9 xl:w-9"
             aria-label="Sankshep.ai source code on GitHub"
           >
             <GithubIcon className="h-5 w-5" />
@@ -124,6 +125,7 @@ const FOOTER_LINKS: { label: string; to: string; external?: boolean }[] = [
   { label: 'How it works', to: '/how-it-works' },
   { label: 'The Pipeline', to: '/#how-it-works' },
   { label: 'About Us', to: '/about' },
+  { label: 'Contact Us', to: '/contact' },
 ]
 
 export function SiteFooter() {

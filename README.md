@@ -209,6 +209,7 @@ flowchart TB
 | `/` | Landing page | Public |
 | `/how-it-works` | Animated walkthrough of the pipeline and data flow | Public |
 | `/about` | The team and the SIH problem statement | Public |
+| `/contact` | GitHub, LinkedIn and email for each team member | Public |
 | `/privacy-policy`, `/terms-and-conditions` | Legal pages | Public |
 | `/login` | Sign in / sign up | Public |
 | `/workspace` | Transform: configure and generate | Signed in |

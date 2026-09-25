@@ -10,6 +10,7 @@ import WorkspacePage from './pages/WorkspacePage'
 
 // Static pages load on demand so the landing page and workspace don't carry their code (or Motion).
 const AboutPage = lazy(() => import('./pages/AboutPage'))
+const ContactPage = lazy(() => import('./pages/ContactPage'))
 const HowItWorksPage = lazy(() => import('./pages/HowItWorksPage'))
 const PrivacyPolicyPage = lazy(() => import('./pages/legal/PrivacyPolicyPage'))
 const TermsPage = lazy(() => import('./pages/legal/TermsPage'))
@@ -26,6 +27,7 @@ export default function App() {
               <Route path="/" element={<LandingPage />} />
               <Route path="/login" element={<LoginPage />} />
               <Route path="/about" element={<AboutPage />} />
+              <Route path="/contact" element={<ContactPage />} />
               <Route path="/how-it-works" element={<HowItWorksPage />} />
               <Route path="/privacy-policy" element={<PrivacyPolicyPage />} />
               <Route path="/terms-and-conditions" element={<TermsPage />} />
