@@ -739,7 +739,7 @@ export function LeftPanel({ onGenerate, generating, onStatusChange }: Props) {
           id={STEP_IDS.audience}
           n="04"
           title="Audience"
-          hint="Who reads these drafts. Optional."
+          hint="Who will read, watch or receive the final content. Optional."
           done={!!audience}
           collapsible={{
             open: audienceOpen,
@@ -847,6 +847,7 @@ export function LeftPanel({ onGenerate, generating, onStatusChange }: Props) {
 
           {audienceChoice === 'custom' && (
             <div id="ws-custom-audience" className="sk-rise mt-3 space-y-3 rounded-xl border border-line bg-paper p-3.5">
+              <p className="text-[12.5px] leading-snug text-ink-soft">Describe the people the finished content is for, not yourself.</p>
               <label className="block">
                 <span className="text-[13px] font-semibold text-ink">Profile name</span>
                 <span className={`mt-1.5 flex h-11 items-center rounded-lg border border-line bg-white px-3.5 transition-shadow ${FIELD_FOCUS}`}>
@@ -863,7 +864,7 @@ export function LeftPanel({ onGenerate, generating, onStatusChange }: Props) {
               <label className="block">
                 <span className="flex items-baseline justify-between text-[13px] font-semibold text-ink">
                   Description
-                  <span className="text-[12px] font-normal text-ink-mute">What they know, what they care about</span>
+                  <span className="text-[12px] font-normal text-ink-mute">What these readers know and care about</span>
                 </span>
                 <span className={`mt-1.5 block rounded-lg border border-line bg-white transition-shadow ${FIELD_FOCUS}`}>
                   <textarea

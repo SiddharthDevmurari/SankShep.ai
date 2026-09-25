@@ -27,16 +27,22 @@ export type OutputFormat =
 
 export type ToneOption = 'Professional' | 'Technical' | 'Casual-friendly' | 'Academic'
 
+/**
+ * The people who will read, watch or receive the finished content: the end consumer,
+ * never the person using Sankshep to produce it. Choosing "HR/Sales" means the drafts
+ * are written to be handed to HR and sales staff.
+ */
 export interface Audience {
   name: string
+  /** Who these readers are and what they need, written about them, not about the author. */
   description: string
 }
 
 export const AUDIENCE_PRESETS: Audience[] = [
-  { name: 'Manager/Executive', description: 'Time-poor decision makers. Lead with the conclusion, the business impact and the decision needed; keep detail to what supports a decision.' },
-  { name: 'HR/Sales', description: 'People-facing teams. Focus on what changes for customers and employees, talking points they can reuse, and plain language over jargon.' },
-  { name: 'Technical Team', description: 'Engineers and specialists. Keep precise terminology, include mechanisms, constraints and trade-offs, and do not oversimplify.' },
-  { name: 'General Public', description: 'Readers with no background in the topic. Explain terms, use everyday examples, and say why it matters to them.' },
+  { name: 'Manager/Executive', description: 'Senior managers and executives who will decide or act on this. They are short on time: lead with the conclusion, the business impact and the decision they need to make, and keep detail to what supports that decision.' },
+  { name: 'HR/Sales', description: 'HR and sales staff who will use this in their work with employees and customers. Show what changes for those people, give talking points they can repeat, and use plain language over jargon.' },
+  { name: 'Technical Team', description: 'Engineers and specialists who will build, run or evaluate this. Keep precise terminology, include mechanisms, constraints and trade-offs, and do not oversimplify.' },
+  { name: 'General Public', description: 'Members of the public with no background in the topic. Explain terms, use everyday examples, and say why it matters to them.' },
 ]
 
 export type EngineMode = 'single' | 'compare'
@@ -357,10 +363,26 @@ ${source}`,
   return prompts[format]
 }
 
-function audienceInstruction(audience?: Audience | null) {
+/**
+ * Tells the model who will consume the content. The audience is the end reader, not the
+ * person asking for the draft: without saying so, models write *to the requester about*
+ * the audience ("share these points with HR") instead of writing *for* the audience.
+ */
+function audienceInstruction(audience?: Audience | null, opts: { translation?: boolean } = {}) {
   if (!audience?.name.trim()) return ''
+  const name = audience.name.trim()
   const traits = audience.description.trim()
-  return `\n\nTarget audience: ${audience.name.trim()}.${traits ? ` ${traits}` : ''} Choose vocabulary, depth, examples and emphasis for this audience.`
+  const rules = opts.translation
+    // A translation must stay faithful; the audience only steers register and word choice.
+    ? `- Keep the full meaning and every line of the source; use only the register and word choices that suit ${name}.`
+    : `- Write the content itself, ready to be given to ${name}: choose vocabulary, depth, examples and emphasis for them.
+- Do not address the person who requested it, and do not give them advice on how to present this to ${name}.
+- Do not treat ${name} as the author or as the subject: they are the ones receiving it.`
+  return `
+
+AUDIENCE (end readers): the finished content will be read, watched or received by ${name}. They are the end consumers of this content, not the person asking you to write it.${traits ? `
+About these readers: ${traits}` : ''}
+${rules}`
 }
 
 async function formatNode(
@@ -434,7 +456,7 @@ async function translateNode(source: string, input: PipelineInput, ref: ModelRef
     const result = await chat(
       ref,
       [
-        { role: 'system', content: system + audienceInstruction(input.audience) },
+        { role: 'system', content: system + audienceInstruction(input.audience, { translation: true }) },
         { role: 'user', content: user },
       ],
       input.engine.keys,
@@ -472,7 +494,7 @@ export async function regenerateFormat(
       [
         {
           role: 'system',
-          content: `You are refining existing ${format} content. Apply the user's change instructions precisely. Output only the updated content, no meta-commentary.${audienceInstruction(audience)}`,
+          content: `You are refining existing ${format} content. Apply the user's change instructions precisely. Output only the updated content, no meta-commentary.${audienceInstruction(audience, { translation: format === 'Language Translation' })}`,
         },
         {
           role: 'user',
