@@ -43,8 +43,10 @@ async function readDocx(file: File): Promise<string> {
 }
 
 async function readPdf(file: File): Promise<DocumentContent> {
-  const pdfjs = await import('pdfjs-dist')
-  const { default: workerUrl } = await import('pdfjs-dist/build/pdf.worker.min.mjs?url')
+  // The legacy build polyfills what the modern one assumes (Map.getOrInsertComputed,
+  // Uint8Array.fromBase64, Math.sumPrecise), which Safari on iOS and macOS lacks.
+  const pdfjs = await import('pdfjs-dist/legacy/build/pdf.mjs')
+  const { default: workerUrl } = await import('pdfjs-dist/legacy/build/pdf.worker.min.mjs?url')
   pdfjs.GlobalWorkerOptions.workerSrc = workerUrl
 
   const task = pdfjs.getDocument({ data: new Uint8Array(await file.arrayBuffer()) })

@@ -9,7 +9,7 @@
  * provider directly with the user's own key (lib/providers.ts).
  */
 
-import { chat, providerInfo, type ApiKeys, type ImageInput, type ModelRef, type ProviderId } from './providers'
+import { chat, providerInfo, timeoutSignal, type ApiKeys, type ImageInput, type ModelRef, type ProviderId } from './providers'
 import { describeReader, pickImageReader, readImages } from './ingest'
 
 export type OutputFormat =
@@ -114,7 +114,7 @@ async function readUrl(raw: string): Promise<string> {
   const url = /^https?:\/\//i.test(raw.trim()) ? raw.trim() : `https://${raw.trim()}`
   let res: Response
   try {
-    res = await fetch(`https://r.jina.ai/${url}`, { headers: { Accept: 'text/plain' }, signal: AbortSignal.timeout(60_000) })
+    res = await fetch(`https://r.jina.ai/${url}`, { headers: { Accept: 'text/plain' }, signal: timeoutSignal(60_000) })
   } catch {
     throw new Error(`Couldn't open ${url}. Check the link, or paste the page's text instead.`)
   }

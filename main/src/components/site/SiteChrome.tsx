@@ -64,15 +64,16 @@ export function SiteNav() {
       <div className="flex justify-center">
         <nav
           aria-label="Main"
-          className="flex items-center gap-3 rounded-full bg-white/95 px-5 py-3 backdrop-blur-md"
+          className="flex max-w-full items-center gap-2 rounded-full bg-white/95 px-3 py-3 backdrop-blur-md sm:gap-3 sm:px-5"
           style={{ boxShadow: CAPSULE_SHADOW }}
         >
-          <Link to="/" className="mr-2 flex items-center gap-2.5 rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink/30" aria-label="Sankshep home">
+          <Link to="/" className="flex items-center gap-2.5 rounded-xl sm:mr-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink/30" aria-label="Sankshep home">
             <BrandMark className="h-9 w-9 rounded-full" />
-            <span className="font-display text-[17px] text-ink">Sankshep</span>
+            {/* Small phones: the mark alone, so the capsule fits a 320px screen. */}
+            <span className="hidden font-display text-[17px] text-ink sm:inline">Sankshep</span>
           </Link>
 
-          <div className="hidden items-center gap-1 md:flex">
+          <div className="hidden items-center gap-1 lg:flex">
             {NAV_LINKS.map((l) =>
               l.to.includes('#') ? (
                 <Link key={l.label} to={l.to} className={PILL_LINK}>{l.label}</Link>
@@ -96,7 +97,7 @@ export function SiteNav() {
             href={GITHUB_URL}
             target="_blank"
             rel="noopener noreferrer"
-            className="ml-1 flex h-11 w-11 items-center justify-center rounded-full text-ink-soft transition-colors hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink/30 md:h-9 md:w-9"
+            className="ml-1 flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-ink-soft transition-colors hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink/30 lg:h-9 lg:w-9"
             aria-label="Sankshep.ai source code on GitHub"
           >
             <GithubIcon className="h-5 w-5" />
@@ -104,7 +105,7 @@ export function SiteNav() {
 
           <Link
             to="/workspace"
-            className="ml-1 flex items-center gap-1.5 rounded-full bg-ink px-5 py-2.5 text-[14px] font-medium text-paper transition-transform hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-matcha"
+            className="ml-1 flex items-center gap-1.5 whitespace-nowrap rounded-full bg-ink px-4 py-2.5 text-[14px] font-medium text-paper sm:px-5 transition-transform hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-matcha"
           >
             <ArrowRight className="h-3.5 w-3.5" />
             Open Workspace
@@ -129,7 +130,8 @@ export function SiteFooter() {
   return (
     <footer className="border-t border-hair bg-paper-deep">
       <div className="px-5 pb-4 pt-10 sm:px-8">
-        <p className="font-display select-none text-[clamp(4rem,20vw,17rem)] leading-[1.1] text-ink" aria-hidden>
+        {/* "Sankshep.ai" is about 5.4× as wide as its font size: 15.5vw keeps it inside the page at every width. */}
+        <p className="font-display select-none whitespace-nowrap text-[clamp(2.5rem,15.5vw,17rem)] leading-[1.1] text-ink" aria-hidden>
           Sankshep<span className="text-matcha-deep">.ai</span>
         </p>
       </div>

@@ -43,6 +43,7 @@ Organisations spend hours turning the same source material into briefs, posts, d
 | **Full-length translation** | Translation covers the whole source, line by line, in chunks, however long the document is. |
 | **Refine one draft** | Ask for "shorter", "add a risk table" or anything else; only that draft is rewritten, by the same model. |
 | **History & Analytics** | Every draft is logged with its format, provider, model and word counts. Filter your history by format and see usage at a glance. |
+| **Install as an app** | Installable on Android, iPhone, iPad, Mac and Windows from the website itself (a PWA). The landing page shows **Download for Android** or **Download for iOS** on those devices. |
 | **Accounts & admin** | Email sign-up with no verification step, a shared demo account, self-service account deletion, and an admin panel for all users and activity. |
 
 ## Quick start
@@ -110,6 +111,19 @@ Run these inside `main/`:
 | "Port 8443 is already in use" | Another copy of the dev server is running. Close it, or run `npx vite --port 5173`. |
 | A Mistral model says it isn't available | The Mistral plan behind the key doesn't include that model. Pick `open-mistral-nemo` or another provider. |
 | A long document is slow | Free Groq keys allow about 8,000 tokens a minute; the app waits and retries rather than failing. Gemini handles long sources fastest. |
+
+## Install the app
+
+Sankshep is an installable web app (PWA): no app store, and every deploy updates it automatically.
+
+| Device | How |
+|---|---|
+| **Android** | Open [sankshep-ai.vercel.app](https://sankshep-ai.vercel.app) in Chrome and tap **Download for Android** on the landing page, then **Install**. (Or browser menu ⋮ → **Install app**.) |
+| **iPhone / iPad** | Open the site in Safari, tap **Download for iOS** for the steps: **Share** → **Add to Home Screen** → **Add**. |
+| **Mac** | Safari: **File → Add to Dock**. Chrome or Edge: the install icon at the right of the address bar. |
+| **Windows** | Chrome or Edge: the install icon at the right of the address bar. |
+
+The install files are `main/public/manifest.webmanifest`, the icons in `main/public/`, and the service worker `main/public/sw.js`. The service worker only caches the site's own files; AI requests and account data always go to the network. It runs in production builds only (`npm run build`), not in `npm run dev`.
 
 ## How it works
 

@@ -2,6 +2,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { SiteFooter, SiteNav } from '../components/site/SiteChrome'
+import { InstallAppButton } from '../components/InstallApp'
 
 /* ---------- tiny inline icon set (stroke, 1.6) ---------- */
 type IconProps = { className?: string }
@@ -155,6 +156,7 @@ function Hero() {
               Launch Workspace <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
             </Link>
             <a href="#how-it-works" className="rounded-full border border-hair bg-white px-6 py-3.5 text-[15px] font-medium text-ink transition-colors hover:bg-paper-deep">See How It Works</a>
+            <InstallAppButton />
           </div>
           <div className="mt-8 flex items-center gap-5 text-[13px] text-ink-soft">
             <span className="flex items-center gap-1.5"><Check className="h-4 w-4 text-matcha-deep" /> No credit card</span>

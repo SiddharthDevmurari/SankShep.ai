@@ -5,7 +5,14 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link rel="icon" type="image/jpeg" href="/logo.jpeg" />
-    <link rel="apple-touch-icon" href="/logo.jpeg" />
+    <!-- Installable app (PWA): Android/desktop read the manifest; iOS reads the apple-* tags. -->
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <meta name="theme-color" content="#1f3834" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="Sankshep" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <title><!-- figma:title --></title>
     <!-- figma:head-end -->
   </head>

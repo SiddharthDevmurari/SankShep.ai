@@ -301,6 +301,18 @@ async function geminiChat(model: string, messages: ChatMessage[], route: Route, 
 const REQUEST_TIMEOUT_MS = 120_000
 const SHARED_ENDPOINT = '/api/chat'
 
+/**
+ * AbortSignal.timeout, with a fallback for Safari before 16 (older iPhones and Macs),
+ * where calling it would throw and stop every request. The fallback aborts with a
+ * TimeoutError too, so callers can tell a timeout from other failures.
+ */
+export function timeoutSignal(ms: number): AbortSignal {
+  if (typeof AbortSignal.timeout === 'function') return AbortSignal.timeout(ms)
+  const controller = new AbortController()
+  setTimeout(() => controller.abort(new DOMException('The request timed out.', 'TimeoutError')), ms)
+  return controller.signal
+}
+
 async function send(info: ProviderInfo, model: string, route: Route, url: string, auth: Record<string, string>, body: unknown): Promise<Response> {
   const shared = route.kind === 'shared'
   const where = shared ? 'the shared-key service' : info.host
@@ -310,7 +322,7 @@ async function send(info: ProviderInfo, model: string, route: Route, url: string
       method: 'POST',
       headers: { 'Content-Type': 'application/json', ...auth },
       body: JSON.stringify(shared ? { provider: info.id, model, body } : body),
-      signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+      signal: timeoutSignal(REQUEST_TIMEOUT_MS),
     })
   } catch (err) {
     const reason = err instanceof Error && err.name === 'TimeoutError' ? 'no answer after 2 minutes' : err instanceof Error ? err.message : String(err)
