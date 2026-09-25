@@ -367,7 +367,7 @@ function figmaMakeKitPlugin(options: { storiesGlob: string | string[] }): Plugin
  * works with no .env.local: the shared keys stay in that site's Vercel environment
  * variables and never enter the repo. Override with SANKSHEP_API_ORIGIN.
  */
-const DEPLOYED_ORIGIN = ''
+const DEPLOYED_ORIGIN = 'https://sankshep-ai.vercel.app'
 
 /** Sends the request to the deployed /api/chat instead of answering locally. */
 async function forwardToDeployed(origin: string, payload: ProxyRequest | null) {

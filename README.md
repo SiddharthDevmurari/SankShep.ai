@@ -8,6 +8,8 @@ A generative AI workspace that turns a single report, article or advisory into e
 
 *Smart India Hackathon 2026 · Problem statement: Gen AI Platform for Automated Content Transformation*
 
+**Live: [sankshep-ai.vercel.app](https://sankshep-ai.vercel.app)**
+
 [![React](https://img.shields.io/badge/React-19-0f100f?logo=react&logoColor=d4ed64)](https://react.dev)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.7-0f100f?logo=typescript&logoColor=d4ed64)](https://www.typescriptlang.org)
 [![Vite](https://img.shields.io/badge/Vite-8-0f100f?logo=vite&logoColor=d4ed64)](https://vite.dev)
@@ -85,7 +87,7 @@ All optional for local development. Set them in Vercel for the deployed site (se
 | `GROQ_API_KEYS` | Shared Groq keys, comma-separated, tried in turn |
 | `GEMINI_API_KEYS` | Shared Gemini keys |
 | `MISTRAL_API_KEYS` | Shared Mistral keys |
-| `SANKSHEP_API_ORIGIN` | Local dev only: the site whose `/api/chat` to use when there are no local keys (defaults to the deployed site) |
+| `SANKSHEP_API_ORIGIN` | Local dev only: the site whose `/api/chat` to use when there are no local keys (defaults to `https://sankshep-ai.vercel.app`) |
 
 Don't name provider keys with a `VITE_` prefix: Vite builds every `VITE_` variable into the public website.
 
