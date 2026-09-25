@@ -1112,12 +1112,16 @@ function Step({ id, n, title, hint, done, action, collapsible, children }: {
   )
 }
 
-/** Shared by the config panel and the empty canvas so both read as the same three steps. */
+/**
+ * Shared by the config panel and the empty canvas so both read as the same steps.
+ * Every badge is the same solid pill; only the numeral's colour marks a finished step.
+ * What is still missing is said in words next to it ("Go to step", the step's summary).
+ */
 export function StepNumber({ n, done }: { n: string; done?: boolean }) {
   return (
     <span
-      className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg font-mono text-[12px] font-semibold tabular-nums ${
-        done ? 'bg-ink text-matcha' : 'border border-ink/30 bg-white text-ink'
+      className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-ink font-mono text-[12px] font-semibold tabular-nums ${
+        done ? 'text-matcha' : 'text-paper'
       }`}
     >
       {n}
