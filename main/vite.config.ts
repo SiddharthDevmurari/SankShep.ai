@@ -2,7 +2,7 @@ import { defineConfig, loadEnv, type HtmlTagDescriptor, type Plugin } from 'vite
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import path from 'node:path'
-import { safeProxyChat, type ProxyRequest } from './api/chat.ts'
+import { safeProxyChat, systemKeys, type ProxyRequest } from './api/chat.ts'
 
 import siteConfiguration from './.figma/make/site.json'
 
@@ -363,11 +363,39 @@ function figmaMakeKitPlugin(options: { storiesGlob: string | string[] }): Plugin
 }
 
 /**
- * Serves POST /api/chat during `vite dev` with the same code Vercel runs
- * (api/chat.ts), reading GROQ_API_KEYS / GEMINI_API_KEYS / MISTRAL_API_KEYS from
- * .env.local. The keys stay in this Node process; none are exposed to the browser.
+ * The deployed site whose /api/chat a fresh clone falls back to, so `npm run dev`
+ * works with no .env.local: the shared keys stay in that site's Vercel environment
+ * variables and never enter the repo. Override with SANKSHEP_API_ORIGIN.
+ */
+const DEPLOYED_ORIGIN = ''
+
+/** Sends the request to the deployed /api/chat instead of answering locally. */
+async function forwardToDeployed(origin: string, payload: ProxyRequest | null) {
+  try {
+    const res = await fetch(`${origin.replace(/\/+$/, '')}/api/chat`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+      signal: AbortSignal.timeout(65_000),
+    })
+    const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+    const retryAfter = res.headers.get('retry-after')
+    if (retryAfter) headers['Retry-After'] = retryAfter
+    return { status: res.status, headers, body: await res.text() }
+  } catch {
+    return { status: 502, headers: { 'Content-Type': 'application/json' }, body: `{"error":{"message":"Couldn't reach ${origin}/api/chat."}}` }
+  }
+}
+
+/**
+ * Serves POST /api/chat during `vite dev`. With keys in .env.local (GROQ_API_KEYS,
+ * GEMINI_API_KEYS, MISTRAL_API_KEYS) it runs the same code Vercel runs (api/chat.ts);
+ * without them it forwards to the deployed site, which holds the shared keys.
+ * Either way no key is exposed to the browser.
  */
 function sharedKeyApi(env: Record<string, string>): Plugin {
+  const allEnv = { ...process.env, ...env }
+  const deployed = (allEnv.SANKSHEP_API_ORIGIN || DEPLOYED_ORIGIN).trim()
   return {
     name: 'sankshep-shared-key-api',
     apply: 'serve',
@@ -381,9 +409,12 @@ function sharedKeyApi(env: Record<string, string>): Plugin {
         } catch {
           payload = null
         }
-        const reply = req.method === 'POST'
-          ? await safeProxyChat(payload as ProxyRequest, { ...process.env, ...env })
-          : { status: 405, headers: { 'Content-Type': 'application/json' }, body: '{"error":{"message":"Use POST."}}' }
+        const hasLocalKeys = typeof payload?.provider === 'string' && systemKeys(payload.provider, allEnv).length > 0
+        const reply = req.method !== 'POST'
+          ? { status: 405, headers: { 'Content-Type': 'application/json' }, body: '{"error":{"message":"Use POST."}}' }
+          : !hasLocalKeys && deployed
+            ? await forwardToDeployed(deployed, payload)
+            : await safeProxyChat(payload as ProxyRequest, allEnv)
         res.statusCode = reply.status
         for (const [name, value] of Object.entries(reply.headers)) res.setHeader(name, value)
         res.end(reply.body)
