@@ -115,9 +115,9 @@ async function ingestNode(input: PipelineInput): Promise<{ text: string; readBy:
   if (input.url?.trim()) parts.push(await readUrl(input.url))
   let readBy: string | null = null
   if (input.images?.length) {
-    const reader = pickImageReader(input.engine.models, input.engine.keys)
-    parts.push(await readImages(input.images, reader, input.engine.keys))
-    readBy = describeReader(reader)
+    const read = await readImages(input.images, pickImageReader(input.engine.models, input.engine.keys), input.engine.keys)
+    parts.push(read.text)
+    readBy = describeReader(read.reader)
   }
   return { text: parts.filter(Boolean).join('\n\n'), readBy }
 }

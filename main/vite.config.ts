@@ -1,7 +1,8 @@
-import { defineConfig, type HtmlTagDescriptor, type Plugin } from 'vite'
+import { defineConfig, loadEnv, type HtmlTagDescriptor, type Plugin } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import path from 'node:path'
+import { safeProxyChat, type ProxyRequest } from './api/chat.ts'
 
 import siteConfiguration from './.figma/make/site.json'
 
@@ -18,6 +19,7 @@ export default defineConfig(({ mode }) => {
       minify: !emitSourcemaps,
     },
     plugins: [
+      sharedKeyApi(loadEnv(mode, process.cwd(), '')),
 react(),
       tailwindcss(),
       figmaSiteConfiguration(siteConfiguration),
@@ -355,6 +357,36 @@ function figmaMakeKitPlugin(options: { storiesGlob: string | string[] }): Plugin
         } catch (err) {
           next(err as Error)
         }
+      })
+    },
+  }
+}
+
+/**
+ * Serves POST /api/chat during `vite dev` with the same code Vercel runs
+ * (api/chat.ts), reading GROQ_API_KEYS / GEMINI_API_KEYS / MISTRAL_API_KEYS from
+ * .env.local. The keys stay in this Node process; none are exposed to the browser.
+ */
+function sharedKeyApi(env: Record<string, string>): Plugin {
+  return {
+    name: 'sankshep-shared-key-api',
+    apply: 'serve',
+    configureServer(server) {
+      server.middlewares.use('/api/chat', async (req, res) => {
+        let payload: ProxyRequest | null = null
+        try {
+          const chunks: Buffer[] = []
+          for await (const chunk of req) chunks.push(chunk as Buffer)
+          payload = JSON.parse(Buffer.concat(chunks).toString('utf8'))
+        } catch {
+          payload = null
+        }
+        const reply = req.method === 'POST'
+          ? await safeProxyChat(payload as ProxyRequest, { ...process.env, ...env })
+          : { status: 405, headers: { 'Content-Type': 'application/json' }, body: '{"error":{"message":"Use POST."}}' }
+        res.statusCode = reply.status
+        for (const [name, value] of Object.entries(reply.headers)) res.setHeader(name, value)
+        res.end(reply.body)
       })
     },
   }

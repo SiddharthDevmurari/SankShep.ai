@@ -9,7 +9,6 @@ import {
   DEFAULT_MODEL, PROVIDERS, canWrite, hasKey, modelInfo, parseRefKey, providerInfo, refKey,
   type ApiKeys, type ImageInput, type ModelKind, type ProviderId,
 } from '../lib/providers'
-import { hasGroqKey } from '../lib/groq'
 import { describeReader, pickImageReader } from '../lib/ingest'
 import { extractDocument, isDocumentFile } from '../lib/documents'
 
@@ -101,14 +100,34 @@ function isImageFile(file: File) {
   return file.type.startsWith('image/') || /\.(png|jpe?g|webp)$/i.test(file.name)
 }
 
-function readAsImageInput(file: File): Promise<ImageInput> {
+/** Longest side sent to a vision model: legible for text, and small enough for the shared-key service's 4.5 MB request limit. */
+const MAX_IMAGE_SIDE = 2000
+
+/** Reads an image, scaling it down to MAX_IMAGE_SIDE as JPEG when it is larger. */
+async function readAsImageInput(file: File): Promise<ImageInput> {
+  const url = await readAsDataUrl(file)
+  const img = new Image()
+  img.src = url
+  await img.decode()
+  const scale = Math.min(1, MAX_IMAGE_SIDE / Math.max(img.naturalWidth, img.naturalHeight))
+  if (scale === 1 && file.size < 1.5 * 1024 * 1024) {
+    return { mimeType: file.type || 'image/png', data: url.slice(url.indexOf(',') + 1) }
+  }
+  const canvas = document.createElement('canvas')
+  canvas.width = Math.round(img.naturalWidth * scale)
+  canvas.height = Math.round(img.naturalHeight * scale)
+  const ctx = canvas.getContext('2d')!
+  ctx.fillStyle = '#fff' // JPEG has no transparency; keep transparent areas white, not black.
+  ctx.fillRect(0, 0, canvas.width, canvas.height)
+  ctx.drawImage(img, 0, 0, canvas.width, canvas.height)
+  const jpeg = canvas.toDataURL('image/jpeg', 0.88)
+  return { mimeType: 'image/jpeg', data: jpeg.slice(jpeg.indexOf(',') + 1) }
+}
+
+function readAsDataUrl(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader()
-    reader.onload = () => {
-      const url = String(reader.result)
-      const comma = url.indexOf(',')
-      resolve({ mimeType: file.type || 'image/png', data: url.slice(comma + 1) })
-    }
+    reader.onload = () => resolve(String(reader.result))
     reader.onerror = () => reject(reader.error ?? new Error('Could not read the image.'))
     reader.readAsDataURL(file)
   })
@@ -181,7 +200,7 @@ export function LeftPanel({ onGenerate, generating, onStatusChange }: Props) {
 
   const selectedRefs = (engineMode === 'single' ? [singleModel] : compareModels).map(parseRefKey)
   const usedProviders = [...new Set(selectedRefs.map((r) => r.provider))]
-  const missingKey = usedProviders.find((p) => !hasKey(p, keys, hasGroqKey)) ?? null
+  const missingKey = usedProviders.find((p) => !hasKey(p, keys)) ?? null
 
   const audience: Audience | null =
     audienceChoice === 'custom' ? (customAudience.name.trim() ? customAudience : null)
@@ -1023,7 +1042,6 @@ function ModelSelect({ label, hideLabel, value, taken = [], onChange }: {
 function KeyField({ provider, value, onChange }: { provider: ProviderId; value: string; onChange: (value: string) => void }) {
   const info = providerInfo(provider)
   const [visible, setVisible] = useState(false)
-  const workspaceFallback = provider === 'groq' && hasGroqKey
   const id = `ws-key-${provider}`
 
   return (
@@ -1045,7 +1063,7 @@ function KeyField({ provider, value, onChange }: { provider: ProviderId; value: 
           type={visible ? 'text' : 'password'}
           value={value}
           onChange={(e) => onChange(e.target.value)}
-          placeholder={workspaceFallback ? 'Optional' : `Enter your ${info.name} API key (${info.keyPlaceholder})`}
+          placeholder={`Optional (${info.keyPlaceholder})`}
           autoComplete="off"
           spellCheck={false}
           className="min-w-0 flex-1 bg-transparent font-mono text-[13px] text-ink outline-none placeholder:font-sans placeholder:text-ink-mute"
@@ -1063,9 +1081,7 @@ function KeyField({ provider, value, onChange }: { provider: ProviderId; value: 
       <p className="mt-1.5 text-[12.5px] leading-snug text-ink-mute">
         {value.trim()
           ? <>Sent only to <span className="font-mono text-[12px]">{info.host}</span>. Kept in this tab's memory, never saved.</>
-          : workspaceFallback
-            ? "Leave empty to use this workspace's own Groq key."
-            : `Required for ${info.name} models. Kept in this tab's memory, never saved.`}
+          : `Optional. Leave empty to use Sankshep's shared ${info.name} keys; add your own if they run out.`}
       </p>
     </div>
   )

@@ -2,12 +2,11 @@
  * Provider catalogue and one chat client for Groq, Gemini and Mistral.
  *
  * Every call goes straight from the browser to the provider (all three allow
- * CORS), authenticated with the key the user pasted into the workspace. Groq
- * alone can fall back to this deployment's own key (lib/groq.ts). Keys live
- * only in memory and are never logged or sent to Supabase.
+ * CORS) when the user pasted their own key into the workspace. Without one, or
+ * when it fails, requests go through /api/chat, which adds one of this
+ * deployment's shared keys server-side (api/chat.ts). User keys live only in
+ * memory and are never logged or sent to Supabase.
  */
-
-import { hasGroqKey as hasWorkspaceGroqKey, nextWorkspaceGroqKey } from './groq'
 
 export type ProviderId = 'groq' | 'gemini' | 'mistral'
 
@@ -57,7 +56,6 @@ export const PROVIDERS: ProviderInfo[] = [
     models: [
       { id: 'gemini-3.5-flash-lite', kind: 'vision' },
       { id: 'gemini-3.8-flash', kind: 'vision' },
-      { id: 'gemini-2.5-flash', kind: 'vision' },
     ],
   },
   {
@@ -104,16 +102,12 @@ export function parseRefKey(key: string): ModelRef {
   return { provider: key.slice(0, i) as ProviderId, model: key.slice(i + 1) }
 }
 
-/** The key a request to `provider` will use: the user's own, or for Groq the workspace key. */
-export function resolveKey(provider: ProviderId, keys: ApiKeys): string | null {
-  const own = keys[provider]?.trim()
-  if (own) return own
-  return provider === 'groq' ? nextWorkspaceGroqKey() : null
-}
-
-/** Whether a request to `provider` has a key to use, without consuming a workspace key rotation. */
-export function hasKey(provider: ProviderId, keys: ApiKeys, workspaceGroqKey: boolean): boolean {
-  return !!keys[provider]?.trim() || (provider === 'groq' && workspaceGroqKey)
+/**
+ * Every provider can be used without a key of the user's own: requests without one
+ * (or whose key fails) go through /api/chat, which holds the shared keys (api/chat.ts).
+ */
+export function hasKey(_provider: ProviderId, _keys: ApiKeys): boolean {
+  return true
 }
 
 /* ─── Chat ──────────────────────────────────────────────────────────────── */
@@ -143,38 +137,82 @@ interface ChatOptions {
   temperature?: number
 }
 
-/** A failed request that may succeed if sent again: rate limits, overloaded or unreachable servers. */
+/** Where a request goes: straight to the provider with the user's key, or through the shared-key service. */
+type Route = { kind: 'own'; key: string } | { kind: 'shared' }
+
+/** A failed request that may succeed if sent again the same way: overloaded or unreachable servers. */
 class RetryableError extends Error {
   constructor(message: string, readonly waitMs: number) {
     super(message)
   }
 }
 
-const MAX_ATTEMPTS = 6
+/** The key is the problem, not the request: rejected (invalid, out of quota) or rate-limited for `waitMs`. */
+class KeyError extends Error {
+  constructor(message: string, readonly kind: 'rejected' | 'rate-limited', readonly waitMs = 0) {
+    super(message)
+  }
+}
+
+/** Every shared key for the provider has been rejected, or the shared-key service isn't there. */
+class SharedKeysExhausted extends Error {}
+
+/** Rounds of (own key, then shared keys) before giving up; each round waits out the shortest rate limit. */
+const MAX_ROUNDS = 6
 const MAX_WAIT_MS = 65_000
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 
+/**
+ * Sends one chat request. The user's key goes first; if they gave none, or it is rejected or
+ * rate-limited, the shared keys take over. Per-minute limits are waited out, so a draft
+ * only fails when every key is unusable.
+ */
 export async function chat(ref: ModelRef, messages: ChatMessage[], keys: ApiKeys, opts: ChatOptions = {}): Promise<ChatResult> {
   const info = providerInfo(ref.provider)
-  if (!hasKey(ref.provider, keys, hasWorkspaceGroqKey)) {
-    throw new Error(`Add your ${info.name} API key in the AI engine step to use ${ref.model}.`)
-  }
   if (!canWrite(modelInfo(ref)?.kind)) {
     throw new Error(`${ref.model} is a ${modelInfo(ref)?.kind ?? 'non-text'} model and can't write drafts.`)
   }
-  // Free-tier limits are per minute, so waiting out a 429 almost always gets the draft through.
-  for (let attempt = 1; ; attempt++) {
-    const key = resolveKey(ref.provider, keys)!
-    try {
-      const result = ref.provider === 'gemini'
-        ? await geminiChat(ref.model, messages, key, opts)
-        : await openAiStyleChat(info, ref.model, messages, key, opts)
-      return { ...result, content: stripThinking(result.content) }
-    } catch (err) {
-      if (!(err instanceof RetryableError) || attempt >= MAX_ATTEMPTS) throw err
-      await sleep(Math.min(err.waitMs, MAX_WAIT_MS) + Math.random() * 500)
+  const own = keys[ref.provider]?.trim()
+  let ownProblem: string | null = null
+  let sharedOut = false
+
+  for (let round = 1; round <= MAX_ROUNDS; round++) {
+    const routes: Route[] = [
+      ...(own && !ownProblem?.startsWith('rejected') ? [{ kind: 'own', key: own } as const] : []),
+      ...(sharedOut ? [] : [{ kind: 'shared' } as const]),
+    ]
+    if (routes.length === 0) break
+    let shortestWait = Infinity
+
+    for (const route of routes) {
+      try {
+        const result = ref.provider === 'gemini'
+          ? await geminiChat(ref.model, messages, route, opts)
+          : await openAiStyleChat(info, ref.model, messages, route, opts)
+        return { ...result, content: stripThinking(result.content) }
+      } catch (err) {
+        if (err instanceof SharedKeysExhausted) {
+          sharedOut = true
+        } else if (err instanceof KeyError) {
+          if (route.kind === 'own') ownProblem = `${err.kind}: ${err.message}`
+          if (err.kind === 'rate-limited') shortestWait = Math.min(shortestWait, err.waitMs)
+        } else if (err instanceof RetryableError) {
+          shortestWait = Math.min(shortestWait, err.waitMs)
+        } else {
+          throw err // About the request itself (too long, unknown model): another key won't help.
+        }
+      }
     }
+
+    if (shortestWait === Infinity) break // Nothing left that waiting would fix.
+    if (round < MAX_ROUNDS) await sleep(Math.min(shortestWait, MAX_WAIT_MS) + Math.random() * 500)
   }
+
+  if (ownProblem?.startsWith('rejected') && sharedOut) {
+    throw new Error(`Your ${info.name} API key was rejected, and the system API keys are exhausted. Check your key in the AI engine step.`)
+  }
+  if (sharedOut) throw new Error(`System API keys are exhausted. Please enter your own valid ${info.name} API key in the AI engine step.`)
+  throw new Error(`${info.name} is busy: every available key is rate-limited. Wait a minute and generate again, or pick another model.`)
 }
 
 /** Reasoning models may put their scratch work inline; only the answer belongs in a draft. */
@@ -183,7 +221,7 @@ function stripThinking(text: string) {
 }
 
 /** Groq and Mistral both speak the OpenAI chat-completions dialect. */
-async function openAiStyleChat(info: ProviderInfo, model: string, messages: ChatMessage[], key: string, opts: ChatOptions): Promise<ChatResult> {
+async function openAiStyleChat(info: ProviderInfo, model: string, messages: ChatMessage[], route: Route, opts: ChatOptions): Promise<ChatResult> {
   const url = info.id === 'groq' ? 'https://api.groq.com/openai/v1/chat/completions' : 'https://api.mistral.ai/v1/chat/completions'
   const body = {
     model,
@@ -204,7 +242,7 @@ async function openAiStyleChat(info: ProviderInfo, model: string, messages: Chat
     // gpt-oss reasons before answering and the reasoning shares max_tokens; keep it short so the draft fits.
     ...(info.id === 'groq' && model.startsWith('openai/gpt-oss') && { reasoning_effort: 'low' }),
   }
-  const res = await send(info, url, { Authorization: `Bearer ${key}` }, body)
+  const res = await send(info, model, route, url, route.kind === 'own' ? { Authorization: `Bearer ${route.key}` } : {}, body)
   const data = await res.json()
   const choice = data.choices?.[0]
   const content: string | undefined = choice?.message?.content
@@ -215,7 +253,7 @@ async function openAiStyleChat(info: ProviderInfo, model: string, messages: Chat
   return { content, model: data.model ?? model, truncated: choice?.finish_reason === 'length' }
 }
 
-async function geminiChat(model: string, messages: ChatMessage[], key: string, opts: ChatOptions): Promise<ChatResult> {
+async function geminiChat(model: string, messages: ChatMessage[], route: Route, opts: ChatOptions): Promise<ChatResult> {
   const info = providerInfo('gemini')
   const system = messages.filter((m) => m.role === 'system').map((m) => m.content).join('\n\n')
   const body = {
@@ -236,7 +274,7 @@ async function geminiChat(model: string, messages: ChatMessage[], key: string, o
     },
   }
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`
-  const res = await send(info, url, { 'x-goog-api-key': key }, body)
+  const res = await send(info, model, route, url, route.kind === 'own' ? { 'x-goog-api-key': route.key } : {}, body)
   const data = await res.json()
   const candidate = data.candidates?.[0]
   const content = (candidate?.content?.parts ?? []).map((p: { text?: string }) => p.text ?? '').join('').trim()
@@ -248,36 +286,46 @@ async function geminiChat(model: string, messages: ChatMessage[], key: string, o
 }
 
 const REQUEST_TIMEOUT_MS = 120_000
+const SHARED_ENDPOINT = '/api/chat'
 
-async function send(info: ProviderInfo, url: string, auth: Record<string, string>, body: unknown): Promise<Response> {
+async function send(info: ProviderInfo, model: string, route: Route, url: string, auth: Record<string, string>, body: unknown): Promise<Response> {
+  const shared = route.kind === 'shared'
+  const where = shared ? 'the shared-key service' : info.host
   let res: Response
   try {
-    res = await fetch(url, {
+    res = await fetch(shared ? SHARED_ENDPOINT : url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', ...auth },
-      body: JSON.stringify(body),
+      body: JSON.stringify(shared ? { provider: info.id, model, body } : body),
       signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
     })
   } catch (err) {
     const reason = err instanceof Error && err.name === 'TimeoutError' ? 'no answer after 2 minutes' : err instanceof Error ? err.message : String(err)
-    throw new RetryableError(`Couldn't reach ${info.host}: ${reason}`, 3000)
+    throw new RetryableError(`Couldn't reach ${where}: ${reason}`, 3000)
   }
   if (res.ok) return res
   const text = (await res.text()).slice(0, 400)
-  // Gemini reports a bad key as 400 "API key not valid".
-  if (res.status === 401 || res.status === 403 || (res.status === 400 && /api key/i.test(text))) throw new Error(`${info.name} rejected the API key (${res.status}). Check the key in the AI engine step.`)
+
+  if (shared) {
+    // Not JSON: the page is hosted without the /api function (e.g. a static preview).
+    if (!/^\s*\{/.test(text)) throw new SharedKeysExhausted('Shared-key service unavailable.')
+    if (res.status === 404) throw new Error(`${model} isn't available on the shared ${info.name} keys. Pick another model, or add your own ${info.name} key.`)
+    if (res.status === 503 && /keys_exhausted/.test(text)) throw new SharedKeysExhausted(text)
+    if (res.status === 429) throw new KeyError(`${info.name} shared keys are rate-limited.`, 'rate-limited', retryDelayMs(res, text))
+  } else {
+    // Gemini reports a bad key as 400 "API key not valid".
+    if (res.status === 401 || res.status === 403 || (res.status === 400 && /api.key/i.test(text))) throw new KeyError(`${info.name} rejected the API key (${res.status}).`, 'rejected')
+    if (res.status === 429) {
+      // Daily quotas don't reset within a minute; hand over to the shared keys instead of waiting.
+      if (/per day|daily|quota exceeded/i.test(text) && !/per minute/i.test(text)) throw new KeyError(`${info.name} daily limit reached for your key.`, 'rejected')
+      throw new KeyError(`${info.name} rate limit reached.`, 'rate-limited', retryDelayMs(res, text))
+    }
+    if (res.status === 404) throw new KeyError(`${info.name} doesn't offer ${model} to your key (404).`, 'rejected')
+  }
   if (res.status === 413 || /request too large|context.length|maximum context|too many tokens/i.test(text)) {
     throw new Error(`The source is too long for this model on ${info.name}. Pick a model with a larger limit (Gemini reads the most), or shorten the source.`)
   }
-  if (res.status === 429) {
-    // Daily quotas don't reset within a minute; retrying only burns time.
-    if (/per day|daily|quota exceeded/i.test(text) && !/per minute/i.test(text)) {
-      throw new Error(`${info.name} daily limit reached for this key. Use another model or your own key. ${text}`)
-    }
-    throw new RetryableError(`${info.name} rate limit reached. Wait a minute or use another model. ${text}`, retryDelayMs(res, text))
-  }
   if (res.status === 408 || res.status >= 500) throw new RetryableError(`${info.name} API ${res.status}: ${text}`, 3000)
-  if (res.status === 404) throw new Error(`${info.name} doesn't offer this model to your key (404). ${text}`)
   throw new Error(`${info.name} API ${res.status}: ${text}`)
 }
 

@@ -1,12 +1,9 @@
 /// <reference types="vite/client" />
 
+// Provider keys are server-side only (api/chat.ts); never read them here, or Vite inlines them into the bundle.
 interface ImportMetaEnv {
-  readonly VITE_GROQ_API_KEY: string
-  readonly VITE_GROQ_KEY_1: string
-  readonly VITE_GROQ_KEY_2: string
-  readonly VITE_GROQ_KEY_3: string
-  readonly VITE_GROQ_KEY_4: string
-  readonly VITE_GROQ_KEY_5: string
+  readonly VITE_SUPABASE_URL: string
+  readonly VITE_SUPABASE_ANON_KEY: string
 }
 
 interface ImportMeta {
