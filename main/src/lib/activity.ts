@@ -64,6 +64,9 @@ export const PAGE_SIZE = 50
 
 /* ─── Write ─────────────────────────────────────────────────────────────── */
 
+/** False once an insert shows the input_words/models columns are missing (schema.sql section 10 not run). */
+let metaColumns = true
+
 /**
  * Records one action for the signed-in user. Never throws — tracking must not
  * break the feature being tracked. user_id is filled by the column default
@@ -71,11 +74,16 @@ export const PAGE_SIZE = 50
  */
 export async function logActivity(entry: NewActivity): Promise<void> {
   try {
-    let { error } = await supabase.from('activity_logs').insert(entry)
-    // Databases without section 10 of schema.sql lack these columns; log the rest.
-    if (error?.code === 'PGRST204' && ('input_words' in entry || 'models' in entry)) {
-      const { input_words: _w, models: _m, ...legacy } = entry
-      ;({ error } = await supabase.from('activity_logs').insert(legacy))
+    const hasMeta = 'input_words' in entry || 'models' in entry
+    let error = null as { code?: string; message: string } | null
+    if (metaColumns || !hasMeta) ({ error } = await supabase.from('activity_logs').insert(entry))
+    // Databases without section 10 of schema.sql lack these columns. Keep the values anyway,
+    // tucked into the outputs JSON under META_KEY; readRow() moves them back out.
+    if (hasMeta && (!metaColumns || error?.code === 'PGRST204')) {
+      metaColumns = false // Skip the doomed first insert for the rest of the session.
+      const { input_words, models, ...legacy } = entry
+      const meta: StoredMeta = { models: models ?? null, input_words: input_words ?? null }
+      ;({ error } = await supabase.from('activity_logs').insert({ ...legacy, outputs: { ...(legacy.outputs ?? {}), [META_KEY]: JSON.stringify(meta) } }))
     }
     if (error) console.warn('[activity] failed to log', entry.action, error.message)
   } catch (err) {
@@ -117,12 +125,44 @@ export function previewOf(content: string) {
 
 /* ─── Read ──────────────────────────────────────────────────────────────── */
 
+/** Key in `outputs` holding models and word count when the database has no columns for them. Never a format name. */
+const META_KEY = '__sankshep_meta'
+
+interface StoredMeta {
+  models: Record<string, string> | null
+  input_words: number | null
+}
+
+/** Moves models/word count stored inside `outputs` (see logActivity) back to their own fields. */
+function readRow(row: ActivityLog): ActivityLog {
+  const raw = row.outputs?.[META_KEY]
+  if (raw === undefined) return row
+  const { [META_KEY]: _meta, ...outputs } = row.outputs!
+  let meta: Partial<StoredMeta> = {}
+  try {
+    meta = JSON.parse(raw)
+  } catch {
+    // A malformed value just means no stored meta.
+  }
+  return {
+    ...row,
+    outputs: Object.keys(outputs).length ? outputs : null,
+    models: row.models ?? meta.models ?? null,
+    input_words: row.input_words ?? meta.input_words ?? null,
+  }
+}
+
 function unwrap<T>(data: T | null, error: { code?: string; message: string } | null): T {
   if (error) {
     if (isMissingSchemaError(error)) throw new SchemaMissingError()
     throw new Error(error.message)
   }
   return data as T
+}
+
+/** unwrap for activity rows: also restores meta stored inside `outputs`. */
+function unwrapRows(data: ActivityLog[] | null, error: { code?: string; message: string } | null): ActivityLog[] {
+  return unwrap(data, error).map(readRow)
 }
 
 /** One page of the given user's history, newest first. */
@@ -134,7 +174,7 @@ export async function fetchUserActivity(userId: string, page: number): Promise<A
     .eq('user_id', userId)
     .order('created_at', { ascending: false })
     .range(from, from + PAGE_SIZE - 1)
-  return unwrap(data as ActivityLog[] | null, error)
+  return unwrapRows(data as ActivityLog[] | null, error)
 }
 
 
@@ -152,7 +192,7 @@ export async function fetchUserGenerations(userId: string, page: number, format?
     .range(from, from + PAGE_SIZE - 1)
   if (format) query = query.contains('formats', [format])
   const { data, error } = await query
-  return unwrap(data as ActivityLog[] | null, error)
+  return unwrapRows(data as ActivityLog[] | null, error)
 }
 
 /** Every generation the user has run, newest first, for the analytics totals. Capped to keep the payload bounded. */
@@ -164,7 +204,7 @@ export async function fetchUserAnalyticsRows(userId: string): Promise<ActivityLo
     .in('action', GENERATION_ACTIONS)
     .order('created_at', { ascending: false })
     .limit(1000)
-  return unwrap(data as ActivityLog[] | null, error)
+  return unwrapRows(data as ActivityLog[] | null, error)
 }
 
 /* ─── Per-draft view ────────────────────────────────────────────────────── */
@@ -236,7 +276,7 @@ export async function fetchGlobalActivity(
   if (filters.userId) query = query.eq('user_id', filters.userId)
   if (filters.action) query = query.eq('action', filters.action)
   const { data, error } = await query
-  return unwrap(data as ActivityLog[] | null, error)
+  return unwrapRows(data as ActivityLog[] | null, error)
 }
 
 /** Admin only: permanently deletes an account and all of its activity. */
