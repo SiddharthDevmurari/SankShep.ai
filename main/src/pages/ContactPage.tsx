@@ -49,6 +49,12 @@ const TEAM: Member[] = [
     linkedin: 'https://www.linkedin.com/in/harshitkumar-vadher-529654350',
     email: 'harshitsinhvadher@gmail.com',
   },
+  {
+    name: 'Harsh Thakkar',
+    github: 'https://github.com/thakkarharsh1572007-sudo',
+    linkedin: 'https://www.linkedin.com/in/thakkar-harsh-18010b375',
+    email: 'thakkarharsh1572007@gmail.com',
+  },
 ]
 
 const EASE = [0.22, 1, 0.36, 1] as const
@@ -92,8 +98,8 @@ export default function ContactPage() {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true, margin: '-60px' }}
                 transition={{ duration: 0.6, delay: i * 0.06, ease: EASE }}
-                // Three per row on desktop; the last two share the second row, centred.
-                className={`min-w-0 lg:col-span-2 ${i === 3 ? 'lg:col-start-2' : ''} ${i === TEAM.length - 1 && TEAM.length % 2 === 1 ? 'sm:col-span-2 sm:mx-auto sm:w-full sm:max-w-[calc(50%-10px)] lg:col-span-2 lg:mx-0 lg:max-w-none' : ''}`}
+                // Three per row on desktop; an odd last card is centred on the two-column layout.
+                className={`min-w-0 lg:col-span-2 ${i === TEAM.length - 1 && TEAM.length % 2 === 1 ? 'sm:col-span-2 sm:mx-auto sm:w-full sm:max-w-[calc(50%-10px)] lg:col-span-2 lg:mx-0 lg:max-w-none' : ''}`}
               >
                 <MemberCard member={m} index={i} />
               </motion.li>
