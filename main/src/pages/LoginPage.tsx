@@ -2,10 +2,23 @@ import { useState } from 'react'
 import { Navigate, useNavigate, useLocation, Link } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { DEMO_EMAIL, DEMO_PASSWORD } from '../lib/supabase'
-import { Eye, EyeOff, Zap } from 'lucide-react'
+import { Eye, EyeOff } from 'lucide-react'
+import { AnimatePresence, MotionConfig, motion } from 'motion/react'
 import { BrandMark } from '../components/site/SiteChrome'
 
-const stroke = { fill: 'none', stroke: 'currentColor', strokeWidth: 1.6, strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const }
+const EASE = [0.22, 1, 0.36, 1] as const
+const FORMATS = ['Executive Summary', '5-Slide Deck', 'LinkedIn Post', 'Video Script', 'Advisory']
+const COPY = {
+  login: { title: 'Welcome back.', lead: 'Sign in to pick up where you left off.', submit: 'Sign in', busy: 'Signing in…' },
+  signup: {
+    title: 'Start with one document.',
+    lead: 'Create an account and go straight into the workspace. There is no email step.',
+    submit: 'Create account',
+    busy: 'Creating account…',
+  },
+} as const
+const field =
+  'w-full rounded-lg border border-hair bg-paper px-4 py-3 text-[15px] text-ink outline-none transition-colors placeholder:text-ink-mute/70 hover:border-line focus:border-ink focus:bg-white focus-visible:ring-2 focus-visible:ring-matcha'
 
 export default function LoginPage() {
   const { user, loading: authLoading, signIn, signUp } = useAuth()
@@ -59,143 +72,201 @@ export default function LoginPage() {
   // Already signed in: skip the form. Mid-submit this is harmless, since both go to `from`.
   if (!authLoading && user && !loading) return <Navigate to={from} replace />
 
+  const copy = COPY[mode]
+  const switchMode = (next: 'login' | 'signup') => {
+    if (next === mode) return
+    setMode(next)
+    setError(null)
+  }
+
   return (
-    // Sits under the capsule nav, so fill what's left of the viewport
-    <div className="flex min-h-[calc(100dvh-6rem)] bg-paper">
-      {/* Left decorative panel — hidden on mobile */}
-      <div className="hidden lg:flex lg:w-[44%] bg-ink flex-col justify-between p-12 relative overflow-hidden">
-        <div
-          className="pointer-events-none absolute inset-0 opacity-[0.06]"
-          style={{
-            backgroundImage: 'radial-gradient(#d4ed64 1px, transparent 1px)',
-            backgroundSize: '20px 20px',
-          }}
-        />
-        <div className="relative">
-          <Link to="/" className="inline-flex items-center gap-3 rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-matcha" aria-label="Sankshep home">
-            <BrandMark className="h-12 w-12 rounded-full ring-1 ring-paper/15" />
-            <span className="font-display text-[22px] text-paper">Sankshep.ai</span>
-          </Link>
-        </div>
-        <div className="relative space-y-6">
-          <h2 className="font-display text-[clamp(2.4rem,4vw,3.2rem)] text-paper leading-tight">
-            Transform any content<br />
-            into every format.
-          </h2>
-          <p className="text-[15px] text-paper/55 leading-relaxed max-w-xs">
-            Upload reports, paste text, or drop a link. Get executive summaries, slide decks, LinkedIn posts and more — in seconds.
-          </p>
-          <div className="flex flex-wrap gap-2 mt-4">
-            {['Executive Summary', '5-Slide Deck', 'LinkedIn Post', 'Video Script', 'Advisory'].map((f) => (
-              <span key={f} className="rounded-full border border-paper/15 px-3 py-1.5 text-[12px] font-medium text-paper/70">{f}</span>
-            ))}
-          </div>
-        </div>
-        <p className="relative text-[12px] text-paper/30">© 2026 Sankshep.ai · NTRO SIH</p>
-      </div>
+    <MotionConfig reducedMotion="user">
+      {/* Sits under the capsule nav, so fill what's left of the viewport. The dot grid is the same
+          texture as the landing hero, so the form sits on the site's own canvas. */}
+      <main className="relative isolate flex min-h-[calc(100dvh-6rem)] items-center justify-center overflow-hidden bg-paper px-4 py-10 sm:px-8 lg:py-16">
+        <div aria-hidden className="sk-dots sk-dots-fade pointer-events-none absolute inset-0 -z-10" />
 
-      {/* Right form panel */}
-      <div className="flex flex-1 flex-col items-center justify-center px-6 py-12">
-        <div className="w-full max-w-[380px]">
-          <h1 className="text-[24px] font-semibold text-ink">
-            {mode === 'login' ? 'Welcome back' : 'Create account'}
-          </h1>
-          <p className="mt-1 text-[14px] text-ink-soft">
-            {mode === 'login'
-              ? 'Sign in to access your workspace.'
-              : 'Get started — it only takes a moment.'}
-          </p>
+        <motion.div
+          initial={{ opacity: 0, y: 24 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.8, ease: EASE }}
+          className="sk-elevated grid w-full max-w-[1000px] overflow-hidden rounded-3xl bg-white md:grid-cols-[5fr_6fr]"
+        >
+          {/* Editorial side: warm paper tone, so it reads as one sheet with the form */}
+          <aside className="flex flex-col justify-between gap-10 bg-paper-deep px-7 py-8 sm:px-10 sm:py-10">
+            <Link
+              to="/"
+              aria-label="Sankshep home"
+              className="inline-flex w-fit items-center gap-3 rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink"
+            >
+              <BrandMark className="h-10 w-10 rounded-full ring-1 ring-ink/10" />
+              <span className="font-display text-[20px] text-ink">Sankshep.ai</span>
+            </Link>
 
-          {/* Demo credentials button */}
-          {mode === 'login' && (
+            <div>
+              <h2 className="font-display max-w-[13ch] text-[clamp(2rem,3.6vw,2.9rem)] text-balance text-ink">
+                One document, <span className="font-serif">every</span> format.
+              </h2>
+              <ol className="mt-8 hidden divide-y divide-line border-y border-line md:block">
+                {FORMATS.map((f, i) => (
+                  <motion.li
+                    key={f}
+                    initial={{ opacity: 0, x: -8 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ duration: 0.5, delay: 0.25 + i * 0.07, ease: EASE }}
+                    className="flex items-baseline gap-4 py-2.5 text-[14.5px] text-ink"
+                  >
+                    <span className="font-mono text-[11.5px] tabular-nums text-ink-mute">0{i + 1}</span>
+                    {f}
+                  </motion.li>
+                ))}
+              </ol>
+            </div>
+
+            <p className="hidden text-[12.5px] text-ink-mute md:block">© 2026 Sankshep.ai · NTRO SIH</p>
+          </aside>
+
+          {/* Form side */}
+          <section className="px-7 py-8 sm:px-10 sm:py-10 lg:px-14">
+            {/* Mode switch: one control, so Sign in and Create account read as two views of the same page */}
+            <div role="tablist" aria-label="Account" className="relative grid grid-cols-2 rounded-xl bg-paper-deep p-1">
+              {(['login', 'signup'] as const).map((m) => (
+                <button
+                  key={m}
+                  type="button"
+                  role="tab"
+                  aria-selected={mode === m}
+                  onClick={() => switchMode(m)}
+                  className="relative rounded-lg py-2 text-[14px] font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ink"
+                >
+                  {mode === m && (
+                    <motion.span
+                      layoutId="auth-tab"
+                      transition={{ type: 'spring', stiffness: 420, damping: 36 }}
+                      className="absolute inset-0 rounded-lg bg-white shadow-[0_1px_2px_rgba(15,16,15,0.08)]"
+                    />
+                  )}
+                  <span className={`relative ${mode === m ? 'text-ink' : 'text-ink-mute hover:text-ink'}`}>
+                    {m === 'login' ? 'Sign in' : 'Create account'}
+                  </span>
+                </button>
+              ))}
+            </div>
+
+            <div className="mt-8 min-h-[104px]" aria-live="polite">
+              <AnimatePresence mode="wait" initial={false}>
+                <motion.div
+                  key={mode}
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -6 }}
+                  transition={{ duration: 0.22, ease: EASE }}
+                >
+                  <h1 className="font-display text-[clamp(1.9rem,3vw,2.4rem)] text-ink">{copy.title}</h1>
+                  <p className="mt-3 max-w-[40ch] text-[15px] leading-relaxed text-ink-soft">{copy.lead}</p>
+                </motion.div>
+              </AnimatePresence>
+            </div>
+
+            <form onSubmit={handleSubmit} className="mt-6 space-y-5">
+              <div className="space-y-1.5">
+                <label className="text-[13px] font-medium text-ink-soft" htmlFor="email">
+                  Email
+                </label>
+                <input
+                  id="email"
+                  type="email"
+                  required
+                  autoComplete="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="you@example.com"
+                  className={field}
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <div className="flex items-baseline justify-between">
+                  <label className="text-[13px] font-medium text-ink-soft" htmlFor="password">
+                    Password
+                  </label>
+                  {mode === 'signup' && <span className="text-[12px] text-ink-mute">At least 6 characters</span>}
+                </div>
+                <div className="relative">
+                  <input
+                    id="password"
+                    type={showPass ? 'text' : 'password'}
+                    required
+                    minLength={mode === 'signup' ? 6 : undefined}
+                    autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="Your password"
+                    className={`${field} pr-12`}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPass((v) => !v)}
+                    aria-label={showPass ? 'Hide password' : 'Show password'}
+                    aria-pressed={showPass}
+                    className="absolute right-1.5 top-1/2 grid h-9 w-9 -translate-y-1/2 place-items-center rounded-md text-ink-mute transition-colors hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink"
+                  >
+                    {showPass ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
+              </div>
+
+              {error && (
+                <motion.div
+                  role="alert"
+                  initial={{ opacity: 0, y: -4 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.25, ease: EASE }}
+                  className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-[13.5px] leading-relaxed text-red-800"
+                >
+                  {error}
+                </motion.div>
+              )}
+
+              <button
+                type="submit"
+                disabled={loading}
+                className="flex w-full items-center justify-center gap-2.5 rounded-xl bg-ink px-4 py-3.5 text-[15px] font-medium text-paper transition-all duration-200 hover:bg-ink-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2 active:scale-[0.985] disabled:cursor-not-allowed disabled:opacity-60 disabled:active:scale-100"
+              >
+                {loading ? (
+                  <>
+                    <span className="h-4 w-4 animate-spin rounded-full border-2 border-paper/30 border-t-paper" aria-hidden />
+                    {copy.busy}
+                  </>
+                ) : (
+                  copy.submit
+                )}
+              </button>
+            </form>
+
+            {/* Quick access: a quiet row under the form, not a banner above it */}
+            <div className="mt-7 flex items-center gap-4 text-[12.5px] text-ink-mute" aria-hidden>
+              <span className="h-px flex-1 bg-hair" />
+              or look around first
+              <span className="h-px flex-1 bg-hair" />
+            </div>
             <button
               type="button"
               onClick={fillDemo}
-              className="mt-5 flex w-full items-center justify-center gap-2 rounded-xl border-2 border-matcha-deep bg-matcha/20 px-4 py-3 text-[14px] font-semibold text-ink transition-all hover:bg-matcha/40 hover:scale-[1.01] active:scale-[0.99]"
-            >
-              <Zap className="h-4 w-4 text-matcha-deep" />
-              [ Use Demo Credentials ]
-            </button>
-          )}
-
-          <form onSubmit={handleSubmit} className="mt-5 space-y-4">
-            {/* Email */}
-            <div className="space-y-1.5">
-              <label className="text-[13px] font-medium text-ink-soft" htmlFor="email">Email</label>
-              <input
-                id="email"
-                type="email"
-                required
-                autoComplete="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="you@example.com"
-                className="w-full rounded-xl border border-hair bg-white px-4 py-3 text-[14px] text-ink outline-none ring-0 transition-all placeholder:text-ink-soft/50 focus:border-ink/30 focus:ring-2 focus:ring-ink/8"
-              />
-            </div>
-
-            {/* Password */}
-            <div className="space-y-1.5">
-              <label className="text-[13px] font-medium text-ink-soft" htmlFor="password">Password</label>
-              <div className="relative">
-                <input
-                  id="password"
-                  type={showPass ? 'text' : 'password'}
-                  required
-                  minLength={mode === 'signup' ? 6 : undefined}
-                  autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="••••••••"
-                  className="w-full rounded-xl border border-hair bg-white px-4 py-3 pr-11 text-[14px] text-ink outline-none ring-0 transition-all placeholder:text-ink-soft/50 focus:border-ink/30 focus:ring-2 focus:ring-ink/8"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPass((v) => !v)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-ink-soft/50 hover:text-ink-soft"
-                  tabIndex={-1}
-                >
-                  {showPass ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                </button>
-              </div>
-            </div>
-
-            {/* Error */}
-            {error && (
-              <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-[13px] text-red-700">
-                {error}
-              </div>
-            )}
-
-            {/* Submit */}
-            <button
-              type="submit"
               disabled={loading}
-              className="flex w-full items-center justify-center gap-2 rounded-xl bg-ink px-4 py-3.5 text-[14px] font-medium text-paper transition-all hover:-translate-y-0.5 disabled:opacity-60 disabled:translate-y-0"
+              className="group mt-4 flex w-full items-center justify-between gap-4 rounded-xl bg-matcha/25 px-4 py-3 text-left transition-all duration-200 hover:bg-matcha/55 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink active:scale-[0.985] disabled:cursor-not-allowed disabled:opacity-60"
             >
-              {loading ? (
-                <>
-                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-paper/30 border-t-paper" />
-                  {mode === 'login' ? 'Signing in…' : 'Creating account…'}
-                </>
-              ) : (
-                mode === 'login' ? 'Sign in' : 'Create account'
-              )}
+              <span className="min-w-0">
+                <span className="block text-[14.5px] font-medium text-ink">Continue with the demo account</span>
+                <span className="mt-0.5 block truncate font-mono text-[12px] text-ink-soft">{DEMO_EMAIL}</span>
+              </span>
+              <span className="shrink-0 text-[13px] font-medium text-ink underline decoration-ink/30 underline-offset-4 transition-colors group-hover:decoration-ink">
+                Enter
+              </span>
             </button>
-          </form>
-
-          {/* Toggle mode */}
-          <p className="mt-6 text-center text-[13.5px] text-ink-soft">
-            {mode === 'login' ? "Don't have an account? " : 'Already have an account? '}
-            <button
-              onClick={() => { setMode(mode === 'login' ? 'signup' : 'login'); setError(null) }}
-              className="font-medium text-ink underline underline-offset-2 hover:no-underline"
-            >
-              {mode === 'login' ? 'Sign up' : 'Log in'}
-            </button>
-          </p>
-        </div>
-      </div>
-    </div>
+          </section>
+        </motion.div>
+      </main>
+    </MotionConfig>
   )
 }
