@@ -132,7 +132,7 @@ export function TransformView({ onOpenHistory }: { onOpenHistory?: () => void })
         <div className="mt-5 grid gap-5 lg:grid-cols-[minmax(420px,5fr)_minmax(0,7fr)] lg:items-start lg:gap-6 2xl:gap-8">
           <aside
             aria-label="Source and configuration"
-            className="sk-elevated flex h-fit flex-col rounded-xl border border-edge bg-white"
+            className="sk-elevated flex h-fit flex-col rounded-xl border border-ink bg-white"
           >
             <LeftPanel onGenerate={handleGenerate} generating={generating} onStatusChange={setStatus} />
           </aside>
