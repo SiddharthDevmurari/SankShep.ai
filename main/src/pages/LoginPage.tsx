@@ -2,7 +2,8 @@ import { useState } from 'react'
 import { Navigate, useNavigate, useLocation, Link } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { DEMO_EMAIL, DEMO_PASSWORD } from '../lib/supabase'
-import { Eye, EyeOff } from 'lucide-react'
+import { PASSWORD_RULES, isStrongPassword, PASSWORD_POLICY_MESSAGE } from '../lib/password'
+import { Check, Eye, EyeOff } from 'lucide-react'
 import { AnimatePresence, MotionConfig, motion } from 'motion/react'
 import { BrandMark } from '../components/site/SiteChrome'
 
@@ -45,7 +46,7 @@ export default function LoginPage() {
     if (error) {
       setError(
         /incorrect email or password/i.test(error)
-          ? 'The demo account isn’t set up in the database yet. Run main/supabase/schema.sql in the Supabase SQL Editor.'
+          ? 'The demo account isn’t set up in the database yet. Run main/supabase/reset_accounts.sql in the Supabase SQL Editor.'
           : error,
       )
       setLoading(false)
@@ -57,9 +58,13 @@ export default function LoginPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError(null)
+    if (mode === 'signup' && !isStrongPassword(password)) {
+      setError(PASSWORD_POLICY_MESSAGE)
+      return
+    }
     setLoading(true)
 
-    // Sign-up creates the account and signs in immediately — no email step.
+    // Sign-up creates the account and signs in immediately, with no email step.
     const { error } = mode === 'login' ? await signIn(email, password) : await signUp(email, password)
     if (error) {
       setError(error)
@@ -84,14 +89,22 @@ export default function LoginPage() {
       {/* Sits under the capsule nav, so fill what's left of the viewport. The dot grid is the same
           texture as the landing hero, so the form sits on the site's own canvas. */}
       <main className="relative isolate flex min-h-[calc(100dvh-6rem)] items-center justify-center overflow-hidden bg-paper px-4 py-10 sm:px-8 lg:py-16">
-        <div aria-hidden className="sk-dots sk-dots-fade pointer-events-none absolute inset-0 -z-10" />
+        {/* Same dot grid as the landing hero, one step darker so it reads behind the card */}
+        <div
+          aria-hidden
+          className="sk-dots-fade pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(#cfcbbd_1px,transparent_1px)] bg-[size:22px_22px]"
+        />
 
         <motion.div
           initial={{ opacity: 0, y: 24 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, ease: EASE }}
-          className="sk-elevated grid w-full max-w-[1000px] overflow-hidden rounded-3xl bg-white md:grid-cols-[5fr_6fr]"
+          className="relative w-full max-w-[1000px]"
         >
+          {/* Landing showcase frame: lime glow, lime edge gradient, then a solid ink border on the card */}
+          <div aria-hidden className="sk-glow-ring pointer-events-none absolute -inset-3 rounded-[34px] bg-matcha/50 blur-2xl" />
+          <div aria-hidden className="pointer-events-none absolute -inset-px rounded-[25px] bg-gradient-to-br from-matcha via-transparent to-matcha/40" />
+          <div className="relative grid overflow-hidden rounded-3xl border-2 border-ink bg-white shadow-[0_20px_50px_-20px_rgba(15,16,15,0.45)] ring-1 ring-ink/5 md:grid-cols-[5fr_6fr]">
           {/* Editorial side: warm paper tone, so it reads as one sheet with the form */}
           <aside className="flex flex-col justify-between gap-10 bg-paper-deep px-7 py-8 sm:px-10 sm:py-10">
             <Link
@@ -186,22 +199,20 @@ export default function LoginPage() {
               </div>
 
               <div className="space-y-1.5">
-                <div className="flex items-baseline justify-between">
-                  <label className="text-[13px] font-medium text-ink-soft" htmlFor="password">
-                    Password
-                  </label>
-                  {mode === 'signup' && <span className="text-[12px] text-ink-mute">At least 6 characters</span>}
-                </div>
+                <label className="text-[13px] font-medium text-ink-soft" htmlFor="password">
+                  Password
+                </label>
                 <div className="relative">
                   <input
                     id="password"
                     type={showPass ? 'text' : 'password'}
                     required
-                    minLength={mode === 'signup' ? 6 : undefined}
+                    minLength={mode === 'signup' ? 8 : undefined}
                     autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
+                    aria-describedby={mode === 'signup' ? 'password-rules' : undefined}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    placeholder="Your password"
+                    placeholder={mode === 'signup' ? 'Create a password' : 'Your password'}
                     className={`${field} pr-12`}
                   />
                   <button
@@ -214,6 +225,36 @@ export default function LoginPage() {
                     {showPass ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </button>
                 </div>
+
+                {/* Live checklist on sign-up, so the rules are met before submit, not discovered after */}
+                <AnimatePresence initial={false}>
+                  {mode === 'signup' && (
+                    <motion.ul
+                      id="password-rules"
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: 'auto' }}
+                      exit={{ opacity: 0, height: 0 }}
+                      transition={{ duration: 0.25, ease: EASE }}
+                      className="grid grid-cols-1 gap-x-4 gap-y-1.5 overflow-hidden pt-2 sm:grid-cols-2"
+                    >
+                      {PASSWORD_RULES.map((r) => {
+                        const ok = r.test(password)
+                        return (
+                          <li key={r.id} className={`flex items-center gap-2 text-[12.5px] transition-colors ${ok ? 'text-ink' : 'text-ink-mute'}`}>
+                            <span
+                              className={`grid h-4 w-4 shrink-0 place-items-center rounded-full border transition-colors ${ok ? 'border-ink bg-ink text-paper' : 'border-line'}`}
+                              aria-hidden
+                            >
+                              {ok && <Check className="h-2.5 w-2.5" strokeWidth={3} />}
+                            </span>
+                            {r.label}
+                            <span className="sr-only">{ok ? '(met)' : '(not met)'}</span>
+                          </li>
+                        )
+                      })}
+                    </motion.ul>
+                  )}
+                </AnimatePresence>
               </div>
 
               {error && (
@@ -265,6 +306,7 @@ export default function LoginPage() {
               </span>
             </button>
           </section>
+          </div>
         </motion.div>
       </main>
     </MotionConfig>

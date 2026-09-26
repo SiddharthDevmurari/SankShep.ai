@@ -10,11 +10,11 @@
 
 do $$
 declare
-  admin_password constant text := 'admin123';
+  admin_password constant text := 'A@dmin12345';
   admin_id uuid;
 begin
-  if admin_password = 'CHANGE_ME' or length(admin_password) < 6 then
-    raise exception 'Set admin_password to your own password (6+ characters) before running.';
+  if admin_password = 'CHANGE_ME' or length(admin_password) < 8 then
+    raise exception 'Set admin_password to your own password (8+ characters) before running.';
   end if;
 
   select id into admin_id from auth.users where lower(email) = public.admin_email();

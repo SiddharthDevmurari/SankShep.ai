@@ -219,12 +219,12 @@ grant  execute on function public.admin_list_users() to authenticated;
 grant  execute on function public.is_admin()         to authenticated;
 
 
--- ─── 7. Shared demo account (demo@sankshep.ai / demo123) ────────────────────
+-- ─── 7. Shared demo account (demo@gmail.com / Demo@1234) ────────────────────
 -- Creates the account behind the "Use Demo Credentials" button. If it already
--- exists, its password is reset to demo123 and its email marked confirmed.
+-- exists, its password is reset to Demo@1234 and its email marked confirmed.
 
 create or replace function public.demo_email()
-returns text language sql immutable as $$ select 'demo@sankshep.ai'::text $$;
+returns text language sql immutable as $$ select 'demo@gmail.com'::text $$;
 
 do $$
 declare
@@ -242,7 +242,7 @@ begin
       email_change_token_current, reauthentication_token
     ) values (
       '00000000-0000-0000-0000-000000000000', demo_id, 'authenticated', 'authenticated',
-      public.demo_email(), extensions.crypt('demo123', extensions.gen_salt('bf')), now(),
+      public.demo_email(), extensions.crypt('Demo@1234', extensions.gen_salt('bf')), now(),
       '{"provider":"email","providers":["email"]}', '{}', now(), now(),
       '', '', '', '', '', ''
     );
@@ -255,7 +255,7 @@ begin
     );
   else
     update auth.users
-       set encrypted_password = extensions.crypt('demo123', extensions.gen_salt('bf')),
+       set encrypted_password = extensions.crypt('Demo@1234', extensions.gen_salt('bf')),
            email_confirmed_at = coalesce(email_confirmed_at, now())
      where id = demo_id;
   end if;

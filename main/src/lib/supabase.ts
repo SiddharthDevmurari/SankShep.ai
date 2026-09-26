@@ -16,8 +16,8 @@ export const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_LCU-9w178iUjqA7haajEwg_3
 export const ADMIN_EMAIL = 'admin@gmail.com'
 
 /** Shared demo account, created by supabase/schema.sql. Must match public.demo_email(). */
-export const DEMO_EMAIL = 'demo@sankshep.ai'
-export const DEMO_PASSWORD = 'demo123'
+export const DEMO_EMAIL = 'demo@gmail.com'
+export const DEMO_PASSWORD = 'Demo@1234'
 
 export const supabase = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
   auth: {
