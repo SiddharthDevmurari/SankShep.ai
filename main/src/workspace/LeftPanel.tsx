@@ -1,7 +1,7 @@
 import { useState, useRef, useCallback, useEffect } from 'react'
 import {
   AlignLeft, AtSign, Briefcase, Check, ChartPie, ChevronDown, Clapperboard, Eye, EyeOff, FileText, Globe, Languages,
-  Lightbulb, Link2, Newspaper, Plus, Presentation, ShieldAlert, Upload, X,
+  Lightbulb, Link2, Newspaper, Plus, Presentation, ShieldAlert, Square, Upload, X,
 } from 'lucide-react'
 import { AUDIENCE_PRESETS, type Audience, type EngineConfig, type EngineMode, type OutputFormat, type ToneOption } from '../lib/pipeline'
 import type { InputType } from '../lib/activity'
@@ -149,6 +149,8 @@ export function toneLabel(t: ToneOption) {
 
 interface Props {
   onGenerate: (cfg: LeftPanelConfig) => void
+  /** Stops the run in flight; the generate button turns into this while drafting. */
+  onStop: () => void
   generating: boolean
   onStatusChange?: (status: LeftPanelStatus) => void
 }
@@ -163,7 +165,7 @@ const INPUT_MODES: { id: InputMode; label: string; icon: typeof FileText }[] = [
 
 const FIELD_FOCUS = 'focus-within:border-ink focus-within:ring-4 focus-within:ring-matcha/50'
 
-export function LeftPanel({ onGenerate, generating, onStatusChange }: Props) {
+export function LeftPanel({ onGenerate, onStop, generating, onStatusChange }: Props) {
   const [inputMode, setInputMode] = useState<InputMode>('file')
   const [rawText, setRawText] = useState('')
   const [urlValue, setUrlValue] = useState('')
@@ -472,563 +474,571 @@ export function LeftPanel({ onGenerate, generating, onStatusChange }: Props) {
 
   return (
     <div className="flex min-h-0 flex-1 flex-col" onKeyDown={onPanelKeyDown}>
-      {/* Panel header */}
-      <div className="shrink-0 border-b border-line px-6 pb-5 pt-6 lg:px-7">
-        <h2 className="font-display text-[22px] font-bold text-ink">Source &amp; configuration</h2>
-        <p className="mt-1.5 text-[13.5px] text-ink-mute">Five steps, then review and generate. Audience and engine start from defaults.</p>
-      </div>
+      {/* The steps scroll on their own from lg up; the generate bar below stays put. */}
+      <div className="lg:min-h-0 lg:flex-1 lg:overflow-y-auto">
+        {/* Panel header */}
+        <div className="border-b border-line px-5 pb-4 pt-5">
+          <h2 className="font-display text-[19px] font-bold leading-tight text-ink">Source &amp; configuration</h2>
+          <p className="mt-1 text-[12.5px] leading-snug text-ink-mute">Five steps, then review and generate. Audience and engine start from defaults.</p>
+        </div>
 
-      <div className="divide-y divide-line">
+        <div className="divide-y divide-line">
 
-        {/* ── 01 Source ──────────────────────────────────────────────────── */}
-        <Step id={STEP_IDS.source} n="01" title="Source" hint="What should we work from?">
-          <div role="tablist" aria-label="Source type" className="grid grid-cols-3 gap-1 rounded-xl border border-line bg-white p-1">
-            {INPUT_MODES.map(({ id, label, icon: Icon }) => {
-              const active = inputMode === id
-              return (
-                <button
-                  key={id}
-                  role="tab"
-                  aria-selected={active}
-                  onClick={() => { setInputMode(id); setFormError(null) }}
-                  className={`flex h-10 items-center justify-center gap-2 rounded-lg text-[13.5px] font-medium transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink/30 ${
-                    active ? 'bg-ink text-paper' : 'text-ink-soft hover:bg-paper-deep hover:text-ink'
-                  }`}
-                >
-                  <Icon className="h-4 w-4" strokeWidth={1.8} />
-                  {label}
-                </button>
-              )
-            })}
-          </div>
-
-          {/* Upload: the whole zone is the one control — no second button inside it */}
-          {inputMode === 'file' && (
-            <div className="mt-3">
-              <input
-                ref={fileInputRef}
-                type="file"
-                className="hidden"
-                accept=".png,.jpg,.jpeg,.webp,.pdf,.docx,.txt,.csv,.json,.md"
-                onChange={onFileChange}
-              />
-              {uploadedFile ? (
-                <div className="sk-pop flex items-center gap-3.5 rounded-xl border border-line bg-white p-3.5">
-                  <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-matcha font-mono text-[11px] font-semibold uppercase text-ink">
-                    {uploadedFile.name.split('.').pop()?.slice(0, 4) || 'file'}
-                  </span>
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-[14px] font-medium text-ink">{uploadedFile.name}</p>
-                    <p className="mt-0.5 text-[12.5px] text-ink-mute">
-                      {formatBytes(uploadedFile.size)} · {
-                        imageReader ? <>{scanNote ?? 'image'}, read with <span className="font-mono text-[12px] text-ink">{imageReader}</span></>
-                        : parsing ? 'reading text…'
-                        : `${extractedText.length.toLocaleString()} characters read`
-                      }
-                    </p>
-                  </div>
+          {/* ── 01 Source ──────────────────────────────────────────────────── */}
+          <Step id={STEP_IDS.source} n="01" title="Source" hint="What should we work from?">
+            <div role="tablist" aria-label="Source type" className="grid grid-cols-3 gap-1 rounded-xl border border-line bg-white p-1">
+              {INPUT_MODES.map(({ id, label, icon: Icon }) => {
+                const active = inputMode === id
+                return (
                   <button
-                    onClick={() => fileInputRef.current?.click()}
-                    className="rounded-lg px-3 py-1.5 text-[13px] font-medium text-ink-soft transition-colors hover:bg-paper-deep hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink/30"
+                    key={id}
+                    role="tab"
+                    aria-selected={active}
+                    onClick={() => { setInputMode(id); setFormError(null) }}
+                    className={`flex h-10 items-center justify-center gap-2 rounded-lg text-[13.5px] font-medium transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink/30 ${
+                      active ? 'bg-ink text-paper' : 'text-ink-soft hover:bg-paper-deep hover:text-ink'
+                    }`}
                   >
-                    Replace
+                    <Icon className="h-4 w-4" strokeWidth={1.8} />
+                    {label}
                   </button>
-                  <button
-                    onClick={clearFile}
-                    aria-label="Remove file"
-                    className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-ink-mute transition-colors hover:bg-paper-deep hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink/30"
-                  >
-                    <X className="h-4 w-4" />
-                  </button>
-                </div>
-              ) : (
-                <div
-                  role="button"
-                  tabIndex={0}
-                  aria-label="Choose a source file, or drop one here"
-                  onClick={() => fileInputRef.current?.click()}
-                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fileInputRef.current?.click() } }}
-                  onDragOver={(e) => { e.preventDefault(); setDragOver(true) }}
-                  onDragLeave={() => setDragOver(false)}
-                  onDrop={onDrop}
-                  className={`flex min-h-[148px] cursor-pointer flex-col items-center justify-center rounded-xl border-[1.5px] border-dashed px-6 py-8 text-center transition-colors duration-200 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-matcha/50 ${
-                    dragOver ? 'border-ink bg-matcha/30' : 'border-ink/25 bg-white hover:border-ink/50'
-                  }`}
-                >
-                  <p className="font-display text-[19px] font-bold text-ink [text-wrap:balance]">
-                    {dragOver ? 'Release to add this file' : 'Drop a file, or click to choose one'}
-                  </p>
-                  <p className="mt-2 text-[13px] text-ink-mute">PDF, DOCX, TXT, CSV, JSON or an image · up to 30 MB</p>
-                </div>
-              )}
+                )
+              })}
             </div>
-          )}
 
-          {/* Link */}
-          {inputMode === 'url' && (
-            <div className="mt-3">
-              <label className={`flex h-12 items-center gap-3 rounded-xl border border-line bg-white px-4 transition-shadow ${FIELD_FOCUS}`}>
-                <Globe className="h-[18px] w-[18px] shrink-0 text-ink-mute" />
-                <span className="sr-only">Source link</span>
+            {/* Upload: the whole zone is the one control — no second button inside it */}
+            {inputMode === 'file' && (
+              <div className="mt-3">
                 <input
-                  type="url"
-                  value={urlValue}
-                  onChange={(e) => { setUrlValue(e.target.value); setFormError(null) }}
-                  placeholder="https://example.com/report"
-                  className="min-w-0 flex-1 bg-transparent text-[14.5px] text-ink outline-none placeholder:text-ink-mute"
+                  ref={fileInputRef}
+                  type="file"
+                  className="hidden"
+                  accept=".png,.jpg,.jpeg,.webp,.pdf,.docx,.txt,.csv,.json,.md"
+                  onChange={onFileChange}
                 />
-              </label>
-              <p className="mt-2 text-[12.5px] text-ink-mute">Articles, reports and public pages work best.</p>
-            </div>
-          )}
-
-          {/* Paste */}
-          {inputMode === 'text' && (
-            <div className={`relative mt-3 rounded-xl border border-line bg-white transition-shadow ${FIELD_FOCUS}`}>
-              <textarea
-                value={rawText}
-                onChange={(e) => { setRawText(e.target.value); setFormError(null) }}
-                placeholder="Paste a report, article, research paper or notes…"
-                aria-label="Source text"
-                rows={8}
-                className="block w-full resize-none rounded-xl bg-transparent px-4 pb-9 pt-3.5 text-[14.5px] leading-[1.7] text-ink outline-none placeholder:text-ink-mute"
-              />
-              <span className="pointer-events-none absolute bottom-2.5 right-3.5 text-[12px] tabular-nums text-ink-mute">
-                {wordCount.toLocaleString()} words
-              </span>
-            </div>
-          )}
-        </Step>
-
-        {/* ── 02 Outputs ─────────────────────────────────────────────────── */}
-        <Step
-          id={STEP_IDS.outputs}
-          n="02"
-          title="Outputs"
-          hint="Each format is drafted in parallel. Instructions shape every draft."
-          action={
-            <button
-              type="button"
-              onClick={toggleAll}
-              className="whitespace-nowrap rounded-md text-[13px] font-medium text-ink underline decoration-ink/30 underline-offset-4 transition-colors hover:decoration-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink/30"
-            >
-              {allSelected ? 'Clear all' : 'Select all'}
-            </button>
-          }
-        >
-          <div className="grid gap-2 sm:grid-cols-2">
-            {ALL_FORMATS.map(({ label, short, desc, icon: Icon }) => {
-              const selected = formats.includes(label)
-              return (
-                <button
-                  key={label}
-                  type="button"
-                  aria-pressed={selected}
-                  onClick={() => toggleFormat(label)}
-                  className={`group flex items-center gap-3 rounded-xl border px-3 py-2.5 text-left transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink/30 active:scale-[0.99] ${
-                    selected ? 'border-ink bg-ink text-paper' : 'border-line bg-white text-ink hover:border-ink/40'
-                  }`}
-                >
-                  <Icon className={`h-[18px] w-[18px] shrink-0 ${selected ? 'text-matcha' : 'text-ink-mute group-hover:text-ink'}`} strokeWidth={1.8} />
-                  <span className="min-w-0 flex-1">
-                    <span className="block truncate text-[13.5px] font-semibold leading-tight">{short}</span>
-                    <span className={`mt-0.5 block truncate text-[12px] leading-tight ${selected ? 'text-paper/75' : 'text-ink-mute'}`}>{desc}</span>
-                  </span>
-                  <span
-                    aria-hidden
-                    className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-md border transition-colors ${
-                      selected ? 'border-matcha bg-matcha text-ink' : 'border-ink/25 bg-white'
-                    }`}
-                  >
-                    {selected && <Check className="h-3 w-3" strokeWidth={3} />}
-                  </span>
-                </button>
-              )
-            })}
-          </div>
-
-          {/* Translation target (only when Translation is selected) */}
-          {showLangField && (
-            <fieldset className="sk-rise mt-4 rounded-xl border border-line bg-white p-3.5">
-              <legend className="flex items-center gap-2 px-1 text-[13px] font-semibold text-ink">
-                <Languages className="h-4 w-4" /> Translate into
-              </legend>
-              <div className="grid grid-cols-3 gap-1.5">
-                {LANGUAGES.map((l) => (
-                  <button
-                    key={l}
-                    type="button"
-                    aria-pressed={targetLanguage === l}
-                    onClick={() => setTargetLanguage(l)}
-                    className={`rounded-lg py-2 text-[13px] font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink/30 ${
-                      targetLanguage === l ? 'bg-ink text-paper' : 'bg-paper-deep text-ink-soft hover:text-ink'
-                    }`}
-                  >
-                    {l}
-                  </button>
-                ))}
-              </div>
-            </fieldset>
-          )}
-
-          <label htmlFor="ws-custom-format" className="mt-5 flex items-baseline justify-between text-[13px] font-semibold text-ink">
-            Custom instructions
-            <span className="text-[12px] font-normal text-ink-mute">Optional</span>
-          </label>
-          <div className={`mt-2 rounded-xl border border-line bg-white transition-shadow ${FIELD_FOCUS}`}>
-            <textarea
-              id="ws-custom-format"
-              value={customSchema}
-              onChange={(e) => { setCustomSchema(e.target.value); setFormError(null) }}
-              placeholder="e.g. Start with a one-line verdict, then a risk table, then three recommendations…"
-              rows={3}
-              className="block w-full resize-none rounded-t-xl bg-transparent px-4 pt-3 text-[14.5px] leading-[1.65] text-ink outline-none placeholder:text-ink-mute"
-            />
-            <div className="flex items-center justify-between gap-3 px-3 pb-3 pt-2">
-              <div className="flex flex-wrap gap-1.5">
-                {SCHEMA_SUGGESTIONS.map((s) => (
-                  <button
-                    key={s}
-                    type="button"
-                    onClick={() => addSuggestion(s)}
-                    className="rounded-lg border border-line bg-paper px-2.5 py-1 text-[12px] text-ink-soft transition-colors hover:border-ink/40 hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink/30"
-                  >
-                    + {s}
-                  </button>
-                ))}
-              </div>
-              {customSchema && (
-                <button
-                  type="button"
-                  onClick={() => setCustomSchema('')}
-                  className="shrink-0 rounded-md text-[12.5px] font-medium text-ink-soft underline decoration-ink/30 underline-offset-4 hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink/30"
-                >
-                  Clear
-                </button>
-              )}
-            </div>
-          </div>
-        </Step>
-
-        {/* ── 03 Voice ───────────────────────────────────────────────────── */}
-        <Step id={STEP_IDS.voice} n="03" title="Voice" hint="Tone applies to every draft.">
-          <div role="radiogroup" aria-label="Tone" className="grid grid-cols-2 gap-2 xl:grid-cols-4">
-            {TONES.map(({ value, note }) => {
-              const active = tone === value
-              return (
-                <button
-                  key={value}
-                  type="button"
-                  role="radio"
-                  aria-checked={active}
-                  onClick={() => setTone(value)}
-                  className={`rounded-xl border px-3 py-2.5 text-left transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink/30 ${
-                    active ? 'border-ink bg-white text-ink ring-1 ring-ink' : 'border-line bg-white text-ink-soft hover:border-ink/40 hover:text-ink'
-                  }`}
-                >
-                  <span className="block text-[13.5px] font-semibold">{toneLabel(value)}</span>
-                  <span className="block font-serif text-[14px] text-ink-mute">{note}</span>
-                </button>
-              )
-            })}
-          </div>
-        </Step>
-
-        {/* ── 04 Audience ────────────────────────────────────────────────── */}
-        <Step
-          id={STEP_IDS.audience}
-          n="04"
-          title="Audience"
-          hint="Who will read, watch or receive the final content. Optional."
-          collapsible={{
-            open: audienceOpen,
-            onToggle: () => setAudienceOpen((v) => !v),
-            summary: audienceChoice === 'custom' && !audience ? 'Custom profile needs a name' : audience?.name ?? 'No specific audience',
-            warn: !audienceReady,
-          }}
-        >
-          <div className="grid grid-cols-2 gap-2" role="group" aria-label="Target audience">
-            {AUDIENCE_PRESETS.map(({ name }) => {
-              const active = audienceChoice === name
-              return (
-                <button
-                  key={name}
-                  type="button"
-                  aria-pressed={active}
-                  onClick={() => { setAudienceChoice(active ? null : name); setFormError(null) }}
-                  className={`min-h-11 rounded-lg border px-3 py-2 text-left text-[13.5px] font-medium transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink/30 active:scale-[0.99] ${
-                    active ? 'border-ink bg-ink text-paper' : 'border-line bg-white text-ink-soft hover:border-ink/40 hover:text-ink'
-                  }`}
-                >
-                  {name}
-                </button>
-              )
-            })}
-
-            {/* Profiles saved to this account */}
-            {canSaveAudience && savedState === 'loading' && (
-              <p className="col-span-2 py-1 text-[12.5px] text-ink-mute" aria-live="polite">Loading your saved profiles…</p>
-            )}
-            {canSaveAudience && savedState === 'error' && (
-              <p className="col-span-2 flex flex-wrap items-center gap-x-2 py-1 text-[12.5px] text-red-700" role="alert">
-                Couldn't load your saved profiles.
-                <button type="button" onClick={loadSavedAudiences} className="font-medium text-ink underline decoration-ink/30 underline-offset-4 hover:decoration-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink/30">
-                  Try again
-                </button>
-              </p>
-            )}
-            {savedAudiences.length > 0 && (
-              <>
-                <p className="col-span-2 mt-1 text-[12.5px] font-medium text-ink-mute">Saved to your account</p>
-                {savedAudiences.map((profile) => {
-                  const active = audienceChoice === `saved:${profile.name}`
-                  return (
+                {uploadedFile ? (
+                  <div className="sk-pop flex items-center gap-3 rounded-xl border border-line bg-white p-3">
+                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-matcha font-mono text-[11px] font-semibold uppercase text-ink">
+                      {uploadedFile.name.split('.').pop()?.slice(0, 4) || 'file'}
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-[14px] font-medium text-ink">{uploadedFile.name}</p>
+                      <p className="mt-0.5 text-[12.5px] text-ink-mute">
+                        {formatBytes(uploadedFile.size)} · {
+                          imageReader ? <>{scanNote ?? 'image'}, read with <span className="font-mono text-[12px] text-ink">{imageReader}</span></>
+                          : parsing ? 'reading text…'
+                          : `${extractedText.length.toLocaleString()} characters read`
+                        }
+                      </p>
+                    </div>
                     <button
-                      key={profile.name}
-                      type="button"
-                      aria-pressed={active}
-                      onClick={() => { setAudienceChoice(active ? null : `saved:${profile.name}`); setFormError(null); setAudienceNote(null) }}
-                      className={`min-h-11 truncate rounded-lg border px-3 py-2 text-left text-[13.5px] font-medium transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink/30 active:scale-[0.99] ${
-                        active ? 'border-ink bg-ink text-paper' : 'border-line bg-white text-ink-soft hover:border-ink/40 hover:text-ink'
-                      }`}
-                      title={profile.name}
+                      onClick={() => fileInputRef.current?.click()}
+                      className="rounded-lg px-3 py-1.5 text-[13px] font-medium text-ink-soft transition-colors hover:bg-paper-deep hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink/30"
                     >
-                      {profile.name}
+                      Replace
                     </button>
-                  )
-                })}
-              </>
+                    <button
+                      onClick={clearFile}
+                      aria-label="Remove file"
+                      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-ink-mute transition-colors hover:bg-paper-deep hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink/30"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  </div>
+                ) : (
+                  <div
+                    role="button"
+                    tabIndex={0}
+                    aria-label="Choose a source file, or drop one here"
+                    onClick={() => fileInputRef.current?.click()}
+                    onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fileInputRef.current?.click() } }}
+                    onDragOver={(e) => { e.preventDefault(); setDragOver(true) }}
+                    onDragLeave={() => setDragOver(false)}
+                    onDrop={onDrop}
+                    className={`flex min-h-[128px] cursor-pointer flex-col items-center justify-center rounded-xl border-[1.5px] border-dashed px-5 py-6 text-center transition-colors duration-200 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-matcha/50 ${
+                      dragOver ? 'border-ink bg-matcha/30' : 'border-ink/25 bg-white hover:border-ink/50'
+                    }`}
+                  >
+                    <p className="font-display text-[17px] font-bold leading-snug text-ink [text-wrap:balance]">
+                      {dragOver ? 'Release to add this file' : 'Drop a file, or click to choose one'}
+                    </p>
+                    <p className="mt-1.5 text-[12.5px] text-ink-mute [text-wrap:balance]">PDF, DOCX, TXT, CSV, JSON or an image · up to 30 MB</p>
+                  </div>
+                )}
+              </div>
             )}
 
-            <button
-              type="button"
-              aria-pressed={audienceChoice === 'custom'}
-              aria-expanded={audienceChoice === 'custom'}
-              aria-controls="ws-custom-audience"
-              onClick={() => { setAudienceChoice(audienceChoice === 'custom' ? null : 'custom'); setFormError(null); setAudienceNote(null) }}
-              className={`col-span-2 flex min-h-11 items-center justify-center gap-2 rounded-lg border px-3 py-2 text-[13.5px] font-medium transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink/30 ${
-                audienceChoice === 'custom' ? 'border-ink bg-ink text-paper' : 'border-dashed border-ink/30 bg-white text-ink-soft hover:border-ink/60 hover:text-ink'
-              }`}
-            >
-              {audienceChoice === 'custom' ? <Check className="h-4 w-4 text-matcha" /> : <Plus className="h-4 w-4" />}
-              Custom Audience
-            </button>
-          </div>
-
-          {audience && audienceChoice !== 'custom' && (
-            <p className="mt-3 text-[13px] leading-relaxed text-ink-mute">
-              <span className="font-medium text-ink">Writes for:</span> {audience.description || 'No description saved.'}
-            </p>
-          )}
-
-          {savedChoice && (
-            <div className="mt-2 flex flex-wrap gap-x-4">
-              <button
-                type="button"
-                onClick={() => editSavedAudience(savedChoice)}
-                className="min-h-11 text-[13px] font-medium text-ink underline decoration-ink/30 underline-offset-4 hover:decoration-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink/30"
-              >
-                Edit profile
-              </button>
-              <button
-                type="button"
-                onClick={() => handleRemoveAudience(savedChoice.name)}
-                className="min-h-11 text-[13px] font-medium text-red-700 underline decoration-red-700/30 underline-offset-4 hover:decoration-red-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-700/30"
-              >
-                Remove from saved
-              </button>
-            </div>
-          )}
-
-          {audienceNote && audienceChoice !== 'custom' && (
-            <p role="status" className={`mt-2 text-[12.5px] ${audienceNote.kind === 'error' ? 'text-red-700' : 'text-ink-soft'}`}>{audienceNote.text}</p>
-          )}
-
-          {audienceChoice === 'custom' && (
-            <div id="ws-custom-audience" className="sk-rise mt-3 space-y-3 rounded-xl border border-line bg-paper p-3.5">
-              <p className="text-[12.5px] leading-snug text-ink-soft">Describe the people the finished content is for, not yourself.</p>
-              <label className="block">
-                <span className="text-[13px] font-semibold text-ink">Profile name</span>
-                <span className={`mt-1.5 flex h-11 items-center rounded-lg border border-line bg-white px-3.5 transition-shadow ${FIELD_FOCUS}`}>
+            {/* Link */}
+            {inputMode === 'url' && (
+              <div className="mt-3">
+                <label className={`flex h-12 items-center gap-3 rounded-xl border border-line bg-white px-4 transition-shadow ${FIELD_FOCUS}`}>
+                  <Globe className="h-[18px] w-[18px] shrink-0 text-ink-mute" />
+                  <span className="sr-only">Source link</span>
                   <input
-                    type="text"
-                    value={customAudience.name}
-                    onChange={(e) => { setCustomAudience((a) => ({ ...a, name: e.target.value })); setFormError(null) }}
-                    placeholder="e.g. Gen Z tech enthusiasts"
-                    maxLength={80}
+                    type="url"
+                    value={urlValue}
+                    onChange={(e) => { setUrlValue(e.target.value); setFormError(null) }}
+                    placeholder="https://example.com/report"
                     className="min-w-0 flex-1 bg-transparent text-[14.5px] text-ink outline-none placeholder:text-ink-mute"
                   />
-                </span>
-              </label>
-              <label className="block">
-                <span className="flex items-baseline justify-between text-[13px] font-semibold text-ink">
-                  Description
-                  <span className="text-[12px] font-normal text-ink-mute">What these readers know and care about</span>
-                </span>
-                <span className={`mt-1.5 block rounded-lg border border-line bg-white transition-shadow ${FIELD_FOCUS}`}>
-                  <textarea
-                    value={customAudience.description}
-                    onChange={(e) => setCustomAudience((a) => ({ ...a, description: e.target.value }))}
-                    placeholder="e.g. 18 to 25, early adopters, skim on mobile, distrust corporate language"
-                    rows={3}
-                    maxLength={600}
-                    className="block w-full resize-none rounded-lg bg-transparent px-3.5 py-2.5 text-[14px] leading-[1.6] text-ink outline-none placeholder:text-ink-mute"
-                  />
-                </span>
-              </label>
+                </label>
+                <p className="mt-2 text-[12.5px] text-ink-mute">Articles, reports and public pages work best.</p>
+              </div>
+            )}
 
-              {canSaveAudience ? (
-                <div className="flex flex-wrap items-center gap-x-3 gap-y-2 pt-0.5">
+            {/* Paste */}
+            {inputMode === 'text' && (
+              <div className={`relative mt-3 rounded-xl border border-line bg-white transition-shadow ${FIELD_FOCUS}`}>
+                <textarea
+                  value={rawText}
+                  onChange={(e) => { setRawText(e.target.value); setFormError(null) }}
+                  placeholder="Paste a report, article, research paper or notes…"
+                  aria-label="Source text"
+                  rows={8}
+                  className="block w-full resize-none rounded-xl bg-transparent px-4 pb-9 pt-3.5 text-[14.5px] leading-[1.7] text-ink outline-none placeholder:text-ink-mute"
+                />
+                <span className="pointer-events-none absolute bottom-2.5 right-3.5 text-[12px] tabular-nums text-ink-mute">
+                  {wordCount.toLocaleString()} words
+                </span>
+              </div>
+            )}
+          </Step>
+
+          {/* ── 02 Outputs ─────────────────────────────────────────────────── */}
+          <Step
+            id={STEP_IDS.outputs}
+            n="02"
+            title="Outputs"
+            hint="Each format is drafted in parallel. Instructions shape every draft."
+            action={
+              <button
+                type="button"
+                onClick={toggleAll}
+                className="whitespace-nowrap rounded-md text-[13px] font-medium text-ink underline decoration-ink/30 underline-offset-4 transition-colors hover:decoration-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink/30"
+              >
+                {allSelected ? 'Clear all' : 'Select all'}
+              </button>
+            }
+          >
+            <div className="grid gap-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-2">
+              {ALL_FORMATS.map(({ label, short, desc, icon: Icon }) => {
+                const selected = formats.includes(label)
+                return (
+                  <button
+                    key={label}
+                    type="button"
+                    aria-pressed={selected}
+                    onClick={() => toggleFormat(label)}
+                    title={`${short}: ${desc}`}
+                    className={`group flex items-center gap-2 rounded-lg border px-2.5 py-2.5 text-left transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink/30 active:scale-[0.99] ${
+                      selected ? 'border-ink bg-ink text-paper' : 'border-line bg-white text-ink hover:border-ink/40'
+                    }`}
+                  >
+                    <Icon className={`h-[18px] w-[18px] shrink-0 ${selected ? 'text-matcha' : 'text-ink-mute group-hover:text-ink'}`} strokeWidth={1.8} />
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-[13px] font-semibold leading-tight">{short}</span>
+                      <span className={`mt-0.5 block truncate text-[12px] leading-tight ${selected ? 'text-paper/75' : 'text-ink-mute'}`}>{desc}</span>
+                    </span>
+                  </button>
+                )
+              })}
+            </div>
+
+            {/* Translation target (only when Translation is selected) */}
+            {showLangField && (
+              <fieldset className="sk-rise mt-4 rounded-xl border border-line bg-white p-3.5">
+                <legend className="flex items-center gap-2 px-1 text-[13px] font-semibold text-ink">
+                  <Languages className="h-4 w-4" /> Translate into
+                </legend>
+                <div className="grid grid-cols-3 gap-1.5">
+                  {LANGUAGES.map((l) => (
+                    <button
+                      key={l}
+                      type="button"
+                      aria-pressed={targetLanguage === l}
+                      onClick={() => setTargetLanguage(l)}
+                      className={`rounded-lg py-2 text-[13px] font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink/30 ${
+                        targetLanguage === l ? 'bg-ink text-paper' : 'bg-paper-deep text-ink-soft hover:text-ink'
+                      }`}
+                    >
+                      {l}
+                    </button>
+                  ))}
+                </div>
+              </fieldset>
+            )}
+
+            <label htmlFor="ws-custom-format" className="mt-5 flex items-baseline justify-between text-[13px] font-semibold text-ink">
+              Custom instructions
+              <span className="text-[12px] font-normal text-ink-mute">Optional</span>
+            </label>
+            <div className={`mt-2 rounded-xl border border-line bg-white transition-shadow ${FIELD_FOCUS}`}>
+              <textarea
+                id="ws-custom-format"
+                value={customSchema}
+                onChange={(e) => { setCustomSchema(e.target.value); setFormError(null) }}
+                placeholder="e.g. Start with a one-line verdict, then a risk table, then three recommendations…"
+                rows={3}
+                className="block w-full resize-none rounded-t-xl bg-transparent px-4 pt-3 text-[14.5px] leading-[1.65] text-ink outline-none placeholder:text-ink-mute"
+              />
+              <div className="flex items-center justify-between gap-3 px-3 pb-3 pt-2">
+                <div className="flex flex-wrap gap-1.5">
+                  {SCHEMA_SUGGESTIONS.map((s) => (
+                    <button
+                      key={s}
+                      type="button"
+                      onClick={() => addSuggestion(s)}
+                      className="rounded-lg border border-line bg-paper px-2.5 py-1 text-[12px] text-ink-soft transition-colors hover:border-ink/40 hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink/30"
+                    >
+                      + {s}
+                    </button>
+                  ))}
+                </div>
+                {customSchema && (
                   <button
                     type="button"
-                    onClick={handleSaveAudience}
-                    disabled={!customAudience.name.trim() || savingAudience}
-                    className="flex min-h-11 items-center gap-2 rounded-lg bg-ink px-4 text-[13.5px] font-medium text-paper transition-colors hover:bg-ink-soft focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-matcha disabled:cursor-not-allowed disabled:bg-ink/30"
+                    onClick={() => setCustomSchema('')}
+                    className="shrink-0 rounded-md text-[12.5px] font-medium text-ink-soft underline decoration-ink/30 underline-offset-4 hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink/30"
                   >
-                    <Check className="h-4 w-4" />
-                    {savingAudience ? 'Saving…' : savedAudiences.some((a) => a.name.toLowerCase() === customAudience.name.trim().toLowerCase()) ? 'Update saved profile' : 'Save audience profile'}
+                    Clear
                   </button>
-                  <span role="status" className={`text-[12.5px] ${audienceNote?.kind === 'error' ? 'text-red-700' : 'text-ink-mute'}`}>
-                    {audienceNote?.text ?? (customAudience.name.trim() ? 'Saves to your account for next time.' : 'Add a profile name to save it.')}
-                  </span>
-                </div>
-              ) : (
-                <p className="text-[12.5px] text-ink-mute">
-                  {user?.isDemo ? 'The shared demo account can’t save profiles. This one is used for this session only.' : 'Sign in to save profiles to your account.'}
+                )}
+              </div>
+            </div>
+          </Step>
+
+          {/* ── 03 Voice ───────────────────────────────────────────────────── */}
+          <Step id={STEP_IDS.voice} n="03" title="Voice" hint="Tone applies to every draft.">
+            <div role="radiogroup" aria-label="Tone" className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-2">
+              {TONES.map(({ value, note }) => {
+                const active = tone === value
+                return (
+                  <button
+                    key={value}
+                    type="button"
+                    role="radio"
+                    aria-checked={active}
+                    onClick={() => setTone(value)}
+                    className={`rounded-lg border px-3 py-2 text-left transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink/30 ${
+                      active ? 'border-ink bg-white text-ink ring-1 ring-ink' : 'border-line bg-white text-ink-soft hover:border-ink/40 hover:text-ink'
+                    }`}
+                  >
+                    <span className="block text-[13.5px] font-semibold">{toneLabel(value)}</span>
+                    <span className="block font-serif text-[14px] text-ink-mute">{note}</span>
+                  </button>
+                )
+              })}
+            </div>
+          </Step>
+
+          {/* ── 04 Audience ────────────────────────────────────────────────── */}
+          <Step
+            id={STEP_IDS.audience}
+            n="04"
+            title="Audience"
+            hint="Who will read, watch or receive the final content. Optional."
+            collapsible={{
+              open: audienceOpen,
+              onToggle: () => setAudienceOpen((v) => !v),
+              summary: audienceChoice === 'custom' && !audience ? 'Custom profile needs a name' : audience?.name ?? 'No specific audience',
+              warn: !audienceReady,
+            }}
+          >
+            <div className="grid grid-cols-2 gap-2" role="group" aria-label="Target audience">
+              {AUDIENCE_PRESETS.map(({ name }) => {
+                const active = audienceChoice === name
+                return (
+                  <button
+                    key={name}
+                    type="button"
+                    aria-pressed={active}
+                    onClick={() => { setAudienceChoice(active ? null : name); setFormError(null) }}
+                    className={`min-h-11 rounded-lg border px-3 py-2 text-left text-[13.5px] font-medium transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink/30 active:scale-[0.99] ${
+                      active ? 'border-ink bg-ink text-paper' : 'border-line bg-white text-ink-soft hover:border-ink/40 hover:text-ink'
+                    }`}
+                  >
+                    {name}
+                  </button>
+                )
+              })}
+
+              {/* Profiles saved to this account */}
+              {canSaveAudience && savedState === 'loading' && (
+                <p className="col-span-2 py-1 text-[12.5px] text-ink-mute" aria-live="polite">Loading your saved profiles…</p>
+              )}
+              {canSaveAudience && savedState === 'error' && (
+                <p className="col-span-2 flex flex-wrap items-center gap-x-2 py-1 text-[12.5px] text-red-700" role="alert">
+                  Couldn't load your saved profiles.
+                  <button type="button" onClick={loadSavedAudiences} className="font-medium text-ink underline decoration-ink/30 underline-offset-4 hover:decoration-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink/30">
+                    Try again
+                  </button>
                 </p>
               )}
-            </div>
-          )}
-        </Step>
-
-        {/* ── 05 Engine ──────────────────────────────────────────────────── */}
-        <Step
-          id={STEP_IDS.engine}
-          n="05"
-          title="AI engine & provider"
-          hint="Your model, your key."
-          collapsible={{
-            open: engineOpen,
-            onToggle: () => setEngineOpen((v) => !v),
-            summary: missingKey ? `${providerInfo(missingKey).name} key needed` : engineLabel,
-            warn: !!missingKey,
-          }}
-        >
-          <div role="radiogroup" aria-label="Engine mode" className="grid grid-cols-2 gap-1 rounded-xl border border-line bg-white p-1">
-            {([['single', 'Single provider'], ['compare', 'Compare models']] as const).map(([mode, label]) => {
-              const active = engineMode === mode
-              return (
-                <button
-                  key={mode}
-                  type="button"
-                  role="radio"
-                  aria-checked={active}
-                  onClick={() => { setEngineMode(mode); setFormError(null) }}
-                  className={`flex h-10 items-center justify-center rounded-lg text-[13.5px] font-medium transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink/30 ${
-                    active ? 'bg-ink text-paper' : 'text-ink-soft hover:bg-paper-deep hover:text-ink'
-                  }`}
-                >
-                  {label}
-                </button>
-              )
-            })}
-          </div>
-
-          {engineMode === 'single' ? (
-            <div className="mt-3">
-              <ModelSelect label="Model" value={singleModel} onChange={(v) => { setSingleModel(v); setFormError(null) }} />
-            </div>
-          ) : (
-            <div className="mt-3">
-              <p className="text-[13px] text-ink-mute">Each model drafts every selected format. Results appear side by side.</p>
-              <ol className="mt-2.5 space-y-2">
-                {compareModels.map((value, i) => (
-                  <li key={i} className="flex items-center gap-2">
-                    <span className="w-6 shrink-0 font-mono text-[12px] font-semibold text-ink-mute tabular-nums">{String.fromCharCode(65 + i)}</span>
-                    <div className="min-w-0 flex-1">
-                      <ModelSelect
-                        label={`Model ${String.fromCharCode(65 + i)}`}
-                        hideLabel
-                        value={value}
-                        taken={compareModels.filter((_, j) => j !== i)}
-                        onChange={(v) => { setCompareModels((list) => list.map((m, j) => (j === i ? v : m))); setFormError(null) }}
-                      />
-                    </div>
-                    {compareModels.length > 2 && (
+              {savedAudiences.length > 0 && (
+                <>
+                  <p className="col-span-2 mt-1 text-[12.5px] font-medium text-ink-mute">Saved to your account</p>
+                  {savedAudiences.map((profile) => {
+                    const active = audienceChoice === `saved:${profile.name}`
+                    return (
                       <button
+                        key={profile.name}
                         type="button"
-                        onClick={() => setCompareModels((list) => list.filter((_, j) => j !== i))}
-                        aria-label={`Remove model ${String.fromCharCode(65 + i)}`}
-                        className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-ink-mute transition-colors hover:bg-paper-deep hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink/30"
+                        aria-pressed={active}
+                        onClick={() => { setAudienceChoice(active ? null : `saved:${profile.name}`); setFormError(null); setAudienceNote(null) }}
+                        className={`min-h-11 truncate rounded-lg border px-3 py-2 text-left text-[13.5px] font-medium transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink/30 active:scale-[0.99] ${
+                          active ? 'border-ink bg-ink text-paper' : 'border-line bg-white text-ink-soft hover:border-ink/40 hover:text-ink'
+                        }`}
+                        title={profile.name}
                       >
-                        <X className="h-4 w-4" />
+                        {profile.name}
                       </button>
-                    )}
-                  </li>
-                ))}
-              </ol>
-              {compareModels.length < MAX_COMPARE && (
+                    )
+                  })}
+                </>
+              )}
+
+              <button
+                type="button"
+                aria-pressed={audienceChoice === 'custom'}
+                aria-expanded={audienceChoice === 'custom'}
+                aria-controls="ws-custom-audience"
+                onClick={() => { setAudienceChoice(audienceChoice === 'custom' ? null : 'custom'); setFormError(null); setAudienceNote(null) }}
+                className={`col-span-2 flex min-h-11 items-center justify-center gap-2 rounded-lg border px-3 py-2 text-[13.5px] font-medium transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink/30 ${
+                  audienceChoice === 'custom' ? 'border-ink bg-ink text-paper' : 'border-dashed border-ink/30 bg-white text-ink-soft hover:border-ink/60 hover:text-ink'
+                }`}
+              >
+                {audienceChoice === 'custom' ? <Check className="h-4 w-4 text-matcha" /> : <Plus className="h-4 w-4" />}
+                Custom Audience
+              </button>
+            </div>
+
+            {audience && audienceChoice !== 'custom' && (
+              <p className="mt-3 text-[13px] leading-relaxed text-ink-mute">
+                <span className="font-medium text-ink">Writes for:</span> {audience.description || 'No description saved.'}
+              </p>
+            )}
+
+            {savedChoice && (
+              <div className="mt-2 flex flex-wrap gap-x-4">
                 <button
                   type="button"
-                  onClick={() => setCompareModels((list) => [...list, nextFreeModel(list)])}
-                  className="mt-2 flex h-10 items-center gap-1.5 rounded-lg px-2 text-[13px] font-medium text-ink underline decoration-ink/30 underline-offset-4 transition-colors hover:decoration-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink/30"
+                  onClick={() => editSavedAudience(savedChoice)}
+                  className="min-h-11 text-[13px] font-medium text-ink underline decoration-ink/30 underline-offset-4 hover:decoration-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink/30"
                 >
-                  <Plus className="h-3.5 w-3.5" /> Add a third model
+                  Edit profile
                 </button>
-              )}
-            </div>
-          )}
+                <button
+                  type="button"
+                  onClick={() => handleRemoveAudience(savedChoice.name)}
+                  className="min-h-11 text-[13px] font-medium text-red-700 underline decoration-red-700/30 underline-offset-4 hover:decoration-red-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-700/30"
+                >
+                  Remove from saved
+                </button>
+              </div>
+            )}
 
-          <div className="mt-4 space-y-3">
-            {usedProviders.map((p) => (
-              <KeyField
-                key={p}
-                provider={p}
-                value={keys[p] ?? ''}
-                onChange={(v) => { setKeys((k) => ({ ...k, [p]: v })); setFormError(null) }}
-              />
-            ))}
-          </div>
-        </Step>
+            {audienceNote && audienceChoice !== 'custom' && (
+              <p role="status" className={`mt-2 text-[12.5px] ${audienceNote.kind === 'error' ? 'text-red-700' : 'text-ink-soft'}`}>{audienceNote.text}</p>
+            )}
+
+            {audienceChoice === 'custom' && (
+              <div id="ws-custom-audience" className="sk-rise mt-3 space-y-3 rounded-xl border border-line bg-paper p-3.5">
+                <p className="text-[12.5px] leading-snug text-ink-soft">Describe the people the finished content is for, not yourself.</p>
+                <label className="block">
+                  <span className="text-[13px] font-semibold text-ink">Profile name</span>
+                  <span className={`mt-1.5 flex h-11 items-center rounded-lg border border-line bg-white px-3.5 transition-shadow ${FIELD_FOCUS}`}>
+                    <input
+                      type="text"
+                      value={customAudience.name}
+                      onChange={(e) => { setCustomAudience((a) => ({ ...a, name: e.target.value })); setFormError(null) }}
+                      placeholder="e.g. Gen Z tech enthusiasts"
+                      maxLength={80}
+                      className="min-w-0 flex-1 bg-transparent text-[14.5px] text-ink outline-none placeholder:text-ink-mute"
+                    />
+                  </span>
+                </label>
+                <label className="block">
+                  <span className="flex items-baseline justify-between text-[13px] font-semibold text-ink">
+                    Description
+                    <span className="text-[12px] font-normal text-ink-mute">What these readers know and care about</span>
+                  </span>
+                  <span className={`mt-1.5 block rounded-lg border border-line bg-white transition-shadow ${FIELD_FOCUS}`}>
+                    <textarea
+                      value={customAudience.description}
+                      onChange={(e) => setCustomAudience((a) => ({ ...a, description: e.target.value }))}
+                      placeholder="e.g. 18 to 25, early adopters, skim on mobile, distrust corporate language"
+                      rows={3}
+                      maxLength={600}
+                      className="block w-full resize-none rounded-lg bg-transparent px-3.5 py-2.5 text-[14px] leading-[1.6] text-ink outline-none placeholder:text-ink-mute"
+                    />
+                  </span>
+                </label>
+
+                {canSaveAudience ? (
+                  <div className="flex flex-wrap items-center gap-x-3 gap-y-2 pt-0.5">
+                    <button
+                      type="button"
+                      onClick={handleSaveAudience}
+                      disabled={!customAudience.name.trim() || savingAudience}
+                      className="flex min-h-11 items-center gap-2 rounded-lg bg-ink px-4 text-[13.5px] font-medium text-paper transition-colors hover:bg-ink-soft focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-matcha disabled:cursor-not-allowed disabled:bg-ink/30"
+                    >
+                      <Check className="h-4 w-4" />
+                      {savingAudience ? 'Saving…' : savedAudiences.some((a) => a.name.toLowerCase() === customAudience.name.trim().toLowerCase()) ? 'Update saved profile' : 'Save audience profile'}
+                    </button>
+                    <span role="status" className={`text-[12.5px] ${audienceNote?.kind === 'error' ? 'text-red-700' : 'text-ink-mute'}`}>
+                      {audienceNote?.text ?? (customAudience.name.trim() ? 'Saves to your account for next time.' : 'Add a profile name to save it.')}
+                    </span>
+                  </div>
+                ) : (
+                  <p className="text-[12.5px] text-ink-mute">
+                    {user?.isDemo ? 'The shared demo account can’t save profiles. This one is used for this session only.' : 'Sign in to save profiles to your account.'}
+                  </p>
+                )}
+              </div>
+            )}
+          </Step>
+
+          {/* ── 05 Engine ──────────────────────────────────────────────────── */}
+          <Step
+            id={STEP_IDS.engine}
+            n="05"
+            title="AI engine & provider"
+            hint="Your model, your key."
+            collapsible={{
+              open: engineOpen,
+              onToggle: () => setEngineOpen((v) => !v),
+              summary: missingKey ? `${providerInfo(missingKey).name} key needed` : engineLabel,
+              warn: !!missingKey,
+            }}
+          >
+            <div role="radiogroup" aria-label="Engine mode" className="grid grid-cols-2 gap-1 rounded-xl border border-line bg-white p-1">
+              {([['single', 'Single provider'], ['compare', 'Compare models']] as const).map(([mode, label]) => {
+                const active = engineMode === mode
+                return (
+                  <button
+                    key={mode}
+                    type="button"
+                    role="radio"
+                    aria-checked={active}
+                    onClick={() => { setEngineMode(mode); setFormError(null) }}
+                    className={`flex h-10 items-center justify-center rounded-lg text-[13.5px] font-medium transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink/30 ${
+                      active ? 'bg-ink text-paper' : 'text-ink-soft hover:bg-paper-deep hover:text-ink'
+                    }`}
+                  >
+                    {label}
+                  </button>
+                )
+              })}
+            </div>
+
+            {engineMode === 'single' ? (
+              <div className="mt-3">
+                <ModelSelect label="Model" value={singleModel} onChange={(v) => { setSingleModel(v); setFormError(null) }} />
+              </div>
+            ) : (
+              <div className="mt-3">
+                <p className="text-[13px] text-ink-mute">Each model drafts every selected format. Results appear side by side.</p>
+                <ol className="mt-2.5 space-y-2">
+                  {compareModels.map((value, i) => (
+                    <li key={i} className="flex items-center gap-2">
+                      <span className="w-6 shrink-0 font-mono text-[12px] font-semibold text-ink-mute tabular-nums">{String.fromCharCode(65 + i)}</span>
+                      <div className="min-w-0 flex-1">
+                        <ModelSelect
+                          label={`Model ${String.fromCharCode(65 + i)}`}
+                          hideLabel
+                          value={value}
+                          taken={compareModels.filter((_, j) => j !== i)}
+                          onChange={(v) => { setCompareModels((list) => list.map((m, j) => (j === i ? v : m))); setFormError(null) }}
+                        />
+                      </div>
+                      {compareModels.length > 2 && (
+                        <button
+                          type="button"
+                          onClick={() => setCompareModels((list) => list.filter((_, j) => j !== i))}
+                          aria-label={`Remove model ${String.fromCharCode(65 + i)}`}
+                          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-ink-mute transition-colors hover:bg-paper-deep hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink/30"
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
+                      )}
+                    </li>
+                  ))}
+                </ol>
+                {compareModels.length < MAX_COMPARE && (
+                  <button
+                    type="button"
+                    onClick={() => setCompareModels((list) => [...list, nextFreeModel(list)])}
+                    className="mt-2 flex h-10 items-center gap-1.5 rounded-lg px-2 text-[13px] font-medium text-ink underline decoration-ink/30 underline-offset-4 transition-colors hover:decoration-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink/30"
+                  >
+                    <Plus className="h-3.5 w-3.5" /> Add a third model
+                  </button>
+                )}
+              </div>
+            )}
+
+            <div className="mt-4 space-y-3">
+              {usedProviders.map((p) => (
+                <KeyField
+                  key={p}
+                  provider={p}
+                  value={keys[p] ?? ''}
+                  onChange={(v) => { setKeys((k) => ({ ...k, [p]: v })); setFormError(null) }}
+                />
+              ))}
+            </div>
+          </Step>
+        </div>
+
+        {/* ── Review ───────────────────────────────────────────────────────── */}
+        <div className="border-t border-line px-5 pb-5 pt-4">
+          <h3 className="mb-2.5 text-[13px] font-semibold text-ink">Review</h3>
+          <dl className="grid grid-cols-2 gap-px overflow-hidden rounded-lg border border-line bg-line sm:grid-cols-4 lg:grid-cols-2" aria-label="Generation summary">
+            <SummaryCell label="Source" value={sourceLabel ?? 'Not added'} missing={!sourceLabel} />
+            <SummaryCell
+              label="Drafts"
+              value={outputCount === 0 ? 'None chosen' : `${outputCount} ${outputCount === 1 ? 'format' : 'formats'}`}
+              missing={outputCount === 0}
+            />
+            <SummaryCell label="Voice" value={`${toneLabel(tone)}${audienceLabel ? ` · ${audienceLabel}` : ''}${showLangField ? ` · ${targetLanguage}` : ''}`} />
+            <SummaryCell label="Engine" value={missingKey ? `${providerInfo(missingKey).name} key needed` : engineLabel} missing={!!missingKey} />
+          </dl>
+        </div>
       </div>
 
-      {/* ── Review + generate ────────────────────────────────────────────── */}
-      <div className="rounded-b-xl border-t border-line bg-paper-deep px-6 pb-6 pt-5 lg:px-7">
+      {/* ── Generate: pinned to the bottom of the panel so it is reachable from any step ── */}
+      <div className="sticky bottom-0 z-10 shrink-0 border-t border-line bg-paper-deep px-5 pb-5 pt-4 shadow-[0_-12px_24px_-20px_rgba(15,16,15,0.35)]">
         {formError && (
-          <p role="alert" className="sk-rise mb-3 rounded-lg border border-red-200 bg-red-50 px-3.5 py-2.5 text-[13px] text-red-800">
+          <p role="alert" className="sk-rise mb-3 max-h-32 overflow-y-auto rounded-lg border border-red-200 bg-red-50 px-3.5 py-2.5 text-[13px] leading-snug text-red-800">
             {formError}
           </p>
         )}
 
-        <dl className="grid grid-cols-2 overflow-hidden rounded-xl border border-line bg-white sm:grid-cols-4" aria-label="Generation summary">
-          <SummaryCell label="Source" value={sourceLabel ?? 'Not added'} missing={!sourceLabel} />
-          <SummaryCell
-            label="Drafts"
-            value={outputCount === 0 ? 'None chosen' : `${outputCount} ${outputCount === 1 ? 'format' : 'formats'}`}
-            missing={outputCount === 0}
-          />
-          <SummaryCell label="Voice" value={`${toneLabel(tone)}${audienceLabel ? ` · ${audienceLabel}` : ''}${showLangField ? ` · ${targetLanguage}` : ''}`} />
-          <SummaryCell label="Engine" value={missingKey ? `${providerInfo(missingKey).name} key needed` : engineLabel} missing={!!missingKey} />
-        </dl>
-
-        <button
-          onClick={handleGenerate}
-          disabled={generating}
-          className="relative mt-3 flex h-14 w-full items-center justify-center gap-3 overflow-hidden rounded-xl bg-ink text-[15.5px] font-semibold text-paper transition-[transform,background-color] duration-200 hover:bg-ink-soft focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-matcha active:scale-[0.99] disabled:cursor-wait disabled:hover:bg-ink"
-        >
-          {generating && <span className="sk-sweep pointer-events-none absolute bottom-0 left-0 h-[3px] w-1/3 bg-matcha" />}
-          <span>
-            {generating ? 'Drafting…'
-              : engineMode === 'compare' ? `Compare ${selectedRefs.length} models`
-              : outputCount > 1 ? `Generate ${outputCount} drafts` : 'Generate draft'}
-          </span>
-          {!generating && (
+        {generating ? (
+          // Same place and size as Generate, so the stop is where the eye already is. The sweep keeps showing work in progress.
+          <button
+            type="button"
+            onClick={onStop}
+            className="relative flex h-12 w-full items-center justify-center gap-2.5 overflow-hidden rounded-xl bg-white text-[15px] font-semibold text-red-700 ring-1 ring-inset ring-red-200 transition-[transform,background-color] duration-200 hover:bg-red-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-600 active:scale-[0.99]"
+          >
+            <span className="sk-sweep pointer-events-none absolute bottom-0 left-0 h-[3px] w-1/3 bg-red-200" aria-hidden />
+            <Square className="h-3.5 w-3.5 fill-current" aria-hidden />
+            <span>Stop generating</span>
+          </button>
+        ) : (
+          <button
+            onClick={handleGenerate}
+            className="relative flex h-12 w-full items-center justify-center gap-3 overflow-hidden rounded-xl bg-ink text-[15.5px] font-semibold text-paper transition-[transform,background-color] duration-200 hover:bg-ink-soft focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-matcha active:scale-[0.99]"
+          >
+            <span>
+              {engineMode === 'compare' ? `Compare ${selectedRefs.length} models`
+                : outputCount > 1 ? `Generate ${outputCount} drafts` : 'Generate draft'}
+            </span>
             <span className="hidden items-center gap-1 text-[12px] font-medium text-paper/70 sm:flex" aria-hidden>
               <kbd className="rounded border border-paper/25 px-1.5 py-0.5 font-sans">{isMac ? '⌘' : 'Ctrl'}</kbd>
               <kbd className="rounded border border-paper/25 px-1.5 py-0.5 font-sans">↵</kbd>
             </span>
-          )}
-        </button>
+          </button>
+        )}
       </div>
     </div>
   )
@@ -1036,9 +1046,9 @@ export function LeftPanel({ onGenerate, generating, onStatusChange }: Props) {
 
 function SummaryCell({ label, value, missing }: { label: string; value: string; missing?: boolean }) {
   return (
-    <div className="min-w-0 border-b border-r border-line px-3.5 py-3 even:border-r-0 sm:border-b-0 sm:even:border-r sm:last:border-r-0">
-      <dt className="text-[12px] text-ink-mute">{label}</dt>
-      <dd className={`mt-0.5 truncate text-[14px] font-semibold ${missing ? 'font-medium text-ink-mute' : 'text-ink'}`} title={value}>{value}</dd>
+    <div className="min-w-0 bg-white px-3 py-2.5">
+      <dt className="text-[11.5px] text-ink-mute">{label}</dt>
+      <dd className={`mt-0.5 truncate text-[13px] font-semibold ${missing ? 'font-medium text-ink-mute' : 'text-ink'}`} title={value}>{value}</dd>
     </div>
   )
 }
@@ -1060,7 +1070,7 @@ function Step({ id, n, title, hint, action, collapsible, children }: {
         id={id}
         aria-labelledby={`${id}-title`}
         tabIndex={-1}
-        // The output canvas focuses a step to jump to it; a folded step opens so there is something to edit.
+        // Focusing a folded step opens it, so there is something to edit.
         onFocus={(e) => { if (e.target === e.currentTarget && !open) onToggle() }}
         className="scroll-mt-4 outline-none"
       >
@@ -1070,12 +1080,12 @@ function Step({ id, n, title, hint, action, collapsible, children }: {
             onClick={onToggle}
             aria-expanded={open}
             aria-controls={`${id}-body`}
-            className="group flex w-full items-start gap-3 px-6 py-5 text-left transition-colors hover:bg-paper focus-visible:bg-paper focus-visible:outline-none lg:px-7"
+            className="group flex w-full items-start gap-3 px-5 py-4 text-left transition-colors hover:bg-paper focus-visible:bg-paper focus-visible:outline-none"
           >
             <StepNumber n={n} />
             <span className="min-w-0 flex-1">
-              <span className="block text-[15.5px] font-semibold leading-7 text-ink">{title}</span>
-              <span className={`block truncate text-[13px] ${warn && !open ? 'font-medium text-red-700' : 'text-ink-mute'}`}>
+              <span className="block text-[14.5px] font-semibold leading-7 text-ink">{title}</span>
+              <span className={`block truncate text-[12.5px] ${warn && !open ? 'font-medium text-red-700' : 'text-ink-mute'}`}>
                 {open ? hint : summary}
               </span>
             </span>
@@ -1083,7 +1093,7 @@ function Step({ id, n, title, hint, action, collapsible, children }: {
           </button>
         </h3>
         {open && (
-          <div id={`${id}-body`} className="px-6 pb-6 lg:px-7">
+          <div id={`${id}-body`} className="px-5 pb-5">
             {children}
           </div>
         )}
@@ -1092,13 +1102,13 @@ function Step({ id, n, title, hint, action, collapsible, children }: {
   }
 
   return (
-    <section id={id} aria-labelledby={`${id}-title`} tabIndex={-1} className="scroll-mt-4 px-6 py-6 outline-none lg:px-7">
-      <header className="mb-4 flex items-start justify-between gap-3">
+    <section id={id} aria-labelledby={`${id}-title`} tabIndex={-1} className="scroll-mt-4 px-5 py-5 outline-none">
+      <header className="mb-3.5 flex items-start justify-between gap-3">
         <div className="flex items-start gap-3">
           <StepNumber n={n} />
           <div>
-            <h3 id={`${id}-title`} className="text-[15.5px] font-semibold leading-7 text-ink">{title}</h3>
-            {hint && <p className="text-[13px] text-ink-mute">{hint}</p>}
+            <h3 id={`${id}-title`} className="text-[14.5px] font-semibold leading-7 text-ink">{title}</h3>
+            {hint && <p className="text-[12.5px] leading-snug text-ink-mute">{hint}</p>}
           </div>
         </div>
         {action && <div className="pt-1">{action}</div>}

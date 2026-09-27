@@ -9,7 +9,7 @@
  * provider directly with the user's own key (lib/providers.ts).
  */
 
-import { chat, providerInfo, timeoutSignal, type ApiKeys, type ImageInput, type ModelRef, type ProviderId } from './providers'
+import { abortError, chat, isAbortError, OwnKeyError, requestSignal, type ApiKeys, type ImageInput, type ModelRef, type ProviderId } from './providers'
 import { describeReader, pickImageReader, readImages } from './ingest'
 
 export type OutputFormat =
@@ -64,6 +64,8 @@ export interface PipelineInput {
   targetLanguage?: string  // for Language Translation
   audience?: Audience | null
   engine: EngineConfig
+  /** Aborting it stops the run: drafts already written come back, the rest come back `stopped`. */
+  signal?: AbortSignal
 }
 
 export interface FormatResult {
@@ -73,8 +75,8 @@ export interface FormatResult {
   error?: string
   model?: string           // the model id the provider reports for this draft
   provider?: ProviderId
-  /** The user's own key failed and the shared keys wrote this draft: why their key failed (see ChatResult). */
-  ownKeyFailure?: string
+  /** The run was stopped before this draft was written. */
+  stopped?: boolean
 }
 
 /** One model's full set of drafts. */
@@ -91,17 +93,6 @@ export interface PipelineOutput {
   imageReadBy: string | null
   /** Set when the source was longer than a model takes in one request and only passages of it were sent. */
   sourceNote: string | null
-  /** One message per provider whose own key failed while the shared keys stood in. Empty when none did. */
-  keyNotices: string[]
-}
-
-/**
- * Tells the user their own key failed and the shared key was used instead. `clauses` says what
- * the shared key did, e.g. "these drafts were written".
- */
-export function keyFallbackNotice(provider: ProviderId, reason: string, clauses: string): string {
-  const check = reason === 'rate-limited' ? '' : ' Check your key in the AI engine step.'
-  return `Your ${providerInfo(provider).name} API key didn't work (${reason}), so ${clauses} with Sankshep's shared key.${check}`
 }
 
 // ─── Node: Ingest ────────────────────────────────────────────────────────────
@@ -110,12 +101,13 @@ export function keyFallbackNotice(provider: ProviderId, reason: string, clauses:
  * Reads a web page as Markdown through Jina Reader, which fetches server-side and allows CORS.
  * Models can't open links themselves; without this they would invent the page.
  */
-async function readUrl(raw: string): Promise<string> {
+async function readUrl(raw: string, signal?: AbortSignal): Promise<string> {
   const url = /^https?:\/\//i.test(raw.trim()) ? raw.trim() : `https://${raw.trim()}`
   let res: Response
   try {
-    res = await fetch(`https://r.jina.ai/${url}`, { headers: { Accept: 'text/plain' }, signal: timeoutSignal(60_000) })
+    res = await fetch(`https://r.jina.ai/${url}`, { headers: { Accept: 'text/plain' }, signal: requestSignal(60_000, signal) })
   } catch {
+    if (signal?.aborted) throw abortError()
     throw new Error(`Couldn't open ${url}. Check the link, or paste the page's text instead.`)
   }
   const text = res.ok ? (await res.text()).trim() : ''
@@ -129,23 +121,16 @@ async function readUrl(raw: string): Promise<string> {
     .replace(/\[([^\]]*)\]\([^)]*\)/g, '$1')
 }
 
-type KeyFailure = { provider: ProviderId; reason: string }
-
-async function ingestNode(input: PipelineInput): Promise<{ text: string; readBy: string | null; imageKeyFailure: KeyFailure | null }> {
+async function ingestNode(input: PipelineInput): Promise<{ text: string; readBy: string | null }> {
   const parts = [input.content.trim()]
-  if (input.url?.trim()) parts.push(await readUrl(input.url))
+  if (input.url?.trim()) parts.push(await readUrl(input.url, input.signal))
   let readBy: string | null = null
-  // Set when the image was read with the shared keys because the user's own key failed.
-  let imageKeyFailure: KeyFailure | null = null
   if (input.images?.length) {
-    const read = await readImages(input.images, pickImageReader(input.engine.models, input.engine.keys), input.engine.keys)
+    const read = await readImages(input.images, pickImageReader(input.engine.models, input.engine.keys), input.engine.keys, input.signal)
     parts.push(read.text)
     readBy = describeReader(read.reader)
-    if (read.ownKeyFailure && read.reader.method === 'vision') {
-      imageKeyFailure = { provider: read.reader.ref.provider, reason: read.ownKeyFailure }
-    }
   }
-  return { text: parts.filter(Boolean).join('\n\n'), readBy, imageKeyFailure }
+  return { text: parts.filter(Boolean).join('\n\n'), readBy }
 }
 
 // ─── Node: Parse ─────────────────────────────────────────────────────────────
@@ -413,8 +398,8 @@ async function formatNode(
 ): Promise<FormatResult> {
   try {
     if (format === 'Language Translation') {
-      const { text, model, ownKeyFailure } = await translateNode(parsedSource, input, ref)
-      return { format, output: text, status: 'success', model, provider: ref.provider, ownKeyFailure }
+      const { text, model } = await translateNode(parsedSource, input, ref)
+      return { format, output: text, status: 'success', model, provider: ref.provider }
     }
     const { system, user } = buildPrompt(format, parsedSource, input.tone, input.customSchema ?? '', input.targetLanguage)
     const result = await chat(
@@ -424,10 +409,13 @@ async function formatNode(
         { role: 'user', content: user },
       ],
       input.engine.keys,
-      { maxTokens: 2048, temperature: 0.72 },
+      { maxTokens: 2048, temperature: 0.72, signal: input.signal },
     )
-    return { format, output: result.content, status: 'success', model: result.model, provider: ref.provider, ownKeyFailure: result.ownKeyFailure }
+    return { format, output: result.content, status: 'success', model: result.model, provider: ref.provider }
   } catch (err) {
+    // A failing own key stops the whole run so the user can choose; it is not one draft's error.
+    if (err instanceof OwnKeyError) throw err
+    if (isAbortError(err)) return { format, output: '', status: 'error', error: 'Stopped before this draft was written.', stopped: true }
     return {
       format,
       output: '',
@@ -469,9 +457,8 @@ function chunkText(text: string, size: number): string[] {
  * Translates the whole source, not a sample: chunk by chunk in order, joined back together.
  * A chunk whose translation hits the output limit is halved and retried, so nothing is cut off.
  */
-async function translateNode(source: string, input: PipelineInput, ref: ModelRef): Promise<{ text: string; model: string; ownKeyFailure?: string }> {
+async function translateNode(source: string, input: PipelineInput, ref: ModelRef): Promise<{ text: string; model: string }> {
   let model = ref.model
-  let ownKeyFailure: string | undefined
   const translate = async (chunk: string): Promise<string> => {
     const { system, user } = buildPrompt('Language Translation', chunk, input.tone, input.customSchema ?? '', input.targetLanguage)
     const result = await chat(
@@ -481,10 +468,9 @@ async function translateNode(source: string, input: PipelineInput, ref: ModelRef
         { role: 'user', content: user },
       ],
       input.engine.keys,
-      { maxTokens: TRANSLATION_MAX_TOKENS, temperature: 0.2 },
+      { maxTokens: TRANSLATION_MAX_TOKENS, temperature: 0.2, signal: input.signal },
     )
     model = result.model
-    ownKeyFailure ??= result.ownKeyFailure
     if (!result.truncated || chunk.length < MIN_SPLIT_CHARS) return result.content
     const halves = chunkText(chunk, Math.ceil(chunk.length / 2))
     const parts: string[] = []
@@ -495,11 +481,76 @@ async function translateNode(source: string, input: PipelineInput, ref: ModelRef
   const parts: string[] = []
   // In order, one at a time: the parts must line up, and the provider's rate limit is shared.
   for (const chunk of chunkText(source, TRANSLATION_CHUNK[ref.provider])) parts.push(await translate(chunk))
-  return { text: parts.join('\n\n'), model, ownKeyFailure }
+  return { text: parts.join('\n\n'), model }
+}
+
+// ─── Node: Refine router ─────────────────────────────────────────────────────
+
+/**
+ * What a refinement needs to see. `draft`: the change is about the draft itself (length, tone,
+ * grammar, formatting), so the source would only cost tokens and time. `full`: it asks for facts,
+ * missing detail or something in the original, so the source goes in too.
+ */
+export type RefineContext = 'draft' | 'full'
+
+/** The small, fast model each provider routes with; the draft itself is still refined by the model that wrote it. */
+const ROUTER_MODEL: Record<ProviderId, string> = {
+  groq: 'openai/gpt-oss-20b',
+  mistral: 'mistral-small-latest',
+  gemini: 'gemini-3.5-flash-lite',
+}
+
+/** The router must never hold a refinement up: past this it is skipped and the source is sent. */
+const ROUTER_TIMEOUT_MS = 8_000
+
+const ROUTER_SYSTEM = `You route edit requests for a writing tool. A user has a generated draft and types an instruction to change it. Decide whether rewriting the draft needs the ORIGINAL SOURCE DOCUMENT the draft was made from.
+
+Answer DRAFT when the instruction can be carried out using only the draft's own text: changing length (shorter, longer, trim, expand wording), tone or voice, grammar, spelling, clarity, word choice, structure or formatting (bullets, headings, tables, order), audience register, or rewording what is already there.
+
+Answer SOURCE when the instruction needs information that may not be in the draft: adding facts, figures, quotes, names, dates, sections or examples; filling in missing detail; checking accuracy against the original; or when it refers to the source, the original, the report, the document, a page, a section number, a chapter or an appendix.
+
+If unsure, answer SOURCE. Reply with exactly one word: DRAFT or SOURCE.`
+
+/**
+ * Routing node: one short call to a fast model that classifies the refinement instruction.
+ * Anything other than a clear DRAFT (an error, a timeout, an unexpected reply) routes to `full`,
+ * since sending the source costs tokens but leaving it out can cost accuracy. OwnKeyError and a
+ * stop are thrown, as in regenerateFormat.
+ */
+export async function routeRefinement(refinement: string, format: OutputFormat, provider: ProviderId, keys: ApiKeys, signal?: AbortSignal): Promise<RefineContext> {
+  const classify = chat(
+    { provider, model: ROUTER_MODEL[provider] },
+    [
+      { role: 'system', content: ROUTER_SYSTEM },
+      { role: 'user', content: `Draft type: ${format}\nInstruction: ${refinement.trim()}` },
+    ],
+    keys,
+    // gpt-oss reasons inside max_tokens even at low effort, so leave it room for a one-word answer.
+    { maxTokens: 256, temperature: 0, signal },
+  )
+  const timeout = new Promise<null>((resolve) => setTimeout(() => resolve(null), ROUTER_TIMEOUT_MS))
+  try {
+    const result = await Promise.race([classify, timeout])
+    const answer = result?.content.trim().toUpperCase() ?? ''
+    return /^\W*DRAFT\b/.test(answer) ? 'draft' : 'full'
+  } catch (err) {
+    // The user's key failing, or a stop, ends the refinement too; the refine call would only hit it again.
+    if (err instanceof OwnKeyError || isAbortError(err)) throw err
+    return 'full'
+  } finally {
+    // A late or failed classification has nothing left to decide; keep it from surfacing as an unhandled rejection.
+    classify.catch(() => {})
+  }
 }
 
 // ─── Regenerate a single format (independent, no side-effects) ───────────────
 
+
+/**
+ * Rewrites one draft with the user's instruction. Other failures come back as an error result
+ * holding the unchanged draft; OwnKeyError (the user decides whether the shared keys take over)
+ * and a stop through `signal` are thrown instead.
+ */
 export async function regenerateFormat(
   format: OutputFormat,
   currentOutput: string,
@@ -509,26 +560,38 @@ export async function regenerateFormat(
   ref: ModelRef,
   keys: ApiKeys,
   audience?: Audience | null,
+  signal?: AbortSignal,
 ): Promise<FormatResult> {
   try {
+    // Route first: draft-only refinements skip the source entirely. With no source there is nothing to route.
+    const context: RefineContext = originalSource.trim() ? await routeRefinement(refinement, format, ref.provider, keys, signal) : 'draft'
+    // The source shares the provider's per-request budget with the draft being refined.
+    const sourceBlock = context === 'full'
+      ? `Original source:\n${fitSource(originalSource, Math.max(4_000, SOURCE_BUDGET[ref.provider] - currentOutput.length))}\n\n`
+      : ''
     const result = await chat(
       ref,
       [
         {
           role: 'system',
-          content: `You are refining existing ${format} content. Apply the user's change instructions precisely. Output only the updated content, no meta-commentary.${audienceInstruction(audience, { translation: format === 'Language Translation' })}`,
+          content: `You are refining existing ${format} content. Apply the user's change instructions precisely.${
+            context === 'full'
+              ? ' Use the original source for any facts, figures or sections the instructions ask for, and do not invent details that are not in it.'
+              : ' Work only from the current content: keep its facts as they are and do not add new ones.'
+          } Output only the updated content, no meta-commentary.${audienceInstruction(audience, { translation: format === 'Language Translation' })}`,
         },
         {
           role: 'user',
-          content: `Original source:\n${originalSource.slice(0, 4000)}\n\nCurrent ${format} output:\n${currentOutput}\n\nRefinement instructions: ${refinement}\n\nOutput the fully revised ${format}:`,
+          content: `${sourceBlock}Current ${format} output:\n${currentOutput}\n\nRefinement instructions: ${refinement}\n\nOutput the fully revised ${format}:`,
         },
       ],
       keys,
       // A refined translation is rewritten whole, so it needs the translation's room, not a draft's.
-      { maxTokens: format === 'Language Translation' ? TRANSLATION_MAX_TOKENS : 2048, temperature: 0.65 },
+      { maxTokens: format === 'Language Translation' ? TRANSLATION_MAX_TOKENS : 2048, temperature: 0.65, signal },
     )
-    return { format, output: result.content, status: 'success', model: result.model, provider: ref.provider, ownKeyFailure: result.ownKeyFailure }
+    return { format, output: result.content, status: 'success', model: result.model, provider: ref.provider }
   } catch (err) {
+    if (err instanceof OwnKeyError || isAbortError(err)) throw err
     return {
       format,
       output: currentOutput,
@@ -540,75 +603,66 @@ export async function regenerateFormat(
 
 // ─── Pipeline Runner ─────────────────────────────────────────────────────────
 
+/**
+ * Runs the whole graph. Stopping through `input.signal` returns what was written so far, with
+ * every unfinished draft marked `stopped` (a stop while reading the source throws the AbortError).
+ * A failing own key halts every node and throws OwnKeyError, so the user decides what happens next.
+ */
 export async function runPipeline(input: PipelineInput): Promise<PipelineOutput> {
   const t0 = Date.now()
 
-  // Node 1: Ingest. A source that can't be read stops the run: there is nothing to draft from.
-  const ingested = await ingestNode(input)
+  // One signal for every node: it fires on the user's stop, or when a node hits a failing own key.
+  const halt = new AbortController()
+  const onStop = () => halt.abort()
+  if (input.signal?.aborted) halt.abort()
+  else input.signal?.addEventListener('abort', onStop, { once: true })
+  const run: PipelineInput = { ...input, signal: halt.signal }
 
-  // Node 2: Parse locally; every model drafts from the same cleaned source.
-  const parsedSource = parseNode(ingested.text)
-  if (!parsedSource) throw new Error('The source has no readable text. Try another file, or paste the text.')
+  try {
+    // Node 1: Ingest. A source that can't be read stops the run: there is nothing to draft from.
+    const ingested = await ingestNode(run)
 
-  // When no standard formats are selected but a custom schema is provided,
-  // treat it as a standalone Custom Format generation.
-  const formatsToRun: OutputFormat[] =
-    input.formats.length === 0 && input.customSchema?.trim()
-      ? ['Custom Format']
-      : input.formats
+    // Node 2: Parse locally; every model drafts from the same cleaned source.
+    const parsedSource = parseNode(ingested.text)
+    if (!parsedSource) throw new Error('The source has no readable text. Try another file, or paste the text.')
 
-  // Node 3+: every (model, format) pair, a few at a time per provider so rate limits hold.
-  // Models from the same provider share its limit, so they queue behind each other.
-  const queues = new Map<ProviderId, Promise<unknown>>()
-  const runs = await Promise.all(
-    input.engine.models.map(async (ref): Promise<ModelRun> => {
-      const source = fitSource(parsedSource, SOURCE_BUDGET[ref.provider])
-      // Translation works through the full source in chunks; every other format drafts from the fitted sample.
-      const tasks = formatsToRun.map((fmt) => () => formatNode(fmt, fmt === 'Language Translation' ? parsedSource : source, input, ref))
-      const drafts = (queues.get(ref.provider) ?? Promise.resolve()).then(() => withLimit(tasks, CONCURRENCY[ref.provider]))
-      queues.set(ref.provider, drafts)
-      const results: Record<string, FormatResult> = {}
-      for (const r of await drafts) results[r.format] = r
-      return { ref, results: results as Record<OutputFormat, FormatResult> }
-    }),
-  )
+    // When no standard formats are selected but a custom schema is provided,
+    // treat it as a standalone Custom Format generation.
+    const formatsToRun: OutputFormat[] =
+      input.formats.length === 0 && input.customSchema?.trim()
+        ? ['Custom Format']
+        : input.formats
 
-  const smallest = Math.min(...input.engine.models.map((r) => SOURCE_BUDGET[r.provider]))
-  const sampled = formatsToRun.some((f) => f !== 'Language Translation')
-  const sourceNote = sampled && parsedSource.length > smallest
-    ? `The source is ${WORDS.format(wordCount(parsedSource))} words, more than ${input.engine.models.length > 1 ? 'some of these models' : 'this model'} can take in one request, so the drafts were written from passages spread across the whole document (about ${WORDS.format(wordCount(fitSource(parsedSource, smallest)))} words)${formatsToRun.includes('Language Translation') ? '. The translation covers the full text' : ''}. Gemini models read much longer sources.`
-    : null
+    // Node 3+: every (model, format) pair, a few at a time per provider so rate limits hold.
+    // Models from the same provider share its limit, so they queue behind each other.
+    const queues = new Map<ProviderId, Promise<unknown>>()
+    const runs = await Promise.all(
+      input.engine.models.map(async (ref): Promise<ModelRun> => {
+        const source = fitSource(parsedSource, SOURCE_BUDGET[ref.provider])
+        // Translation works through the full source in chunks; every other format drafts from the fitted sample.
+        const tasks = formatsToRun.map((fmt) => () =>
+          formatNode(fmt, fmt === 'Language Translation' ? parsedSource : source, run, ref).catch((err) => {
+            // The same key would fail every remaining draft: stop them now instead of letting each find out.
+            if (err instanceof OwnKeyError) halt.abort()
+            throw err
+          }),
+        )
+        const drafts = (queues.get(ref.provider) ?? Promise.resolve()).then(() => withLimit(tasks, CONCURRENCY[ref.provider]))
+        queues.set(ref.provider, drafts)
+        const results: Record<string, FormatResult> = {}
+        for (const r of await drafts) results[r.format] = r
+        return { ref, results: results as Record<OutputFormat, FormatResult> }
+      }),
+    )
 
-  const keyNotices = keyNoticesFor(runs, ingested.imageKeyFailure)
-  return { parsedSource, runs, durationMs: Date.now() - t0, imageReadBy: ingested.readBy, sourceNote, keyNotices }
-}
+    const smallest = Math.min(...input.engine.models.map((r) => SOURCE_BUDGET[r.provider]))
+    const sampled = formatsToRun.some((f) => f !== 'Language Translation')
+    const sourceNote = sampled && parsedSource.length > smallest
+      ? `The source is ${WORDS.format(wordCount(parsedSource))} words, more than ${input.engine.models.length > 1 ? 'some of these models' : 'this model'} can take in one request, so the drafts were written from passages spread across the whole document (about ${WORDS.format(wordCount(fitSource(parsedSource, smallest)))} words)${formatsToRun.includes('Language Translation') ? '. The translation covers the full text' : ''}. Gemini models read much longer sources.`
+      : null
 
-/** One notice per provider whose own key failed, saying whether the image, all its drafts or only some fell back. */
-function keyNoticesFor(runs: ModelRun[], imageKeyFailure: KeyFailure | null): string[] {
-  const byProvider = new Map<ProviderId, { reason: string; image: boolean; fellBack: number; written: number }>()
-  const entry = (provider: ProviderId, reason: string) => {
-    const e = byProvider.get(provider) ?? { reason, image: false, fellBack: 0, written: 0 }
-    byProvider.set(provider, e)
-    return e
+    return { parsedSource, runs, durationMs: Date.now() - t0, imageReadBy: ingested.readBy, sourceNote }
+  } finally {
+    input.signal?.removeEventListener('abort', onStop)
   }
-  if (imageKeyFailure) entry(imageKeyFailure.provider, imageKeyFailure.reason).image = true
-  for (const run of runs) {
-    for (const r of Object.values(run.results)) {
-      if (r.ownKeyFailure) entry(run.ref.provider, r.ownKeyFailure).fellBack++
-    }
-  }
-  const comparing = runs.length > 1
-  return [...byProvider].map(([provider, e]) => {
-    for (const run of runs) {
-      if (run.ref.provider === provider) e.written += Object.values(run.results).filter((r) => r.status === 'success').length
-    }
-    const name = providerInfo(provider).name
-    const drafts = e.fellBack < e.written
-      ? `some of ${comparing ? `the ${name}` : 'these'} drafts were written`
-      : e.fellBack === 1
-        ? `${comparing ? `the ${name}` : 'this'} draft was written`
-        : `${comparing ? `the ${name}` : 'these'} drafts were written`
-    const clauses = [e.image && 'your image was read', e.fellBack > 0 && drafts].filter(Boolean).join(' and ')
-    return keyFallbackNotice(provider, e.reason, clauses)
-  })
 }

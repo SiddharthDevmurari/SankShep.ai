@@ -1,25 +1,23 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import {
-  ArrowUp, Check, CircleAlert, Copy, Download, Eye, Hourglass, Info, PanelLeft, PanelLeftClose, PenLine, TriangleAlert, WandSparkles, X,
+  ArrowUp, Check, CircleAlert, Copy, Download, Eye, Hourglass, Info, PenLine, ScrollText, Square, WandSparkles, X,
 } from 'lucide-react'
 import type { OutputFormat, FormatResult, ModelRun } from '../lib/pipeline'
-import { keyFallbackNotice, regenerateFormat } from '../lib/pipeline'
+import { regenerateFormat } from '../lib/pipeline'
 import { logActivity, previewOf, storedModel } from '../lib/activity'
-import { providerInfo } from '../lib/providers'
+import { isAbortError, OwnKeyError, providerInfo, withoutKey, type ApiKeys } from '../lib/providers'
+import { KeyConsentDialog } from './KeyConsentDialog'
 import type { ToneOption } from '../lib/pipeline'
 import { RichText } from './RichText'
-import { ALL_FORMATS, STEP_IDS, StepNumber, toneLabel, type LeftPanelStatus } from './LeftPanel'
+import { StepNumber, toneLabel, type LeftPanelStatus } from './LeftPanel'
 import type { RunContext } from './TransformView'
 import { BrandMark } from '../components/site/SiteChrome'
 import { buildPptx, fileSlug, saveFile, toPlainText, type ExportKind } from '../lib/exporters'
 
-/**
- * A banner over the canvas. `warning` means the work went through but not the way the user set it up
- * (their own API key failed and the shared key stood in); `error` means it did not go through.
- */
+/** A banner over the canvas. `error` means the work did not go through; `info` explains how it went. */
 export interface Notice {
   text: string
-  kind: 'error' | 'warning' | 'info'
+  kind: 'error' | 'info'
 }
 
 interface Props {
@@ -30,10 +28,12 @@ interface Props {
   tone: ToneOption
   generating: boolean
   selectedFormats: OutputFormat[]
-  /** A failed run, or information about how the run went (e.g. a long source was sampled, or the user's key failed). */
+  /** A failed run, or information about how the run went (e.g. a long source was sampled, or it was stopped). */
   notice: Notice | null
   onDismissNotice: () => void
   status: LeftPanelStatus | null
+  /** Stops the generation in flight. */
+  onStop: () => void
 }
 
 const EMPTY_QUOTE =
@@ -51,7 +51,7 @@ function countWords(text: string) {
   return t ? t.split(/\s+/).length : 0
 }
 
-export function RightPanel({ runs, runContext, parsedSource, tone, generating, selectedFormats, notice, onDismissNotice, status }: Props) {
+export function RightPanel({ runs, runContext, parsedSource, tone, generating, selectedFormats, notice, onDismissNotice, status, onStop }: Props) {
   const comparing = runs.length > 1
   const results: Partial<Record<OutputFormat, FormatResult>> = runs[0]?.results ?? {}
   const [activeTab, setActiveTab] = useState<OutputFormat | null>(null)
@@ -97,7 +97,7 @@ export function RightPanel({ runs, runContext, parsedSource, tone, generating, s
   }
 
   /* ─── Download ──────────────────────────────────────────────────────────── */
-  // This panel's own banner (a failed export, or a refine that fell back to the shared key); it shows over `notice`.
+  // This panel's own banner (a failed export or refinement); it shows over `notice`.
   const [localNotice, setLocalNotice] = useState<Notice | null>(null)
   useEffect(() => { setLocalNotice(null) }, [currentTab, runs])
 
@@ -119,22 +119,46 @@ export function RightPanel({ runs, runContext, parsedSource, tone, generating, s
   }
 
   /* ─── Regenerate (independent — only this tab) ──────────────────────────── */
-  const handleRegenerate = async () => {
+  // The refinement in flight, so Stop can abort it.
+  const refineAbort = useRef<AbortController | null>(null)
+  // A refinement halted by a failing own key, waiting for the user to allow the shared keys.
+  const [keyConsent, setKeyConsent] = useState<{ error: OwnKeyError; keys: ApiKeys } | null>(null)
+  // Once allowed, the shared keys keep refining this run's drafts without asking again; a new run asks afresh.
+  const [allowedKeys, setAllowedKeys] = useState<ApiKeys | null>(null)
+  useEffect(() => { setAllowedKeys(null) }, [runs])
+
+  /** `keys` defaults to the run's (or the ones the user allowed for it); after consent it is those minus the failing provider's. */
+  const handleRegenerate = async (keys?: ApiKeys) => {
     if (!currentTab || !activeResult || !refinement.trim() || regenerating || !runContext) return
+    const useKeys = keys ?? allowedKeys ?? runContext.engine.keys
     setRegenerating(true)
     setLocalNotice(null)
+    const controller = new AbortController()
+    refineAbort.current = controller
     const t0 = Date.now()
-    // Refine with the model and key that wrote the draft (refining is single-model only).
-    const result = await regenerateFormat(
-      currentTab,
-      activeResult.output,
-      refinement,
-      parsedSource,
-      tone,
-      runs[0].ref,
-      runContext.engine.keys,
-      runContext.audience,
-    )
+    let result: FormatResult
+    try {
+      // Refine with the model and key that wrote the draft (refining is single-model only).
+      result = await regenerateFormat(
+        currentTab,
+        activeResult.output,
+        refinement,
+        parsedSource,
+        tone,
+        runs[0].ref,
+        useKeys,
+        runContext.audience,
+        controller.signal,
+      )
+    } catch (err) {
+      // A stop keeps the draft and the typed instruction as they were; a failing own key asks first.
+      if (err instanceof OwnKeyError) setKeyConsent({ error: err, keys: useKeys })
+      else if (!isAbortError(err)) setLocalNotice({ text: err instanceof Error ? err.message : String(err), kind: 'error' })
+      return
+    } finally {
+      if (refineAbort.current === controller) refineAbort.current = null
+      setRegenerating(false)
+    }
     const model = storedModel(result)
     void logActivity({
       action: 'regenerate',
@@ -152,12 +176,21 @@ export function RightPanel({ runs, runContext, parsedSource, tone, generating, s
     })
     // Only update the current tab — all other tabs are untouched
     setLocalResults((prev) => ({ ...prev, [currentTab]: result }))
-    if (result.ownKeyFailure) {
-      setLocalNotice({ text: keyFallbackNotice(runs[0].ref.provider, result.ownKeyFailure, 'this refined draft was written'), kind: 'warning' })
-    }
     setRefinement('')
-    setRegenerating(false)
   }
+
+  const acceptSharedKey = () => {
+    if (!keyConsent) return
+    const { error, keys } = keyConsent
+    const allowed = withoutKey(keys, error.provider)
+    setKeyConsent(null)
+    setAllowedKeys(allowed)
+    void handleRegenerate(allowed)
+  }
+
+  const consentDialog = keyConsent && (
+    <KeyConsentDialog error={keyConsent.error} onUseShared={acceptSharedKey} onCancel={() => setKeyConsent(null)} />
+  )
 
   const exportOptions: { kind: ExportKind; label: string; hint: string }[] = [
     ...(currentTab === 'PPT Presentation' ? [{ kind: 'pptx' as const, label: 'PowerPoint', hint: '.pptx' }] : []),
@@ -170,9 +203,7 @@ export function RightPanel({ runs, runContext, parsedSource, tone, generating, s
     <div role="alert" className="sk-rise absolute left-1/2 top-6 z-20 flex w-[min(640px,calc(100%-3rem))] -translate-x-1/2 items-start gap-3 rounded-2xl bg-white px-4 py-3.5 text-[13px] text-ink sk-float">
       {banner.kind === 'error'
         ? <CircleAlert className="mt-0.5 h-4 w-4 shrink-0 text-red-600" />
-        : banner.kind === 'warning'
-          ? <TriangleAlert className="mt-0.5 h-4 w-4 shrink-0 text-amber-700" />
-          : <Info className="mt-0.5 h-4 w-4 shrink-0 text-ink-mute" />}
+        : <Info className="mt-0.5 h-4 w-4 shrink-0 text-ink-mute" />}
       <p className="flex-1 whitespace-pre-line leading-relaxed">{banner.text}</p>
       <button onClick={() => (localNotice ? setLocalNotice(null) : onDismissNotice())} aria-label="Dismiss" className="rounded-full p-1 text-ink-mute hover:bg-paper-deep hover:text-ink">
         <X className="h-3.5 w-3.5" />
@@ -189,6 +220,17 @@ export function RightPanel({ runs, runContext, parsedSource, tone, generating, s
         <CanvasHeader
           title="Output canvas"
           status={`Drafting ${selectedFormats.length} ${selectedFormats.length === 1 ? 'format' : 'formats'} · ${status?.engineLabel ?? ''}`}
+          // Here too, so a run can be stopped with the settings panel collapsed.
+          action={
+            <button
+              type="button"
+              onClick={onStop}
+              className="flex min-h-10 items-center gap-2 rounded-lg px-3 text-[13px] font-medium text-red-700 ring-1 ring-inset ring-red-200 transition-colors hover:bg-red-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-600"
+            >
+              <Square className="h-3 w-3 fill-current" aria-hidden />
+              Stop generating
+            </button>
+          }
         />
         <div className="flex-1 overflow-y-auto px-6 py-10 sm:px-10">
           <div className="mx-auto w-full max-w-[640px]" aria-live="polite">
@@ -220,105 +262,20 @@ export function RightPanel({ runs, runContext, parsedSource, tone, generating, s
     )
   }
 
-  /* ─── Empty state: a quiet brief, then the same three steps as the left panel ── */
+  /* ─── Empty state: a quiet, centred placeholder; the steps live in the settings panel ── */
   if (tabs.length === 0) {
-    const steps: { n: string; id: string; title: string; value: string; done: boolean }[] = [
-      {
-        n: '01', id: STEP_IDS.source, title: 'Source',
-        value: status?.sourceLabel ?? 'Add a file, link or pasted text',
-        done: !!status?.sourceLabel,
-      },
-      {
-        n: '02', id: STEP_IDS.outputs, title: 'Outputs',
-        value: status?.formats.length
-          ? `${status.formats.length} ${status.formats.length === 1 ? 'format' : 'formats'} selected${status.hasCustomSchema ? ' · custom instructions' : ''}`
-          : status?.hasCustomSchema ? 'Custom format from your instructions' : 'Choose at least one format',
-        done: !!status && (status.formats.length > 0 || status.hasCustomSchema),
-      },
-      {
-        n: '03', id: STEP_IDS.voice, title: 'Voice',
-        value: status ? `${toneLabel(status.tone)} tone` : 'Professional tone',
-        done: true,
-      },
-      {
-        n: '04', id: STEP_IDS.audience, title: 'Audience',
-        value: status && !status.audienceReady ? 'Custom profile needs a name' : status?.audienceLabel ?? 'No specific audience',
-        done: status?.audienceReady ?? true,
-      },
-      {
-        n: '05', id: STEP_IDS.engine, title: 'AI engine',
-        value: status ? (status.engineReady ? status.engineLabel : `${status.engineLabel} · API key needed`) : 'Groq',
-        done: status?.engineReady ?? true,
-      },
-    ]
-    const queued = (status?.formats ?? [])
-      .map((f) => ALL_FORMATS.find((m) => m.label === f))
-      .filter((m): m is (typeof ALL_FORMATS)[number] => !!m)
-
-    const focusStep = (id: string) => {
-      const el = document.getElementById(id)
-      if (!el) return
-      el.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
-      el.focus({ preventScroll: true })
-    }
-
     return (
       <div className="relative flex min-h-0 flex-1 flex-col">
-        <CanvasHeader title="Output canvas" status="Nothing generated yet" />
         {noticeBanner}
-        <div className="flex-1 overflow-y-auto px-6 py-10 sm:px-10 lg:py-12">
-          <div className="mx-auto w-full max-w-[640px]">
-            <blockquote className="max-w-[46ch] font-serif text-[clamp(1.15rem,1.5vw,1.35rem)] leading-[1.5] text-ink-soft [text-wrap:pretty]">
+        <div className="flex flex-1 items-center justify-center overflow-y-auto px-6 py-16 sm:px-10">
+          <div className="sk-rise flex max-w-[34rem] flex-col items-center text-center">
+            <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-paper-deep text-ink-mute ring-1 ring-hair" aria-hidden>
+              <PenLine className="h-5 w-5" strokeWidth={1.6} />
+            </span>
+            <blockquote className="mt-7 font-serif text-[clamp(1.3rem,1.7vw,1.6rem)] italic leading-[1.45] text-ink-soft [text-wrap:balance]">
               “{EMPTY_QUOTE}”
             </blockquote>
-
-            <h3 className="mt-10 text-[13px] font-semibold text-ink">Before you generate</h3>
-            <ol className="mt-3 divide-y divide-line rounded-xl border border-line">
-              {steps.map((s) => (
-                <li key={s.n}>
-                  <button
-                    type="button"
-                    onClick={() => focusStep(s.id)}
-                    className="group flex w-full items-center gap-4 px-4 py-3.5 text-left transition-colors hover:bg-paper focus-visible:bg-paper focus-visible:outline-none"
-                  >
-                    <StepNumber n={s.n} />
-                    <span className="min-w-0 flex-1">
-                      <span className="block text-[14px] font-semibold text-ink">{s.title}</span>
-                      <span className="block truncate text-[13px] text-ink-mute">{s.value}</span>
-                    </span>
-                    <span className="text-[12.5px] font-medium text-ink-soft underline decoration-ink/0 underline-offset-4 transition-colors group-hover:decoration-ink/40">
-                      {s.done ? 'Edit' : 'Go to step'}
-                    </span>
-                  </button>
-                </li>
-              ))}
-            </ol>
-
-            <h3 className="mt-10 flex items-baseline justify-between text-[13px] font-semibold text-ink">
-              Drafts you'll get
-              <span className="font-normal text-ink-mute">{queued.length + (status?.hasCustomSchema && queued.length === 0 ? 1 : 0)}</span>
-            </h3>
-            {queued.length > 0 ? (
-              <ul className="mt-3 grid gap-2 sm:grid-cols-2">
-                {queued.map(({ label, short, desc, icon: Icon }) => (
-                  <li key={label} className="flex items-center gap-3 rounded-xl bg-paper px-3.5 py-3">
-                    <Icon className="h-[18px] w-[18px] shrink-0 text-ink" strokeWidth={1.8} />
-                    <span className="min-w-0">
-                      <span className="block truncate text-[13.5px] font-medium text-ink">
-                        {short}{label === 'Language Translation' && status?.targetLanguage ? ` → ${status.targetLanguage}` : ''}
-                      </span>
-                      <span className="block truncate text-[12px] text-ink-mute">{desc}</span>
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            ) : status?.hasCustomSchema ? (
-              <p className="mt-3 rounded-xl bg-paper px-3.5 py-3 text-[13.5px] text-ink">One draft following your custom instructions.</p>
-            ) : (
-              <p className="mt-3 rounded-xl border border-dashed border-ink/25 px-3.5 py-3 text-[13.5px] text-ink-mute">
-                No formats selected. Pick them in step 02 and they'll be listed here.
-              </p>
-            )}
+            <p className="mt-6 text-[13px] text-ink-mute">Nothing generated yet. Your drafts will open here.</p>
           </div>
         </div>
       </div>
@@ -332,9 +289,10 @@ export function RightPanel({ runs, runContext, parsedSource, tone, generating, s
   return (
     <div className="relative flex min-h-0 flex-1 flex-col">
       {noticeBanner}
+      {consentDialog}
 
       {/* Toolbar */}
-      <div className="flex min-h-[68px] shrink-0 flex-wrap items-center justify-between gap-3 border-b border-line bg-white px-4 py-3 lg:px-5">
+      <div className="flex min-h-[60px] shrink-0 flex-wrap items-center justify-between gap-3 border-b border-hair bg-white px-4 py-2.5 lg:px-5">
         {/* Format switcher: segmented control */}
         <div role="tablist" aria-label="Generated formats" className="no-scrollbar flex max-w-full items-center gap-1 overflow-x-auto rounded-full bg-paper-deep/80 p-1 ring-1 ring-hair">
           {tabs.map((fmt) => {
@@ -381,7 +339,7 @@ export function RightPanel({ runs, runContext, parsedSource, tone, generating, s
             ))}
           </div>
           <IconButton label={showSource ? 'Hide source' : 'Show parsed source'} onClick={() => setShowSource((v) => !v)} active={showSource} className="hidden xl:flex">
-            {showSource ? <PanelLeftClose className="h-4 w-4" /> : <PanelLeft className="h-4 w-4" />}
+            <ScrollText className="h-4 w-4" />
           </IconButton>
           <IconButton label={copied ? 'Copied' : 'Copy'} onClick={handleCopy}>
             {copied ? <Check className="h-4 w-4 text-green-600" /> : <Copy className="h-4 w-4" />}
@@ -422,7 +380,7 @@ export function RightPanel({ runs, runContext, parsedSource, tone, generating, s
                 <p className="mt-4 text-[13px] text-ink-soft">Describe a change below to try this format again.</p>
               </div>
             ) : viewMode === 'editor' ? (
-              <article className="sk-sheet mx-auto max-w-[760px] rounded-2xl bg-white px-7 py-10 sm:px-14 sm:py-14">
+              <article className="sk-sheet mx-auto max-w-[900px] rounded-2xl bg-white px-7 py-10 sm:px-14 sm:py-14">
                 <header className="mb-8 border-b border-hair pb-7">
                   <p className="text-[12.5px] font-semibold text-ink-mute">
                     Draft · {toneLabel(tone).toLowerCase()}{runContext?.audience && <> · for {runContext.audience.name}</>}
@@ -461,7 +419,7 @@ export function RightPanel({ runs, runContext, parsedSource, tone, generating, s
           <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-paper via-paper/90 to-transparent px-4 pb-6 pt-16 sm:px-8">
             <form
               onSubmit={(e) => { e.preventDefault(); void handleRegenerate() }}
-              className="sk-float pointer-events-auto mx-auto flex max-w-[760px] items-center gap-2 rounded-2xl bg-white p-2 transition-shadow focus-within:shadow-[0_0_0_1px_rgba(15,16,15,0.3),0_0_0_5px_rgba(212,237,100,0.35),0_12px_40px_-14px_rgba(15,16,15,0.22)]"
+              className="sk-float pointer-events-auto mx-auto flex max-w-[900px] items-center gap-2 rounded-2xl bg-white p-2 transition-shadow focus-within:shadow-[0_0_0_1px_rgba(15,16,15,0.3),0_0_0_5px_rgba(212,237,100,0.35),0_12px_40px_-14px_rgba(15,16,15,0.22)]"
             >
               <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[15px] bg-paper-deep text-ink-soft">
                 <WandSparkles className="h-[18px] w-[18px]" />
@@ -474,18 +432,28 @@ export function RightPanel({ runs, runContext, parsedSource, tone, generating, s
                 className="min-w-0 flex-1 bg-transparent text-[14.5px] text-ink outline-none placeholder:text-ink-mute"
               />
               <span className="hidden font-mono text-[10.5px] text-ink-mute md:block">this draft only</span>
-              <button
-                type="submit"
-                disabled={regenerating || !refinement.trim()}
-                className="flex h-11 shrink-0 items-center gap-2 rounded-[15px] bg-ink px-5 text-[13.5px] font-semibold text-paper transition-all hover:-translate-y-0.5 active:translate-y-0 disabled:translate-y-0 disabled:opacity-40"
-              >
-                {regenerating ? (
-                  <span className="h-4 w-4 animate-spin rounded-full border-2 border-paper/30 border-t-paper" />
-                ) : (
+              {regenerating ? (
+                // While refining, the same spot stops it; the spinner stays so it still reads as working.
+                <button
+                  type="button"
+                  onClick={() => refineAbort.current?.abort()}
+                  aria-label="Stop refining"
+                  title="Stop refining"
+                  className="flex h-11 shrink-0 items-center gap-2 rounded-[15px] bg-white px-4 text-[13.5px] font-semibold text-red-700 ring-1 ring-inset ring-red-200 transition-colors hover:bg-red-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-600"
+                >
+                  <span className="h-4 w-4 animate-spin rounded-full border-2 border-red-200 border-t-red-700" aria-hidden />
+                  <span className="hidden sm:inline">Stop</span>
+                </button>
+              ) : (
+                <button
+                  type="submit"
+                  disabled={!refinement.trim()}
+                  className="flex h-11 shrink-0 items-center gap-2 rounded-[15px] bg-ink px-5 text-[13.5px] font-semibold text-paper transition-all hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-matcha active:translate-y-0 disabled:translate-y-0 disabled:opacity-40"
+                >
                   <ArrowUp className="h-4 w-4" />
-                )}
-                <span className="hidden sm:inline">{regenerating ? 'Refining…' : 'Refine'}</span>
-              </button>
+                  <span className="hidden sm:inline">Refine</span>
+                </button>
+              )}
             </form>
           </div>
         </div>
@@ -495,11 +463,14 @@ export function RightPanel({ runs, runContext, parsedSource, tone, generating, s
   )
 }
 
-function CanvasHeader({ title, status }: { title: string; status: string }) {
+function CanvasHeader({ title, status, action }: { title: string; status: string; action?: React.ReactNode }) {
   return (
-    <div className="flex shrink-0 flex-wrap items-end justify-between gap-x-4 gap-y-1 border-b border-line px-6 pb-5 pt-6 sm:px-10">
-      <h2 className="font-display text-[22px] font-bold text-ink">{title}</h2>
-      <p className="text-[13px] text-ink-mute">{status}</p>
+    <div className="flex shrink-0 flex-wrap items-center justify-between gap-x-4 gap-y-2 border-b border-hair px-5 py-3 sm:px-8">
+      <div className="flex min-w-0 flex-wrap items-baseline gap-x-4 gap-y-0.5">
+        <h2 className="font-display text-[18px] font-bold text-ink">{title}</h2>
+        <p className="text-[12.5px] text-ink-mute">{status}</p>
+      </div>
+      {action}
     </div>
   )
 }
@@ -639,7 +610,7 @@ function MockupView({ format, content }: { format: OutputFormat; content: string
 
   if (format === 'Executive Summary') {
     return (
-      <div className="sk-sheet mx-auto max-w-[760px] rounded-2xl bg-white px-8 py-10 sm:px-14 sm:py-14">
+      <div className="sk-sheet mx-auto max-w-[900px] rounded-2xl bg-white px-8 py-10 sm:px-14 sm:py-14">
         <div className="mb-7 border-b-2 border-ink pb-5">
           <p className="text-[12.5px] font-semibold text-ink-mute">Executive brief</p>
           <h2 className="mt-2 font-display text-[30px] text-ink">Executive Summary</h2>
@@ -651,7 +622,7 @@ function MockupView({ format, content }: { format: OutputFormat; content: string
 
   // Default: clean document
   return (
-    <article className="sk-sheet mx-auto max-w-[760px] rounded-2xl bg-white px-8 py-10 sm:px-14 sm:py-14">
+    <article className="sk-sheet mx-auto max-w-[900px] rounded-2xl bg-white px-8 py-10 sm:px-14 sm:py-14">
       <span className="rounded-md bg-matcha/40 px-2 py-1 text-[12.5px] font-semibold text-ink">{format}</span>
       <div className="mt-6"><RichText text={content} /></div>
     </article>

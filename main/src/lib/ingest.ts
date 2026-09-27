@@ -9,7 +9,7 @@
  *      also used when the vision model can't be reached
  */
 
-import { chat, hasKey, modelInfo, type ApiKeys, type ImageInput, type ModelRef } from './providers'
+import { chat, hasKey, isAbortError, modelInfo, OwnKeyError, throwIfAborted, type ApiKeys, type ImageInput, type ModelRef } from './providers'
 
 export type ImageReader = { method: 'vision'; ref: ModelRef } | { method: 'ocr' }
 
@@ -34,19 +34,19 @@ const TRANSCRIBE_PROMPT =
  * Reads every image (an upload, or a scanned PDF's pages) into one source text.
  * Images go one at a time: vision calls stay under per-minute rate limits and
  * OCR reuses a single engine. Pages with nothing legible are skipped. If the
- * vision model can't be reached, on-device OCR reads the images instead.
- * Returns the text, the reader that actually produced it, and why the user's own key failed
- * when the shared keys read the image instead (see ChatResult.ownKeyFailure).
+ * vision model can't be reached, on-device OCR reads the images instead; a failing own key
+ * (OwnKeyError) and a stop are not swallowed that way, they go up to the workspace.
+ * Returns the text and the reader that actually produced it.
  */
 export async function readImages(
   images: ImageInput[],
   reader: ImageReader,
   keys: ApiKeys,
-): Promise<{ text: string; reader: ImageReader; ownKeyFailure?: string }> {
+  signal?: AbortSignal,
+): Promise<{ text: string; reader: ImageReader }> {
   if (reader.method === 'vision') {
     try {
       const pages: string[] = []
-      let ownKeyFailure: string | undefined
       for (const image of images) {
         const result = await chat(
           reader.ref,
@@ -55,28 +55,30 @@ export async function readImages(
             { role: 'user', content: 'Extract the content of this image.', images: [image] },
           ],
           keys,
-          { maxTokens: 4096, temperature: 0.1 },
+          { maxTokens: 4096, temperature: 0.1, signal },
         )
         pages.push(result.content.trim())
-        ownKeyFailure ??= result.ownKeyFailure
       }
       const text = pages.filter(Boolean).join('\n\n')
       if (!text) throw new Error(`${reader.ref.model} found nothing to read in the image.`)
-      return { text, reader, ownKeyFailure }
+      return { text, reader }
     } catch (err) {
+      if (err instanceof OwnKeyError || isAbortError(err)) throw err
       console.warn('[ingest] vision read failed, falling back to on-device OCR:', err)
     }
   }
-  return { text: await ocr(images), reader: { method: 'ocr' } }
+  return { text: await ocr(images, signal), reader: { method: 'ocr' } }
 }
 
-async function ocr(images: ImageInput[]): Promise<string> {
+async function ocr(images: ImageInput[], signal?: AbortSignal): Promise<string> {
   // Loaded on demand: the OCR engine and English model download only when an image needs them.
   const { createWorker } = await import('tesseract.js')
   const worker = await createWorker('eng')
   const pages: string[] = []
   try {
     for (const image of images) {
+      // Tesseract can't be interrupted mid-page, so a stop takes effect between pages.
+      throwIfAborted(signal)
       const { data } = await worker.recognize(`data:${image.mimeType};base64,${image.data}`)
       pages.push(data.text.trim())
     }

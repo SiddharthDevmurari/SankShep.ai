@@ -1,5 +1,5 @@
 // Marketing-site nav and footer, shared by the landing page and the static pages
-// (About, How it works, Privacy Policy, Terms and Conditions).
+// (Features, About, How it works, Privacy Policy, Terms and Conditions).
 import { useEffect, type ReactNode } from 'react'
 import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
@@ -42,6 +42,7 @@ export const BrandCapsule = ({ className = '' }: { className?: string }) => (
 )
 
 const NAV_LINKS = [
+  { label: 'Features', to: '/features' },
   { label: 'How it works', to: '/how-it-works' },
   { label: 'About', to: '/about' },
   { label: 'Contact', to: '/contact' },
@@ -122,6 +123,7 @@ const FOOTER_LINKS: { label: string; to: string; external?: boolean }[] = [
   { label: 'Privacy Policy', to: '/privacy-policy' },
   { label: 'Github', to: GITHUB_URL, external: true },
   { label: 'Workspace', to: '/workspace' },
+  { label: 'Features', to: '/features' },
   { label: 'How it works', to: '/how-it-works' },
   { label: 'The Pipeline', to: '/#how-it-works' },
   { label: 'About Us', to: '/about' },
