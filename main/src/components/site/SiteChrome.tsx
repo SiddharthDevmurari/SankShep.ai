@@ -1,7 +1,8 @@
 // Marketing-site nav and footer, shared by the landing page and the static pages
 // (Features, About, How it works, Privacy Policy, Terms and Conditions).
-import { useEffect, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom'
+import { Menu, X } from 'lucide-react'
 import { useAuth } from '../../contexts/AuthContext'
 import logoUrl from '../../assets/logo.jpeg'
 
@@ -52,23 +53,110 @@ const NAV_LINKS = [
 
 const PILL_LINK = 'rounded-full px-4 py-2 text-[14px] text-ink-soft transition-colors hover:bg-paper-deep hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink/30'
 
+const MENU_LINK = 'flex min-h-12 items-center rounded-2xl px-4 text-[16px] font-medium text-ink-soft transition-colors hover:bg-paper-deep hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink/30'
+
 export function SiteNav() {
   const { user, signOut } = useAuth()
   const navigate = useNavigate()
+  const { pathname } = useLocation()
+  // Below xl the page links live in a menu behind the three-line button, so phones reach every page from the top.
+  const [menuOpen, setMenuOpen] = useState(false)
+  const headerRef = useRef<HTMLElement>(null)
+  const menuButtonRef = useRef<HTMLButtonElement>(null)
+
+  // A new page closes the menu.
+  useEffect(() => { setMenuOpen(false) }, [pathname])
+
+  // Escape (focus back on the button) or a tap outside the nav closes it.
+  useEffect(() => {
+    if (!menuOpen) return
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return
+      setMenuOpen(false)
+      menuButtonRef.current?.focus()
+    }
+    const onDown = (e: PointerEvent) => { if (!headerRef.current?.contains(e.target as Node)) setMenuOpen(false) }
+    document.addEventListener('keydown', onKey)
+    document.addEventListener('pointerdown', onDown)
+    return () => {
+      document.removeEventListener('keydown', onKey)
+      document.removeEventListener('pointerdown', onDown)
+    }
+  }, [menuOpen])
 
   const handleLogout = async () => {
+    setMenuOpen(false)
     await signOut()
     navigate('/')
   }
 
   return (
-    <header className="sticky top-0 z-50 px-4 pb-3 pt-5">
+    <header ref={headerRef} className="sticky top-0 z-50 px-4 pb-3 pt-5">
       <div className="flex justify-center">
         <nav
           aria-label="Main"
-          className="flex max-w-full items-center gap-2 rounded-full bg-white/95 px-3 py-3 backdrop-blur-md sm:gap-3 sm:px-5"
+          className="flex max-w-full items-center gap-1.5 rounded-full bg-white/95 px-3 py-3 backdrop-blur-md sm:gap-3 sm:px-5"
           style={{ boxShadow: CAPSULE_SHADOW }}
         >
+          <button
+            ref={menuButtonRef}
+            type="button"
+            onClick={() => setMenuOpen((v) => !v)}
+            aria-expanded={menuOpen}
+            aria-controls="site-menu"
+            aria-label={menuOpen ? 'Close menu' : 'Open menu'}
+            className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink/30 xl:hidden ${
+              menuOpen ? 'bg-ink text-paper' : 'bg-paper-deep text-ink hover:bg-hair'
+            }`}
+          >
+            {menuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+          </button>
+
+          {/* The menu: every page, one tap each. Placed right after its button so Tab moves straight into it.
+              The capsule's backdrop blur makes it the containing block, so the panel is sized from the viewport
+              and centred on the capsule (which is centred on the page); the animation sits on the inner box. */}
+          {menuOpen && (
+            <div id="site-menu" className="absolute left-1/2 top-[calc(100%+0.75rem)] w-[calc(100vw-2rem)] max-w-md -translate-x-1/2 xl:hidden">
+              <div className="sk-rise rounded-[28px] bg-white p-2" style={{ boxShadow: CAPSULE_SHADOW }}>
+                <ul>
+                  {NAV_LINKS.map((l) => (
+                    <li key={l.label}>
+                      <NavLink
+                        to={l.to}
+                        onClick={() => setMenuOpen(false)}
+                        className={({ isActive }) => `${MENU_LINK} ${isActive ? 'bg-paper-deep text-ink' : ''}`}
+                      >
+                        {l.label}
+                      </NavLink>
+                    </li>
+                  ))}
+                  {/* The capsule is too narrow for the GitHub icon on small phones, so it moves in here. */}
+                  <li className="sm:hidden">
+                    <a href={GITHUB_URL} target="_blank" rel="noopener noreferrer" className={`${MENU_LINK} gap-3`}>
+                      <GithubIcon className="h-5 w-5" /> Source code on GitHub
+                    </a>
+                  </li>
+                </ul>
+                <div className="mt-2 border-t border-hair px-2 pb-1 pt-3">
+                  {user ? (
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="min-w-0 truncate px-2 text-[14px] text-ink-soft">{user.email}</span>
+                      <button
+                        type="button"
+                        onClick={handleLogout}
+                        className="min-h-11 shrink-0 rounded-full px-4 text-[15px] font-medium text-ink transition-colors hover:bg-paper-deep focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink/30"
+                      >
+                        Logout
+                      </button>
+                    </div>
+                  ) : (
+                    <Link to="/login" onClick={() => setMenuOpen(false)} className={MENU_LINK}>Log in / Sign up</Link>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
           <Link to="/" className="flex items-center gap-2.5 rounded-xl sm:mr-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink/30" aria-label="Sankshep home">
             <BrandMark className="h-9 w-9 rounded-full" />
             {/* Small phones: the mark alone, so the capsule fits a 320px screen. */}
@@ -99,7 +187,7 @@ export function SiteNav() {
             href={GITHUB_URL}
             target="_blank"
             rel="noopener noreferrer"
-            className="ml-1 flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-ink-soft transition-colors hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink/30 xl:h-9 xl:w-9"
+            className="ml-1 hidden h-11 w-11 shrink-0 items-center justify-center rounded-full text-ink-soft transition-colors hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink/30 sm:flex xl:h-9 xl:w-9"
             aria-label="Sankshep.ai source code on GitHub"
           >
             <GithubIcon className="h-5 w-5" />
@@ -107,7 +195,7 @@ export function SiteNav() {
 
           <Link
             to="/workspace"
-            className="ml-1 flex items-center gap-1.5 whitespace-nowrap rounded-full bg-ink px-4 py-2.5 text-[14px] font-medium text-paper sm:px-5 transition-transform hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-matcha"
+            className="ml-1 flex items-center gap-1.5 whitespace-nowrap rounded-full bg-ink px-3.5 py-2.5 text-[14px] font-medium text-paper sm:px-5 transition-transform hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-matcha"
           >
             <ArrowRight className="h-3.5 w-3.5" />
             Open Workspace
