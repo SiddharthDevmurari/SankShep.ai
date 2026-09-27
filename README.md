@@ -1,5 +1,7 @@
 <div align="center">
 
+<img src="photos/logo.jpeg" alt="Sankshep.ai logo" width="120" />
+
 # Sankshep.ai
 
 **One source in. Every format out.**

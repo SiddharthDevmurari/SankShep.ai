@@ -63,4 +63,6 @@ main/test-api.mjs
 .agents/
 skills-lock.json
 
-photos/
+# Everything in photos/ stays private except the logo, which README.md shows.
+photos/*
+!photos/logo.jpeg
