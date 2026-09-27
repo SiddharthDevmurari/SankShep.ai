@@ -29,5 +29,5 @@ export function PageHeader({ eyebrow, title, subtitle, actions }: {
   )
 }
 
-/** Width and gutters shared with the Transform view, so switching tabs doesn't shift the page edges. */
+/** Width and gutters shared by the History and Analytics tabs, so switching between them doesn't shift the page edges. */
 export const PAGE_FRAME = 'mx-auto max-w-[1760px] px-4 pb-16 sm:px-6 lg:px-10 2xl:px-14'

@@ -136,14 +136,6 @@ body {
   0% { transform: translateY(-6%); }
   100% { transform: translateY(106%); }
 }
-@keyframes sk-type {
-  from { width: 0; }
-  to { width: 100%; }
-}
-@keyframes sk-blink {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0; }
-}
 @keyframes sk-bar {
   from { width: 0%; }
   to { width: 100%; }
@@ -164,15 +156,6 @@ body {
   animation: sk-glow 3.4s ease-in-out infinite;
 }
 
-/* ---- workflow connector draw ---- */
-@keyframes sk-dash {
-  to { stroke-dashoffset: 0; }
-}
-@keyframes sk-flow {
-  0% { opacity: 0; transform: translateY(8px); }
-  100% { opacity: 1; transform: translateY(0); }
-}
-
 /* Hide scrollbars until scrolling */
 * {
   scrollbar-width: thin;
@@ -185,11 +168,7 @@ body {
 
 /* ════ Workspace surfaces ═══════════════════════════════════════════════════ */
 
-/* Faint dot grid, same texture as the landing hero. */
-.sk-dots {
-  background-image: radial-gradient(#e2dfd2 1px, transparent 1px);
-  background-size: 22px 22px;
-}
+/* Fades a dot-grid background out towards the edges (the login page's canvas). */
 .sk-dots-fade {
   mask-image: radial-gradient(ellipse 75% 65% at 50% 45%, black 30%, transparent 100%);
 }
@@ -223,13 +202,6 @@ body {
     0 2px 4px -1px rgba(20, 22, 20, 0.07),
     0 12px 24px -10px rgba(20, 22, 20, 0.16),
     0 36px 72px -28px rgba(20, 22, 20, 0.30);
-}
-
-/* Bordered workspace cards: warm-tinted, subtle lift. */
-.sk-card {
-  box-shadow:
-    0 1px 2px rgba(15, 16, 15, 0.05),
-    0 10px 30px -20px rgba(15, 16, 15, 0.22);
 }
 
 /* Skeleton shimmer for loading placeholders. */

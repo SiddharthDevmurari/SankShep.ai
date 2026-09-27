@@ -165,19 +165,6 @@ function unwrapRows(data: ActivityLog[] | null, error: { code?: string; message:
   return unwrap(data, error).map(readRow)
 }
 
-/** One page of the given user's history, newest first. */
-export async function fetchUserActivity(userId: string, page: number): Promise<ActivityLog[]> {
-  const from = page * PAGE_SIZE
-  const { data, error } = await supabase
-    .from('activity_logs')
-    .select('*')
-    .eq('user_id', userId)
-    .order('created_at', { ascending: false })
-    .range(from, from + PAGE_SIZE - 1)
-  return unwrapRows(data as ActivityLog[] | null, error)
-}
-
-
 const GENERATION_ACTIONS: ActivityAction[] = ['generate', 'regenerate']
 
 /** One page of the user's generations (sign-ins excluded), newest first, optionally only those that include `format`. */

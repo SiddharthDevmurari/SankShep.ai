@@ -150,7 +150,12 @@ interface ChatOptions {
  * shared keys until the user agrees; the caller then retries with withoutKey(keys, provider).
  */
 export class OwnKeyError extends Error {
-  constructor(readonly provider: ProviderId, message: string) {
+  /**
+   * `key`: the provider refused the key (401/403, quota, no access, rate limit).
+   * `unreachable`: requests with the key kept failing (5xx, no connection, empty answers); the
+   * shared keys go through Sankshep's own server, which can often still get through.
+   */
+  constructor(readonly provider: ProviderId, message: string, readonly kind: 'key' | 'unreachable' = 'key') {
     super(message)
     this.name = 'OwnKeyError'
   }
@@ -200,6 +205,8 @@ const MAX_WAIT_MS = 65_000
  */
 const OWN_KEY_MAX_WAIT_MS = 15_000
 const OWN_KEY_WAITS = 2
+/** Tries with the user's own key through a 5xx, a dropped connection or an empty answer before asking them. */
+const OWN_KEY_ATTEMPTS = 3
 
 /** Resolves after `ms`, or rejects with the abort error as soon as `signal` fires. */
 function sleep(ms: number, signal?: AbortSignal) {
@@ -230,6 +237,7 @@ export async function chat(ref: ModelRef, messages: ChatMessage[], keys: ApiKeys
   const own = keys[ref.provider]?.trim()
   const route: Route = own ? { kind: 'own', key: own } : { kind: 'shared' }
   let ownWaits = 0
+  let ownFailures = 0
 
   for (let round = 1; round <= MAX_ROUNDS; round++) {
     throwIfAborted(opts.signal)
@@ -244,6 +252,10 @@ export async function chat(ref: ModelRef, messages: ChatMessage[], keys: ApiKeys
         const brief = err.kind === 'rate-limited' && err.waitMs <= OWN_KEY_MAX_WAIT_MS && ownWaits < OWN_KEY_WAITS
         if (!brief) throw new OwnKeyError(ref.provider, err.message)
         ownWaits++
+        wait = err.waitMs
+      } else if (err instanceof RetryableError && route.kind === 'own') {
+        // Outages get a few quick retries; after that the user can choose the shared keys rather than wait on.
+        if (++ownFailures >= OWN_KEY_ATTEMPTS) throw new OwnKeyError(ref.provider, err.message, 'unreachable')
         wait = err.waitMs
       } else if (err instanceof KeyError || err instanceof RetryableError) {
         wait = err.waitMs // Shared keys rate-limited, or the provider overloaded or unreachable.
@@ -413,8 +425,10 @@ async function send(info: ProviderInfo, model: string, route: Route, url: string
   if (res.status === 413 || /request too large|context.length|maximum context|too many tokens/i.test(text)) {
     throw new Error(`The source is too long for this model on ${info.name}. Pick a model with a larger limit (Gemini reads the most), or shorten the source.`)
   }
-  if (res.status === 408 || res.status >= 500) throw new RetryableError(`${info.name} API ${res.status}: ${text}`, 3000)
-  throw new Error(`${info.name} API ${res.status}: ${text}`)
+  // The provider's own message rather than its raw JSON: this text can reach the user (a draft's error, the key prompt).
+  const said = providerMessage(text)
+  if (res.status === 408 || res.status >= 500) throw new RetryableError(`${info.name} returned an error (${res.status})${said ? `: ${said}` : '.'}`, 3000)
+  throw new Error(`${info.name} API ${res.status}${said ? `: ${said}` : ''}`)
 }
 
 /** How long the provider asks us to wait: the Retry-After header, or Groq's "try again in 6.3s" / "1m2.5s". */

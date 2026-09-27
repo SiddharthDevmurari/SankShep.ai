@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { ArrowRight, ArrowDownToLine, ArrowUpFromLine, ChartNoAxesColumn, Layers, RefreshCw, Server } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import { SchemaMissingError, fetchUserAnalyticsRows, toDraftEntries, type ActivityLog } from '../lib/activity'

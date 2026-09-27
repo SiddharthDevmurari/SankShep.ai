@@ -59,9 +59,10 @@ export default function WorkspacePage() {
   // Unknown tabs (including the retired /workspace/activity) and admin for non-admins fall back to Transform.
   const tabAllowed = segments.length <= 1 && visibleTabs.some((t) => t.id === activeTab)
 
+  // Leave first: signing out while still on /workspace lets the auth guard send the user to /login instead.
   const handleLogout = async () => {
-    await signOut()
     navigate('/')
+    await signOut()
   }
 
   if (!tabAllowed) return <Navigate to="/workspace" replace />

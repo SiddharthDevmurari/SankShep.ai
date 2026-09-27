@@ -518,6 +518,13 @@ If unsure, answer SOURCE. Reply with exactly one word: DRAFT or SOURCE.`
  * stop are thrown, as in regenerateFormat.
  */
 export async function routeRefinement(refinement: string, format: OutputFormat, provider: ProviderId, keys: ApiKeys, signal?: AbortSignal): Promise<RefineContext> {
+  // The router's own signal: the user's stop cancels it, and so does the router finishing or timing out,
+  // so a slow classification never keeps retrying in the background.
+  const own = new AbortController()
+  const onStop = () => own.abort()
+  if (signal?.aborted) own.abort()
+  else signal?.addEventListener('abort', onStop, { once: true })
+
   const classify = chat(
     { provider, model: ROUTER_MODEL[provider] },
     [
@@ -526,18 +533,22 @@ export async function routeRefinement(refinement: string, format: OutputFormat, 
     ],
     keys,
     // gpt-oss reasons inside max_tokens even at low effort, so leave it room for a one-word answer.
-    { maxTokens: 256, temperature: 0, signal },
+    { maxTokens: 256, temperature: 0, signal: own.signal },
   )
-  const timeout = new Promise<null>((resolve) => setTimeout(() => resolve(null), ROUTER_TIMEOUT_MS))
+  let timer: ReturnType<typeof setTimeout> | undefined
+  const timeout = new Promise<null>((resolve) => { timer = setTimeout(() => resolve(null), ROUTER_TIMEOUT_MS) })
   try {
     const result = await Promise.race([classify, timeout])
     const answer = result?.content.trim().toUpperCase() ?? ''
     return /^\W*DRAFT\b/.test(answer) ? 'draft' : 'full'
   } catch (err) {
     // The user's key failing, or a stop, ends the refinement too; the refine call would only hit it again.
-    if (err instanceof OwnKeyError || isAbortError(err)) throw err
+    if (err instanceof OwnKeyError || (isAbortError(err) && signal?.aborted)) throw err
     return 'full'
   } finally {
+    clearTimeout(timer)
+    signal?.removeEventListener('abort', onStop)
+    own.abort()
     // A late or failed classification has nothing left to decide; keep it from surfacing as an unhandled rejection.
     classify.catch(() => {})
   }
@@ -556,7 +567,6 @@ export async function regenerateFormat(
   currentOutput: string,
   refinement: string,
   originalSource: string,
-  tone: ToneOption,
   ref: ModelRef,
   keys: ApiKeys,
   audience?: Audience | null,

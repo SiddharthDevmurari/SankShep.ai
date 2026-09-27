@@ -29,19 +29,12 @@ export interface LeftPanelConfig {
   engine: EngineConfig
 }
 
-/** Live view of the form, so the output canvas can mirror the same steps. */
+/** What the canvas shows about the form while it waits or drafts: the source and the engine. */
 export interface LeftPanelStatus {
-  audienceLabel: string | null
-  /** The audience choice is usable as is: none, a preset, or a saved or named custom profile. */
-  audienceReady: boolean
   engineLabel: string
   /** Every selected provider has a key to use. */
   engineReady: boolean
   sourceLabel: string | null
-  formats: OutputFormat[]
-  hasCustomSchema: boolean
-  tone: ToneOption
-  targetLanguage: string | null
 }
 
 export const STEP_IDS = {
@@ -457,8 +450,6 @@ export function LeftPanel({ onGenerate, onStop, generating, onStatusChange }: Pr
     : inputMode === 'url' ? urlValue.trim() || null
     : wordCount ? `${wordCount.toLocaleString()} words pasted` : null
 
-  const hasCustomSchema = !!customSchema.trim()
-  const langForStatus = showLangField ? targetLanguage : null
   const audienceLabel = audience?.name.trim() || null
   // "No specific audience" is a valid choice; only a custom profile without a name is unfinished.
   const audienceReady = audienceChoice === null || !!audience
@@ -467,8 +458,8 @@ export function LeftPanel({ onGenerate, onStop, generating, onStatusChange }: Pr
     : `Comparing ${selectedRefs.length} models`
   const engineReady = !missingKey
   useEffect(() => {
-    onStatusChange?.({ sourceLabel, formats, hasCustomSchema, tone, targetLanguage: langForStatus, audienceLabel, audienceReady, engineLabel, engineReady })
-  }, [onStatusChange, sourceLabel, formats, hasCustomSchema, tone, langForStatus, audienceLabel, audienceReady, engineLabel, engineReady])
+    onStatusChange?.({ sourceLabel, engineLabel, engineReady })
+  }, [onStatusChange, sourceLabel, engineLabel, engineReady])
 
   const imageReader = images.length ? describeReader(pickImageReader(selectedRefs, keys)) : null
 
@@ -1119,9 +1110,8 @@ function Step({ id, n, title, hint, action, collapsible, children }: {
 }
 
 /**
- * Shared by the config panel and the empty canvas so both read as the same steps.
- * Every badge looks the same; what is still missing is said in words next to it
- * ("Go to step", the step's summary), not by the badge.
+ * The numbered badge on each config step, also used to letter the model columns when comparing.
+ * Every badge looks the same; what is still missing is said in words next to it (the step's summary).
  */
 export function StepNumber({ n }: { n: string }) {
   return (

@@ -1,6 +1,7 @@
 /**
- * Server side of the shared-key fallback. The browser sends a provider request
- * body here when the user has no key of their own (or theirs failed); this
+ * Server side of the shared keys. The browser sends a provider request body here
+ * when the user has no key of their own, or agreed to use Sankshep's key after theirs
+ * failed (the browser always asks first; see OwnKeyError in src/lib/providers.ts); this
  * forwards it with one of the deployment's keys, moving to the next key when
  * one is rejected or rate-limited. Keys come from environment variables and
  * never reach the browser.

@@ -47,8 +47,22 @@ function friendlyAuthError(message: string): string {
   if (/rate limit|too many requests/i.test(message)) {
     return 'Too many attempts. Please wait a few minutes and try again.'
   }
+
+  // Supabase returns network failures as errors carrying the browser's wording (Chrome, Safari, Firefox).
+  if (/failed to fetch|load failed|networkerror|network request failed|fetch failed/i.test(message)) {
+    return networkError(null)
+  }
   return message
 }
+
+/** A request that threw instead of returning an error: almost always the network. */
+function networkError(err: unknown): string {
+  const detail = err instanceof Error && err.message ? ` (${err.message})` : ''
+  return `Couldn't reach the sign-in service${detail}. Check your connection and try again.`
+}
+
+/** How long the first session check may take before the app stops waiting and shows the signed-out state. */
+const SESSION_CHECK_TIMEOUT_MS = 12_000
 
 /* ─── Context ────────────────────────────────────────────────────────────── */
 
@@ -59,25 +73,47 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
+    // Token refreshes hand back a new User object for the same person; keep the old one so
+    // everything keyed on `user` doesn't re-render (or re-fetch) every hour.
+    const apply = (next: User | null | undefined) =>
+      setUser((prev) => {
+        if (!next) return null
+        const mapped = toAuthUser(next)
+        return prev && prev.id === mapped.id && prev.email === mapped.email ? prev : mapped
+      })
+
     // Until this settles, ProtectedRoute renders a neutral loading screen, never the workspace.
     // If it fails, treat the visitor as signed out rather than hanging on that screen.
+    let settled = false
+    const settle = () => {
+      settled = true
+      setLoading(false)
+    }
     supabase.auth.getSession()
-      .then(({ data }) => setUser(data.session?.user ? toAuthUser(data.session.user) : null))
-      .catch(() => setUser(null))
-      .finally(() => setLoading(false))
+      .then(({ data }) => apply(data.session?.user))
+      .catch(() => apply(null))
+      .finally(settle)
+    // A stored session whose refresh can't reach Supabase can leave getSession pending for a long
+    // time on a bad connection. Stop waiting after a while; a later auth event still signs them in.
+    const giveUp = window.setTimeout(() => { if (!settled) settle() }, SESSION_CHECK_TIMEOUT_MS)
 
-    const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ? toAuthUser(session.user) : null)
-    })
-    return () => sub.subscription.unsubscribe()
+    const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => apply(session?.user))
+    return () => {
+      window.clearTimeout(giveUp)
+      sub.subscription.unsubscribe()
+    }
   }, [])
 
   const signIn = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({
-      email: normaliseEmail(email),
-      password,
-    })
-    if (error) return { error: friendlyAuthError(error.message) }
+    try {
+      const { error } = await supabase.auth.signInWithPassword({
+        email: normaliseEmail(email),
+        password,
+      })
+      if (error) return { error: friendlyAuthError(error.message) }
+    } catch (err) {
+      return { error: networkError(err) }
+    }
     void logActivity({ action: 'login' })
     return { error: null }
   }
@@ -85,29 +121,37 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // No email verification: the account is created and signed in immediately.
   const signUp = async (email: string, password: string) => {
     if (!isStrongPassword(password)) return { error: PASSWORD_POLICY_MESSAGE }
-    const { data, error } = await supabase.auth.signUp({
-      email: normaliseEmail(email),
-      password,
-    })
-    if (error) return { error: friendlyAuthError(error.message) }
+    try {
+      const { data, error } = await supabase.auth.signUp({
+        email: normaliseEmail(email),
+        password,
+      })
+      if (error) return { error: friendlyAuthError(error.message) }
 
-    // Supabase hides whether an email is taken: it returns a user with no
-    // identities instead of an error. Surface that instead of a false "success".
-    if (data.user && data.user.identities?.length === 0) {
-      return { error: 'An account with this email already exists. Sign in instead.' }
+      // Supabase hides whether an email is taken: it returns a user with no
+      // identities instead of an error. Surface that instead of a false "success".
+      if (data.user && data.user.identities?.length === 0) {
+        return { error: 'An account with this email already exists. Sign in instead.' }
+      }
+
+      // No session means Supabase is still set to require email confirmation.
+      if (!data.session) return { error: friendlyAuthError('email not confirmed') }
+
+      return { error: null }
+    } catch (err) {
+      return { error: networkError(err) }
     }
-
-    // No session means Supabase is still set to require email confirmation.
-    if (!data.session) return { error: friendlyAuthError('email not confirmed') }
-
-    return { error: null }
   }
 
   // Permanently deletes the signed-in account (and, by cascade, its profile and
   // activity history) via the delete_my_account() database function.
   const deleteAccount = async () => {
-    const { error } = await supabase.rpc('delete_my_account')
-    if (error) return { error: error.message }
+    try {
+      const { error } = await supabase.rpc('delete_my_account')
+      if (error) return { error: error.message }
+    } catch (err) {
+      return { error: networkError(err) }
+    }
     // The user no longer exists server-side; just clear the local session.
     await supabase.auth.signOut({ scope: 'local' })
     setUser(null)
@@ -116,7 +160,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signOut = async () => {
     await logActivity({ action: 'logout' })
-    await supabase.auth.signOut()
+    // When the server can't be reached, Supabase keeps the stored session, so the next page load
+    // would sign the user straight back in. Clear it on this device regardless.
+    const { error } = await supabase.auth.signOut().catch((err: unknown) => ({ error: err }))
+    if (error) await supabase.auth.signOut({ scope: 'local' }).catch(() => {})
     setUser(null)
   }
 

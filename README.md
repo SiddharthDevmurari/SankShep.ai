@@ -4,7 +4,7 @@
 
 **One source in. Every format out.**
 
-A generative AI workspace that turns a single report, article or advisory into executive summaries, social posts, slide outlines, video scripts and translations, all drafted in parallel.
+A generative AI workspace that turns a single report, article or advisory into executive summaries, social posts, slide decks, video scripts and translations, all drafted in parallel, then refined in plain language.
 
 *Smart India Hackathon 2026 · Problem statement: Gen AI Platform for Automated Content Transformation*
 
@@ -15,8 +15,9 @@ A generative AI workspace that turns a single report, article or advisory into e
 [![Vite](https://img.shields.io/badge/Vite-8-0f100f?logo=vite&logoColor=d4ed64)](https://vite.dev)
 [![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-4-0f100f?logo=tailwindcss&logoColor=d4ed64)](https://tailwindcss.com)
 [![Supabase](https://img.shields.io/badge/Supabase-Auth_%2B_Postgres-0f100f?logo=supabase&logoColor=d4ed64)](https://supabase.com)
+[![Vercel](https://img.shields.io/badge/Vercel-Functions-0f100f?logo=vercel&logoColor=d4ed64)](https://vercel.com)
 
-[What it does](#what-it-does) · [Quick start](#quick-start) · [How it works](#how-it-works) · [Architecture](#architecture) · [Deploy](#deploy) · [Team](#team)
+[What it does](#what-it-does) · [Features](#features) · [Quick start](#quick-start) · [How it works](#how-it-works) · [Architecture](#architecture) · [Deploy](#deploy) · [Team](#team)
 
 </div>
 
@@ -28,23 +29,35 @@ Organisations spend hours turning the same source material into briefs, posts, d
 
 1. **Bring a source.** Upload a PDF, Word (.docx), TXT, Markdown, CSV or JSON file or an image, paste a link, or paste text.
 2. **Choose what you need.** Pick any of 10 formats, or describe your own; set the tone, the audience who will read the result, and the AI model.
-3. **Get every draft at once.** Each format is written in parallel. Compare models side by side, refine any single draft in plain language, and find it all again in your History.
+3. **Get every draft at once.** Each format is written in parallel. Compare models side by side, ask for changes in plain words, and find it all again in your History.
+
+No API keys are needed to start: sign in (or use the demo account) and press Generate.
 
 ## Features
 
+### The workspace
+
+**Sidebar + Hero Canvas.** The Transform view is one full-height app window under the navigation. Settings live in a narrow sidebar on the left (source, outputs, voice, audience, engine) that scrolls on its own, with the Generate button pinned to its foot so it is always in reach. The rest of the screen is a clean editorial canvas for the drafts. The sidebar collapses with one click, giving the canvas the full width for distraction-free reading; everything you set is kept while it is hidden. On phones the sidebar stacks above the canvas.
+
+### What it can do
+
 | | |
 |---|---|
-| **10 output formats + custom** | Executive Summary, LinkedIn Post, Twitter/X thread, Video script and storyboard, Slide deck (exports to PowerPoint), Blog Post, Advisory, Infographic brief, Simplified Explanation, and translation into six Indian languages. Or describe a format in your own words. |
+| **Zero-config AI** | Shared Groq, Gemini and Mistral keys live on the server (`/api/chat`), and a model is already chosen, so the first draft is one click away. Anyone can add their own key in the **AI engine** step instead. |
+| **One source, many formats** | Executive Summary, LinkedIn Post, Twitter/X thread, Video script and storyboard, Slide deck (exports to PowerPoint), Blog Post, Advisory, Infographic brief, Simplified Explanation, and translation into six Indian languages. Or describe a format in your own words. Every selected format is drafted in parallel from the same source. |
+| **Dynamic context routing for Refine** | Type a change under any draft ("make it shorter", "add the budget figure from the report") and only that draft is rewritten. A fast routing model first decides what the change needs: style, length, tone and formatting edits are sent with **the draft only**, so they stay small and keep the draft's facts as they are; requests for facts, missing detail or anything in the original are sent with **the draft and the source**, so the model can look it up instead of guessing. If routing fails or times out, the source is included, so accuracy never depends on it. |
+| **Consent-based key fallback** | If your own key fails (rejected, out of quota, rate-limited beyond a short wait, or the provider keeps erroring), nothing switches behind your back. The run pauses and a prompt shows the provider's exact error and asks: *"Would you like to generate this using Sankshep.ai's free API key instead?"* **Use Sankshep Key** re-runs through the shared keys; **Cancel** leaves the workspace idle and sends nothing else. |
+| **Stop mid-generation** | While drafting, Generate becomes **Stop generating** (also in the canvas header, so it works with the sidebar collapsed), and Refine becomes **Stop**. Stopping aborts the requests at once through an `AbortController`; drafts that already finished stay on the canvas, the rest are dropped, and a note says how many were kept. |
 | **Every kind of source** | PDF and DOCX are turned into text in the browser. Scanned PDFs (no text layer) have their first 10 pages read like images. Links are fetched and read as the page's text. |
-| **Works without a key** | Shared Groq, Gemini and Mistral keys live on the server (`/api/chat`), so users can generate straight away. Anyone can paste their own key instead; if it fails, the shared keys take over. |
-| **Model comparison** | Run the same brief through up to **3 models** and read the drafts side by side, each with word counts and one-click copy. |
 | **Image reading** | Images and scanned pages are read by a Gemini or Mistral vision model, or by **on-device OCR** (Tesseract.js) if no vision model is available. |
+| **Model comparison** | Run the same brief through up to **3 models** and read the drafts side by side, each with word counts and one-click copy. |
 | **Audience targeting** | The audience is who will read, watch or receive the final content (choosing HR/Sales means the drafts are written to be handed to HR and sales staff). Four presets, or describe your own and **save it to your account** for next time. |
 | **Full-length translation** | Translation covers the whole source, line by line, in chunks, however long the document is. |
-| **Refine one draft** | Ask for "shorter", "add a risk table" or anything else; only that draft is rewritten, by the same model. |
 | **History & Analytics** | Every draft is logged with its format, provider, model and word counts. Filter your history by format and see usage at a glance. |
-| **Install as an app** | Installable on Android, iPhone, iPad, Mac and Windows from the website itself (a PWA). The landing page shows **Download for Android** or **Download for iOS** on those devices. |
+| **Install as an app** | Installable on Android, iPhone, iPad, Mac and Windows from the website itself (a PWA). The landing page shows **Download for Android** or **Download for iOS** on those devices. On phones and tablets, the three-line menu in the top navigation reaches every page. |
 | **Accounts & admin** | Email sign-up with no verification step, a shared demo account, self-service account deletion, and an admin panel for all users and activity. |
+
+The public [`/features`](https://sankshep-ai.vercel.app/features) page walks through the main features with interactive previews.
 
 ## Quick start
 
@@ -57,7 +70,7 @@ npm install
 npm run dev
 ```
 
-Open <http://localhost:8443>, click **Use Demo Credentials** on the sign-in page, and you're in. That's all: no keys or `.env` file to set up.
+Open <http://localhost:8443>, click **Continue with the demo account** on the sign-in page, and you're in. That's all: no keys or `.env` file to set up.
 
 > **Where the AI keys come from.** The local dev server forwards AI requests to the deployed site's `/api/chat`, which holds the project's shared keys as Vercel environment variables. The keys never appear in this repository. Users can also paste their own key in the **AI engine** step.
 >
@@ -108,9 +121,11 @@ Run these inside `main/`:
 | What you see | Fix |
 |---|---|
 | "System API keys are exhausted" | The deployed site's keys are used up or invalid (update them in Vercel), or, if you use a local `.env.local`, a variable name has a typo. Restart `npm run dev` after editing it. |
+| "Your … API key didn't work" prompt | Your own key was rejected, is out of quota, or is rate-limited. Choose **Use Sankshep Key** to continue with the shared keys, or fix the key in the **AI engine** step. |
 | "Port 8443 is already in use" | Another copy of the dev server is running. Close it, or run `npx vite --port 5173`. |
 | A Mistral model says it isn't available | The Mistral plan behind the key doesn't include that model. Pick `open-mistral-nemo` or another provider. |
-| A long document is slow | Free Groq keys allow about 8,000 tokens a minute; the app waits and retries rather than failing. Gemini handles long sources fastest. |
+| A long document is slow | Free Groq keys allow about 8,000 tokens a minute; the app waits and retries rather than failing. Gemini handles long sources fastest. Press **Stop generating** at any point to keep what has finished. |
+| A 400 from `activity_logs` in the browser console | Harmless: the database is missing the optional section 10 columns, so the app retries the insert without them. Run section 10 of `schema.sql` to silence it. |
 
 ## Install the app
 
@@ -127,7 +142,7 @@ The install files are `main/public/manifest.webmanifest`, the icons in `main/pub
 
 ## How it works
 
-The pipeline in [`src/lib/pipeline.ts`](main/src/lib/pipeline.ts) is shaped like a LangGraph state graph:
+The pipeline in [`src/lib/pipeline.ts`](main/src/lib/pipeline.ts) follows the LangGraph state-graph pattern: each step is a node, and the (format × model) nodes fan out in parallel. It is plain TypeScript running in the browser, with no LangGraph dependency.
 
 ```mermaid
 flowchart LR
@@ -148,16 +163,37 @@ flowchart LR
 - **Long sources:** each provider has a size budget. If the source is longer, drafts are written from passages spread across the whole document, and the canvas says so. Translation is the exception: it always covers the full text.
 - **Review:** drafts land on the canvas; each model's run is logged as its own History entry.
 
+### Refine: dynamic context routing
+
+```mermaid
+flowchart LR
+    R["Refine instruction"] --> C{"Router node<br/>fast model"}
+    C -- "DRAFT<br/>length · tone · grammar · format" --> D["Draft only"]
+    C -- "SOURCE<br/>facts · missing data · the original" --> S["Draft + source"]
+    C -- "error · timeout · unclear" --> S
+    D --> M["Model that wrote the draft"]
+    S --> M
+    M --> O["This draft, rewritten"]
+```
+
+The router (`routeRefinement`) is one short call to a small, fast model on the same provider (`gpt-oss-20b` on Groq, `mistral-small-latest`, `gemini-3.5-flash-lite`) that answers `DRAFT` or `SOURCE`. It gives up after 8 seconds and cancels its own request; anything other than a clear `DRAFT` includes the source.
+
+### Stopping and key failures
+
+Every model request takes an `AbortSignal`. One controller per run is threaded through every node: pressing Stop aborts the in-flight requests and any wait between retries, finished drafts are returned, and unfinished ones are marked as stopped and dropped. Leaving the workspace, or starting a new run while a refine is in flight, cancels it the same way.
+
+A user's own key is never swapped for the shared keys silently. When it fails, `chat()` throws an `OwnKeyError` carrying the provider's own message; the run halts every other node on the same key and the workspace shows the consent prompt. A short per-minute rate limit (the provider asks to wait 15 seconds or less) is waited out quietly, at most twice, and a provider outage gets a few quick retries, before asking. On consent the same run is repeated with that provider's requests going through `/api/chat`; for Refine, the choice holds for the rest of that run's drafts.
+
 ### Where API keys are used
 
 ```mermaid
 flowchart LR
     U["Browser"] -- "user's own key" --> P["Groq · Gemini · Mistral"]
-    U -- "no key, or it failed" --> S["/api/chat<br/>(server)"]
+    U -- "no key, or the user agreed<br/>after their key failed" --> S["/api/chat<br/>(server)"]
     S -- "shared key 1, 2, … in turn" --> P
 ```
 
-A user's own key goes straight from their browser to the provider. Without one, the request goes to `/api/chat`, which adds a shared key from the environment variables and moves on to the next key if one is rejected or rate-limited.
+A user's own key goes straight from their browser to the provider. Without one (or once they choose Sankshep's key after theirs fails), the request goes to `/api/chat`, which adds a shared key from the environment variables and moves on to the next key if one is rejected or rate-limited.
 
 ### What goes where
 
@@ -197,16 +233,18 @@ flowchart TB
 | Layer | Tools |
 |---|---|
 | Interface | React 19, TypeScript 5.7, Vite 8, Tailwind CSS v4, React Router 7, Motion (animations), Lucide icons |
+| AI pipeline | LangGraph-style node graph in TypeScript: parallel (format × model) nodes, a refine router node, one `AbortController` per run |
+| AI providers | Groq, Google Gemini and Mistral REST APIs; shared keys via a Vercel function |
 | Documents | pdf.js (PDF), mammoth (DOCX), Tesseract.js (on-device OCR), pptxgenjs (PowerPoint export) |
-| AI | Groq, Google Gemini and Mistral REST APIs; shared keys via a Vercel function |
 | Data & auth | Supabase Auth and Postgres with row-level security |
-| Hosting | Vercel (`vercel.json` included) |
+| Hosting | Vercel: static site plus the `/api/chat` serverless function (`vercel.json` included) |
 
 ### Routes
 
 | Route | Page | Access |
 |---|---|---|
 | `/` | Landing page | Public |
+| `/features` | The main features, with interactive previews | Public |
 | `/how-it-works` | Animated walkthrough of the pipeline and data flow | Public |
 | `/about` | The team and the SIH problem statement | Public |
 | `/contact` | GitHub, LinkedIn and email for each team member | Public |
@@ -220,10 +258,11 @@ flowchart TB
 
 ### Security model
 
-- **Every `/workspace` path is behind an auth guard.** Nothing renders until the session check finishes; signed-out visitors are sent to `/login`.
+- **Every `/workspace` path is behind an auth guard.** Nothing renders until the session check finishes (a neutral loading screen shows meanwhile, for at most 12 seconds on a bad connection); signed-out visitors are sent to `/login` and returned to the page they asked for after signing in.
 - **The guard is only the first layer.** The database enforces access on its own: row-level security lets an account read only its own rows (or everyone's, for the admin), insert only as itself, and every admin and deletion function checks permissions on the server.
+- **Signing out always clears the session on this device,** even when Supabase can't be reached.
 - **Shared API keys stay on the server.** They are environment variables read by `/api/chat`; the website's code contains none.
-- **Users' own keys are never persisted,** not to Supabase, logs or browser storage.
+- **Users' own keys are never persisted,** not to Supabase, logs or browser storage, and are never replaced by the shared keys without the user's say-so.
 
 ### Project structure
 
@@ -233,36 +272,39 @@ main/
 │   └── chat.ts                  # Server function: shared keys, rotation, rate-limit handling
 ├── src/
 │   ├── lib/
-│   │   ├── pipeline.ts          # Ingest → clean → parallel (format × model) drafts, chunked translation
-│   │   ├── providers.ts         # Model catalogue; own key first, then /api/chat
+│   │   ├── pipeline.ts          # Ingest → clean → parallel (format × model) drafts, translation, refine router
+│   │   ├── providers.ts         # Model catalogue, chat client, OwnKeyError, abort signals
 │   │   ├── documents.ts         # PDF / DOCX → text; scanned PDF → page images
 │   │   ├── ingest.ts            # Image → text: vision model or on-device OCR
 │   │   ├── audiences.ts         # Custom audience profiles saved to the account
 │   │   ├── activity.ts          # Activity logging and History/Analytics queries
 │   │   ├── exporters.ts         # Markdown, text and PowerPoint export
 │   │   └── supabase.ts          # Central Supabase client
-│   ├── contexts/AuthContext.tsx # Session, sign-in/up, account deletion
+│   ├── contexts/AuthContext.tsx # Session, sign-in/up, sign-out, account deletion
 │   ├── components/
 │   │   ├── ProtectedRoute.tsx   # Auth guard for /workspace/*
-│   │   └── site/SiteChrome.tsx  # Shared site nav and footer
+│   │   └── site/SiteChrome.tsx  # Shared site nav (with the mobile menu) and footer
 │   ├── pages/
 │   │   ├── LandingPage.tsx
+│   │   ├── FeaturesPage.tsx
 │   │   ├── HowItWorksPage.tsx
 │   │   ├── AboutPage.tsx
 │   │   ├── LoginPage.tsx
 │   │   ├── WorkspacePage.tsx    # Workspace shell, capsule header and tabs
 │   │   └── legal/               # Privacy Policy and Terms
 │   ├── workspace/
-│   │   ├── TransformView.tsx    # Runs the pipeline, logs each model's run
-│   │   ├── LeftPanel.tsx        # Source, formats, voice, audience, engine
-│   │   ├── RightPanel.tsx       # Output canvas, comparison, refine, export
+│   │   ├── TransformView.tsx    # Sidebar + canvas layout; runs, stops and logs each generation
+│   │   ├── LeftPanel.tsx        # Settings sidebar: source, formats, voice, audience, engine
+│   │   ├── RightPanel.tsx       # Output canvas: drafts, comparison, refine, export
+│   │   ├── KeyConsentDialog.tsx # The "use Sankshep's key instead?" prompt
 │   │   ├── HistoryView.tsx
 │   │   ├── AnalyticsView.tsx
 │   │   └── AdminPanel.tsx
 │   └── index.css                # Tailwind v4 theme and design tokens
 ├── supabase/
 │   ├── schema.sql               # Tables, RLS, functions, demo account
-│   └── create_admin.sql         # Creates or resets the admin account
+│   ├── create_admin.sql         # Creates or resets the admin account
+│   └── reset_accounts.sql       # DESTRUCTIVE fresh start: deletes every other account and all history, resets admin and demo
 ├── .env.local.example           # Template for the shared API keys
 ├── vite.config.ts               # Also serves /api/chat during npm run dev
 └── vercel.json                  # Build, /api/chat timeout, SPA rewrites
@@ -272,10 +314,10 @@ main/
 
 *One-time, for the project owner only. Anyone who just clones and runs the app can skip this.*
 
-1. Open the [Supabase SQL Editor](https://supabase.com/dashboard/project/onhqpaqqwsdnuxwkxksh/sql/new), paste [`main/supabase/schema.sql`](main/supabase/schema.sql), and run it. This creates `profiles` and `activity_logs`, the row-level security policies, the admin and deletion functions, and the shared demo account `demo@sankshep.ai` / `demo123`. It is safe to run again.
+1. Open the [Supabase SQL Editor](https://supabase.com/dashboard/project/onhqpaqqwsdnuxwkxksh/sql/new), paste [`main/supabase/schema.sql`](main/supabase/schema.sql), and run it. This creates `profiles` and `activity_logs`, the row-level security policies, the admin and deletion functions, and the shared demo account `demo@gmail.com` / `Demo@1234`. It is safe to run again.
    - Section 10 adds the `models` and `input_words` columns used by History. It's optional: without them the app keeps that data inside the existing `outputs` column.
 2. Under **Authentication → Sign In / Providers → Email**, turn **Confirm email** off and save. Accounts are created and signed in immediately, and no emails are sent.
-3. To create the admin, paste [`main/supabase/create_admin.sql`](main/supabase/create_admin.sql) into the SQL Editor, replace `CHANGE_ME` with a password of 6+ characters, and run it. Re-run it any time to reset the password. `admin@gmail.com` gets the admin role automatically.
+3. To create the admin, paste [`main/supabase/create_admin.sql`](main/supabase/create_admin.sql) into the SQL Editor, replace `CHANGE_ME` with a password of 8+ characters, and run it. Re-run it any time to reset the password. `admin@gmail.com` gets the admin role automatically.
 
 Users can delete their own account from the account menu in the workspace; the admin can delete any account from the Admin panel. The demo and admin accounts can't be deleted.
 
@@ -292,6 +334,7 @@ Supabase needs no configuration.
 
 - **The demo account is shared.** Anyone using it can see its History, and it can't save audience profiles. Don't put private material there.
 - **Scanned PDFs:** only the first 10 pages are read.
+- **Stopping during image reading** takes effect after the current page when on-device OCR is reading it; vision-model reads stop at once.
 - **Old Office formats** (`.doc`, `.ppt`, `.xls`) aren't supported. Save them as `.docx` or PDF.
 - **Links behind a login** can't be read. Paste the page's text instead.
 - **Long sources on Groq** are drafted from passages spread across the document (translation still covers everything). Pick a Gemini model to have the whole source read.

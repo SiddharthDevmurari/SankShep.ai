@@ -29,19 +29,6 @@ export const BrandMark = ({ className = 'h-9 w-9 rounded-xl' }: { className?: st
 // Double-border highlight shared by every capsule: hair ring, ink ring, hair ring, soft drop shadow
 export const CAPSULE_SHADOW = '0 0 0 1px #e7e4d9, 0 0 0 3px #0f100f, 0 0 0 5px #e7e4d9, 0 4px 24px -6px rgba(15,16,15,0.14)'
 
-/** Logo + wordmark in the landing-nav capsule, linking home. */
-export const BrandCapsule = ({ className = '' }: { className?: string }) => (
-  <Link
-    to="/"
-    aria-label="Sankshep home"
-    className={`group inline-flex shrink-0 items-center gap-2.5 rounded-full bg-white/95 py-1.5 pl-1.5 pr-4 backdrop-blur-md transition-transform duration-300 hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink/30 ${className}`}
-    style={{ boxShadow: CAPSULE_SHADOW }}
-  >
-    <BrandMark className="h-8 w-8 rounded-full" />
-    <span className="font-display text-[17px] text-ink">Sankshep</span>
-  </Link>
-)
-
 const NAV_LINKS = [
   { label: 'Features', to: '/features' },
   { label: 'How it works', to: '/how-it-works' },

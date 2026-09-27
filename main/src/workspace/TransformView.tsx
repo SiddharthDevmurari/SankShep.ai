@@ -1,11 +1,12 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { ArrowUpRight, ChevronRight, PanelLeftClose, PanelLeftOpen } from 'lucide-react'
 import { LeftPanel, type LeftPanelConfig, type LeftPanelStatus } from './LeftPanel'
 import { RightPanel, type Notice } from './RightPanel'
 import { KeyConsentDialog } from './KeyConsentDialog'
+import { DuplicateFormatsDialog } from './DuplicateFormatsDialog'
 import { runPipeline, type Audience, type EngineConfig, type FormatResult, type ModelRun, type OutputFormat } from '../lib/pipeline'
 import type { ToneOption } from '../lib/pipeline'
-import { isAbortError, OwnKeyError, withoutKey } from '../lib/providers'
+import { isAbortError, OwnKeyError, refKey, withoutKey } from '../lib/providers'
 import { logActivity, previewOf, summariseResults } from '../lib/activity'
 
 /** What the last run used, so refining a draft goes back to the same model, key and audience. */
@@ -29,22 +30,65 @@ export function TransformView({ onOpenHistory }: { onOpenHistory?: () => void })
   // Drafts written since the workspace opened, and how long the last run took.
   const [session, setSession] = useState<{ drafts: number; lastMs: number | null }>({ drafts: 0, lastMs: null })
 
+  // Changes only when a run replaces the canvas; adding formats to it keeps the id, so edits survive.
+  const [canvasId, setCanvasId] = useState(0)
+  // Formats being added to the canvas right now (a "generate only new" run), shown as they're written.
+  const [pendingFormats, setPendingFormats] = useState<OutputFormat[]>([])
+  // What the drafts on the canvas were written from, so a later Generate can tell which formats it already has.
+  const canvasBrief = useRef<{ key: string; language: string } | null>(null)
+  // A Generate that asked for formats the canvas already has, waiting for the user's choice.
+  const [duplicateCheck, setDuplicateCheck] = useState<{ cfg: LeftPanelConfig; requested: OutputFormat[]; existing: OutputFormat[]; fresh: OutputFormat[] } | null>(null)
+
   // The run in flight, so Stop can abort it.
   const runAbort = useRef<AbortController | null>(null)
-  // A run halted by a failing own key, waiting for the user to allow the shared keys.
-  const [keyConsent, setKeyConsent] = useState<{ error: OwnKeyError; cfg: LeftPanelConfig } | null>(null)
+  // Leaving the workspace (logout, an expired session) stops the run instead of letting it finish unseen.
+  useEffect(() => () => runAbort.current?.abort(), [])
+  // A run halted by a failing own key, waiting for the user to allow the shared keys; it resumes the same way.
+  const [keyConsent, setKeyConsent] = useState<{ error: OwnKeyError; cfg: LeftPanelConfig; mode: RunMode; formats: OutputFormat[] } | null>(null)
 
-  const handleGenerate = async (cfg: LeftPanelConfig) => {
+  /**
+   * Smart generation check. Formats already drafted from the same source and settings aren't sent again
+   * without asking: all-new selections are added to the canvas, mixed ones open the choice, and anything
+   * else (a different brief, or only formats already drafted) replaces the canvas as a fresh run.
+   */
+  const handleGenerate = (cfg: LeftPanelConfig) => {
+    // An empty selection with custom instructions runs as a single Custom Format.
+    const requested: OutputFormat[] = cfg.formats.length === 0 && cfg.customSchema.trim() ? ['Custom Format'] : cfg.formats
+    const brief = canvasBrief.current
+    if (!brief || runs.length === 0 || brief.key !== briefKey(cfg)) return void runGeneration(cfg, 'replace', requested)
+
+    const done = draftedFormats(runs)
+    // A translation into another language is a different draft, even from the same source.
+    if (cfg.targetLanguage !== brief.language) done.delete('Language Translation')
+    const existing = requested.filter((f) => done.has(f))
+    const fresh = requested.filter((f) => !done.has(f))
+
+    if (fresh.length === 0) return void runGeneration(cfg, 'replace', requested)
+    if (existing.length === 0) return void runGeneration(cfg, 'merge', fresh)
+    setNotice(null)
+    setDuplicateCheck({ cfg, requested, existing, fresh })
+  }
+
+  /** `replace` starts a fresh canvas with `formats`; `merge` adds `formats` to the canvas and keeps every draft already on it. */
+  const runGeneration = async (cfg: LeftPanelConfig, mode: RunMode, formats: OutputFormat[]) => {
     // Missing keys are caught in the panel before this runs (LeftPanel handleGenerate).
     setNotice(null)
     setKeyConsent(null)
+    setDuplicateCheck(null)
     setGenerating(true)
-    setRuns([])
-    setRunContext(null)
-    setParsedSource('')
-    // An empty selection with custom instructions runs as a single Custom Format.
-    setSelectedFormats(cfg.formats.length === 0 && cfg.customSchema.trim() ? ['Custom Format'] : cfg.formats)
     setTone(cfg.tone)
+    if (mode === 'replace') {
+      setCanvasId((id) => id + 1)
+      setRuns([])
+      setRunContext(null)
+      setParsedSource('')
+      setPendingFormats([])
+      setSelectedFormats(formats)
+      canvasBrief.current = null
+    } else {
+      setPendingFormats(formats)
+      setSelectedFormats((prev) => [...prev, ...formats.filter((f) => !prev.includes(f))])
+    }
 
     const t0 = Date.now()
     const baseLog = {
@@ -53,7 +97,7 @@ export function TransformView({ onOpenHistory }: { onOpenHistory?: () => void })
       source_name: cfg.sourceName,
       ...previewOf(cfg.content),
       tone: cfg.tone,
-      target_language: cfg.formats.includes('Language Translation') ? cfg.targetLanguage : null,
+      target_language: formats.includes('Language Translation') ? cfg.targetLanguage : null,
       custom_schema: cfg.customSchema.trim() || null,
     }
 
@@ -65,7 +109,7 @@ export function TransformView({ onOpenHistory }: { onOpenHistory?: () => void })
         content: cfg.content,
         images: cfg.images,
         url: cfg.url,
-        formats: cfg.formats,
+        formats,
         tone: cfg.tone,
         customSchema: cfg.customSchema,
         targetLanguage: cfg.targetLanguage,
@@ -76,26 +120,36 @@ export function TransformView({ onOpenHistory }: { onOpenHistory?: () => void })
       // A stop keeps the drafts already written and drops the ones it cut off.
       const stopped = controller.signal.aborted
       const asked = output.runs.reduce((n, run) => n + Object.keys(run.results).length, 0)
-      const runs = stopped ? output.runs.map((run) => ({ ...run, results: finishedOnly(run.results) })) : output.runs
-      const kept = runs.reduce((n, run) => n + Object.keys(run.results).length, 0)
+      const fresh = stopped ? output.runs.map((run) => ({ ...run, results: finishedOnly(run.results) })) : output.runs
+      const kept = fresh.reduce((n, run) => n + Object.keys(run.results).length, 0)
       if (stopped && kept === 0) {
         setNotice({ text: 'Generation stopped before any draft was finished.', kind: 'info' })
         return
       }
       setParsedSource(output.parsedSource)
-      setRuns(runs)
-      setRunContext({ engine: cfg.engine, audience: cfg.audience, imageReadBy: output.imageReadBy })
+      // Same brief means the same models in the same order, so each model's new drafts join its own column.
+      setRuns((prev) => mode === 'replace' ? fresh : prev.map((run) => {
+        const added = fresh.find((r) => refKey(r.ref) === refKey(run.ref))
+        return added ? { ...run, results: { ...run.results, ...added.results } } : run
+      }))
+      setRunContext((prev) => ({ engine: cfg.engine, audience: cfg.audience, imageReadBy: output.imageReadBy ?? prev?.imageReadBy ?? null }))
+      canvasBrief.current = {
+        key: briefKey(cfg),
+        // The language the canvas's translation is in: it changes only when a translation was (re)written.
+        language: formats.includes('Language Translation') || !canvasBrief.current ? cfg.targetLanguage : canvasBrief.current.language,
+      }
+      const what = mode === 'merge' ? 'new drafts' : 'drafts'
       const notes = [
-        stopped && `Generation stopped. ${kept} of ${asked} drafts ${kept === 1 ? 'was' : 'were'} finished and ${kept === 1 ? 'is' : 'are'} shown; the rest weren't written.`,
+        stopped && `Generation stopped. ${kept} of ${asked} ${what} ${kept === 1 ? 'was' : 'were'} finished and ${kept === 1 ? 'is' : 'are'} shown; the rest weren't written.`,
         output.sourceNote,
       ].filter((n): n is string => !!n)
       if (notes.length) setNotice({ text: notes.join('\n\n'), kind: 'info' })
 
-      // One activity row per model, so History lists every model's drafts separately.
+      // One activity row per model, so History lists every model's drafts separately. Only this run's drafts are logged.
       // An image or link source has no text of its own; size it by what was read from it.
       const source = cfg.content.trim() ? cfg.content : output.parsedSource
       let written = 0
-      for (const run of runs) {
+      for (const run of fresh) {
         if (Object.keys(run.results).length === 0) continue // Stopped before this model wrote anything.
         const summary = summariseResults(run.results)
         written += summary.successCount
@@ -121,34 +175,35 @@ export function TransformView({ onOpenHistory }: { onOpenHistory?: () => void })
       }
       // The user's own key failed: pause here and let them decide whether the shared keys take over.
       if (err instanceof OwnKeyError) {
-        setKeyConsent({ error: err, cfg })
+        setKeyConsent({ error: err, cfg, mode, formats })
         return
       }
       console.error('Pipeline error:', err)
       void logActivity({
         ...baseLog,
-        formats: cfg.formats,
+        formats,
         status: 'error',
         success_count: 0,
-        error_count: cfg.formats.length,
+        error_count: formats.length,
         error_message: err instanceof Error ? err.message : String(err),
         duration_ms: Date.now() - t0,
       })
       setNotice({ text: `Generation failed: ${err instanceof Error ? err.message : String(err)}`, kind: 'error' })
     } finally {
       if (runAbort.current === controller) runAbort.current = null
+      setPendingFormats([])
       setGenerating(false)
     }
   }
 
   const handleStop = () => runAbort.current?.abort()
 
-  /** Runs the paused generation again with the failing provider's requests going through the shared keys. */
+  /** Runs the paused generation again, the same way, with the failing provider's requests going through the shared keys. */
   const acceptSharedKey = () => {
     if (!keyConsent) return
-    const { error, cfg } = keyConsent
+    const { error, cfg, mode, formats } = keyConsent
     setKeyConsent(null)
-    void handleGenerate({ ...cfg, engine: { ...cfg.engine, keys: withoutKey(cfg.engine.keys, error.provider) } })
+    void runGeneration({ ...cfg, engine: { ...cfg.engine, keys: withoutKey(cfg.engine.keys, error.provider) } }, mode, formats)
   }
 
   return (
@@ -232,6 +287,8 @@ export function TransformView({ onOpenHistory }: { onOpenHistory?: () => void })
               onDismissNotice={() => setNotice(null)}
               status={status}
               onStop={handleStop}
+              canvasId={canvasId}
+              pendingFormats={pendingFormats}
             />
           </div>
         </section>
@@ -240,8 +297,44 @@ export function TransformView({ onOpenHistory }: { onOpenHistory?: () => void })
       {keyConsent && (
         <KeyConsentDialog error={keyConsent.error} onUseShared={acceptSharedKey} onCancel={() => setKeyConsent(null)} />
       )}
+      {duplicateCheck && (
+        <DuplicateFormatsDialog
+          existing={duplicateCheck.existing}
+          fresh={duplicateCheck.fresh}
+          onOnlyNew={() => void runGeneration(duplicateCheck.cfg, 'merge', duplicateCheck.fresh)}
+          onRegenerateAll={() => void runGeneration(duplicateCheck.cfg, 'replace', duplicateCheck.requested)}
+          onCancel={() => setDuplicateCheck(null)}
+        />
+      )}
     </div>
   )
+}
+
+type RunMode = 'replace' | 'merge'
+
+/**
+ * Everything that shapes a draft apart from its format: the source, voice, audience, custom instructions
+ * and models. Two Generates with the same key would write the same draft for a format; keys are left out,
+ * since whose key wrote it doesn't change the brief. Images are compared by size and edges, not in full.
+ */
+function briefKey(cfg: LeftPanelConfig): string {
+  return JSON.stringify({
+    source: [cfg.inputType, cfg.sourceName, cfg.content, cfg.url ?? ''],
+    images: cfg.images.map((img) => `${img.mimeType}:${img.data.length}:${img.data.slice(0, 48)}:${img.data.slice(-48)}`),
+    voice: [cfg.tone, cfg.customSchema.trim()],
+    audience: cfg.audience ? [cfg.audience.name.trim(), cfg.audience.description.trim()] : null,
+    engine: [cfg.engine.mode, ...cfg.engine.models.map(refKey)],
+  })
+}
+
+/** Formats every model on the canvas has a finished draft for; a failed draft doesn't count, so it's written again. */
+function draftedFormats(runs: ModelRun[]): Set<OutputFormat> {
+  const [first, ...rest] = runs
+  const done = new Set<OutputFormat>()
+  for (const [f, r] of Object.entries(first?.results ?? {}) as [OutputFormat, FormatResult][]) {
+    if (r.status === 'success' && rest.every((run) => run.results[f]?.status === 'success')) done.add(f)
+  }
+  return done
 }
 
 /** The drafts a stopped run finished; the ones the stop cut off are dropped. */

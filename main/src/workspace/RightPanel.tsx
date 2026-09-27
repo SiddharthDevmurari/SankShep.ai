@@ -34,6 +34,10 @@ interface Props {
   status: LeftPanelStatus | null
   /** Stops the generation in flight. */
   onStop: () => void
+  /** Changes only when a run replaces the canvas; edits, refinements and their prompts reset with it. */
+  canvasId: number
+  /** Formats being added to the drafts already on the canvas; they show as tabs being written. */
+  pendingFormats: OutputFormat[]
 }
 
 const EMPTY_QUOTE =
@@ -51,7 +55,7 @@ function countWords(text: string) {
   return t ? t.split(/\s+/).length : 0
 }
 
-export function RightPanel({ runs, runContext, parsedSource, tone, generating, selectedFormats, notice, onDismissNotice, status, onStop }: Props) {
+export function RightPanel({ runs, runContext, parsedSource, tone, generating, selectedFormats, notice, onDismissNotice, status, onStop, canvasId, pendingFormats }: Props) {
   const comparing = runs.length > 1
   const results: Partial<Record<OutputFormat, FormatResult>> = runs[0]?.results ?? {}
   const [activeTab, setActiveTab] = useState<OutputFormat | null>(null)
@@ -64,20 +68,29 @@ export function RightPanel({ runs, runContext, parsedSource, tone, generating, s
   const [localResults, setLocalResults] = useState<Partial<Record<OutputFormat, FormatResult>>>({})
   const editorRef = useRef<HTMLTextAreaElement>(null)
 
-  // A new run replaces every draft; edits and refinements belong to the run they were made on.
-  // It also opens in Preview again, even if the last run was left in Edit.
+  // A run that replaces the canvas replaces every draft; edits and refinements belong to the canvas they
+  // were made on. It also opens in Preview again, even if the last run was left in Edit. Adding formats
+  // keeps the canvas (and its id), so nothing here resets.
   useEffect(() => {
     setLocalResults({})
     setViewMode('mockup')
-  }, [runs])
+  }, [canvasId])
+
+  // A format being written again (it had failed) sheds any local copy, so the new draft shows once it lands.
+  useEffect(() => {
+    if (!pendingFormats.length) return
+    setLocalResults((prev) => Object.fromEntries(Object.entries(prev).filter(([f]) => !pendingFormats.includes(f as OutputFormat))))
+  }, [pendingFormats])
 
   // Merge API results with locally-regenerated overrides
   const merged: Partial<Record<OutputFormat, FormatResult>> = { ...results, ...localResults }
 
   // Determine active tab
-  const tabs = selectedFormats.filter((f) => merged[f] || runs.some((r) => r.results[f]))
+  const isPending = (f: OutputFormat) => pendingFormats.includes(f)
+  const tabs = selectedFormats.filter((f) => isPending(f) || merged[f] || runs.some((r) => r.results[f]))
   const currentTab = activeTab && tabs.includes(activeTab) ? activeTab : tabs[0] ?? null
-  const activeResult = currentTab ? merged[currentTab] : null
+  const pendingTab = !!currentTab && isPending(currentTab)
+  const activeResult = currentTab && !pendingTab ? merged[currentTab] : null
   const output = activeResult?.output ?? ''
 
   // Grow the editor with its content so the page scrolls, not the textarea.
@@ -91,7 +104,13 @@ export function RightPanel({ runs, runContext, parsedSource, tone, generating, s
   /* ─── Copy ──────────────────────────────────────────────────────────────── */
   const handleCopy = async () => {
     if (!activeResult?.output) return
-    await navigator.clipboard.writeText(activeResult.output)
+    // The clipboard can refuse (no permission, or a non-HTTPS page); say so instead of failing silently.
+    try {
+      await navigator.clipboard.writeText(activeResult.output)
+    } catch {
+      setLocalNotice({ text: 'Couldn’t copy to the clipboard. Select the text and copy it, or download the draft instead.', kind: 'error' })
+      return
+    }
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
   }
@@ -125,7 +144,15 @@ export function RightPanel({ runs, runContext, parsedSource, tone, generating, s
   const [keyConsent, setKeyConsent] = useState<{ error: OwnKeyError; keys: ApiKeys } | null>(null)
   // Once allowed, the shared keys keep refining this run's drafts without asking again; a new run asks afresh.
   const [allowedKeys, setAllowedKeys] = useState<ApiKeys | null>(null)
-  useEffect(() => { setAllowedKeys(null) }, [runs])
+  // A run that replaces the canvas replaces the drafts, so a refinement still in flight (or waiting on the
+  // key prompt) belongs to drafts that are gone: stop it, so its result can't land on the new run's tab.
+  // Adding formats leaves the drafts in place, so a refinement carries on.
+  useEffect(() => {
+    refineAbort.current?.abort()
+    setKeyConsent(null)
+    setAllowedKeys(null)
+  }, [canvasId])
+  useEffect(() => () => refineAbort.current?.abort(), [])
 
   /** `keys` defaults to the run's (or the ones the user allowed for it); after consent it is those minus the failing provider's. */
   const handleRegenerate = async (keys?: ApiKeys) => {
@@ -144,7 +171,6 @@ export function RightPanel({ runs, runContext, parsedSource, tone, generating, s
         activeResult.output,
         refinement,
         parsedSource,
-        tone,
         runs[0].ref,
         useKeys,
         runContext.audience,
@@ -159,6 +185,8 @@ export function RightPanel({ runs, runContext, parsedSource, tone, generating, s
       if (refineAbort.current === controller) refineAbort.current = null
       setRegenerating(false)
     }
+    // Stopped after the answer arrived (Stop, or a new run replacing these drafts): drop it.
+    if (controller.signal.aborted) return
     const model = storedModel(result)
     void logActivity({
       action: 'regenerate',
@@ -296,6 +324,7 @@ export function RightPanel({ runs, runContext, parsedSource, tone, generating, s
         {/* Format switcher: segmented control */}
         <div role="tablist" aria-label="Generated formats" className="no-scrollbar flex max-w-full items-center gap-1 overflow-x-auto rounded-full bg-paper-deep/80 p-1 ring-1 ring-hair">
           {tabs.map((fmt) => {
+            const writing = isPending(fmt)
             const r = comparing ? runs.map((run) => run.results[fmt]).find((x) => x?.status === 'error') : merged[fmt]
             const active = fmt === currentTab
             return (
@@ -303,21 +332,26 @@ export function RightPanel({ runs, runContext, parsedSource, tone, generating, s
                 key={fmt}
                 role="tab"
                 aria-selected={active}
+                aria-busy={writing}
                 onClick={() => setActiveTab(fmt)}
                 className={`flex h-9 shrink-0 items-center gap-2 rounded-full px-4 text-[13px] font-medium transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink/20 ${
                   active
                     ? 'bg-white text-ink shadow-[0_0_0_1px_rgba(231,228,217,0.9),0_2px_8px_-3px_rgba(15,16,15,0.18)]'
-                    : 'text-ink-soft hover:text-ink'
+                    : writing ? 'text-ink-mute hover:text-ink' : 'text-ink-soft hover:text-ink'
                 }`}
               >
-                {r?.status === 'error' && <span className="h-1.5 w-1.5 rounded-full bg-red-600" aria-label="failed" />}
+                {writing
+                  ? <span className="h-3 w-3 animate-spin rounded-full border-[1.5px] border-ink/15 border-t-ink/70" aria-label="being written" />
+                  : r?.status === 'error' && <span className="h-1.5 w-1.5 rounded-full bg-red-600" aria-label="failed" />}
                 {SHORT_LABEL[fmt] ?? fmt}
               </button>
             )
           })}
         </div>
 
-        {comparing ? (
+        {pendingTab ? (
+          <p className="text-[13px] text-ink-mute">Writing this draft…</p>
+        ) : comparing ? (
           <p className="text-[13px] text-ink-mute">
             Comparing <span className="font-mono font-medium text-ink tabular-nums">{runs.length}</span> models
             {runContext?.imageReadBy && <> · image read with <span className="font-mono text-[12px] text-ink">{runContext.imageReadBy}</span></>}
@@ -349,7 +383,33 @@ export function RightPanel({ runs, runContext, parsedSource, tone, generating, s
         )}
       </div>
 
-      {comparing && currentTab ? (
+      {/* Adding formats: say exactly which are being written, that the rest stay, and offer the stop here too */}
+      {pendingFormats.length > 0 && (
+        <div className="flex shrink-0 flex-wrap items-center gap-x-4 gap-y-2 border-b border-hair bg-paper px-4 py-2.5 lg:px-5" aria-live="polite">
+          <span className="relative h-1 w-16 shrink-0 overflow-hidden rounded-full bg-hair" aria-hidden>
+            <span className="sk-sweep absolute inset-y-0 left-0 w-1/3 rounded-full bg-matcha-deep" />
+          </span>
+          <p className="min-w-0 flex-1 text-[13px] text-ink-soft">
+            <span className="font-semibold text-ink">
+              Drafting {pendingFormats.length} new {pendingFormats.length === 1 ? 'format' : 'formats'}
+            </span>
+            {' · '}{pendingFormats.map((f) => SHORT_LABEL[f] ?? f).join(', ')}
+            <span className="hidden sm:inline">{' · '}your other drafts stay as they are</span>
+          </p>
+          <button
+            type="button"
+            onClick={onStop}
+            className="flex min-h-9 items-center gap-2 rounded-lg px-3 text-[12.5px] font-medium text-red-700 ring-1 ring-inset ring-red-200 transition-colors hover:bg-red-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-600"
+          >
+            <Square className="h-2.5 w-2.5 fill-current" aria-hidden />
+            Stop
+          </button>
+        </div>
+      )}
+
+      {pendingTab && currentTab ? (
+        <PendingDraft format={currentTab} />
+      ) : comparing && currentTab ? (
         <CompareView runs={runs} format={currentTab} />
       ) : (
 
@@ -459,6 +519,24 @@ export function RightPanel({ runs, runContext, parsedSource, tone, generating, s
         </div>
       </div>
       )}
+    </div>
+  )
+}
+
+/** A format being added to the canvas: a sheet that says it's being written, in place of the draft. */
+function PendingDraft({ format }: { format: OutputFormat }) {
+  return (
+    <div className="min-h-0 flex-1 overflow-y-auto bg-paper px-4 pb-16 pt-8 sm:px-8" aria-live="polite">
+      <div className="sk-sheet mx-auto max-w-[900px] rounded-2xl bg-white px-8 py-10 sm:px-14 sm:py-14">
+        <p className="text-[12.5px] font-semibold text-ink-mute">Writing…</p>
+        <h2 className="mt-3 font-display text-[clamp(1.9rem,3vw,2.6rem)] font-bold text-ink">{format}</h2>
+        <div className="mt-8 space-y-3" aria-hidden>
+          {['w-11/12', 'w-full', 'w-4/5', 'w-full', 'w-2/3'].map((w, i) => (
+            <span key={i} className={`sk-skeleton block h-2.5 rounded-full ${w}`} />
+          ))}
+        </div>
+        <p className="mt-8 text-[13px] text-ink-mute">The other drafts are ready to read, edit and refine while this one is written.</p>
+      </div>
     </div>
   )
 }
@@ -652,7 +730,11 @@ function CompareColumn({ run, format, letter }: { run: ModelRun; format: OutputF
 
   const copy = async () => {
     if (!text) return
-    await navigator.clipboard.writeText(text)
+    try {
+      await navigator.clipboard.writeText(text)
+    } catch {
+      return // The clipboard refused; the button simply doesn't turn into "Copied".
+    }
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
   }
