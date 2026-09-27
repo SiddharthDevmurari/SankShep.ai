@@ -45,6 +45,7 @@ No API keys are needed to start: sign in (or use the demo account) and press Gen
 |---|---|
 | **Zero-config AI** | Shared Groq, Gemini and Mistral keys live on the server (`/api/chat`), and a model is already chosen, so the first draft is one click away. Anyone can add their own key in the **AI engine** step instead. |
 | **One source, many formats** | Executive Summary, LinkedIn Post, Twitter/X thread, Video script and storyboard, Slide deck (exports to PowerPoint), Blog Post, Advisory, Infographic brief, Simplified Explanation, and translation into six Indian languages. Or describe a format in your own words. Every selected format is drafted in parallel from the same source. |
+| **Smart generation check (your tokens, respected)** | Tokens cost money on a paid key and run out on a free one, so Sankshep never spends them on a draft you already have. When you press Generate, it compares your selection with the drafts already on the canvas from the same source and settings. If some are there, a prompt says *"Some of these formats have already been generated."* and offers **Generate only new formats** (sends just the new ones; every existing draft stays, edits and refinements included), **Regenerate all**, or **Cancel**. An all-new selection is simply added next to the existing drafts. The new formats show as tabs being written while the others stay readable. |
 | **Dynamic context routing for Refine** | Type a change under any draft ("make it shorter", "add the budget figure from the report") and only that draft is rewritten. A fast routing model first decides what the change needs: style, length, tone and formatting edits are sent with **the draft only**, so they stay small and keep the draft's facts as they are; requests for facts, missing detail or anything in the original are sent with **the draft and the source**, so the model can look it up instead of guessing. If routing fails or times out, the source is included, so accuracy never depends on it. |
 | **Consent-based key fallback** | If your own key fails (rejected, out of quota, rate-limited beyond a short wait, or the provider keeps erroring), nothing switches behind your back. The run pauses and a prompt shows the provider's exact error and asks: *"Would you like to generate this using Sankshep.ai's free API key instead?"* **Use Sankshep Key** re-runs through the shared keys; **Cancel** leaves the workspace idle and sends nothing else. |
 | **Stop mid-generation** | While drafting, Generate becomes **Stop generating** (also in the canvas header, so it works with the sidebar collapsed), and Refine becomes **Stop**. Stopping aborts the requests at once through an `AbortController`; drafts that already finished stay on the canvas, the rest are dropped, and a note says how many were kept. |
@@ -178,6 +179,19 @@ flowchart LR
 
 The router (`routeRefinement`) is one short call to a small, fast model on the same provider (`gpt-oss-20b` on Groq, `mistral-small-latest`, `gemini-3.5-flash-lite`) that answers `DRAFT` or `SOURCE`. It gives up after 8 seconds and cancels its own request; anything other than a clear `DRAFT` includes the source.
 
+### Smart generation check
+
+Every Generate is planned before a single request is sent (`handleGenerate` in [`TransformView.tsx`](main/src/workspace/TransformView.tsx)):
+
+| The canvas has… | What happens |
+|---|---|
+| Nothing, or drafts from a different source, tone, audience, custom instructions or models | A fresh run replaces the canvas |
+| Some of the selected formats, from the same brief | The prompt asks: **Generate only new formats** (only those are sent, the rest are kept with their edits), **Regenerate all**, or **Cancel** |
+| None of the selected formats, same brief | The new formats are drafted and added next to the existing ones |
+| All of the selected formats | They are regenerated, as asked |
+
+A draft that failed counts as missing, so it is written again, and a translation into a different language counts as a new format. Only the new drafts are logged to History for that run. The same principle runs through the rest of the pipeline: draft-only Refine requests don't resend the source, and Stop ends a run the moment you no longer need it.
+
 ### Stopping and key failures
 
 Every model request takes an `AbortSignal`. One controller per run is threaded through every node: pressing Stop aborts the in-flight requests and any wait between retries, finished drafts are returned, and unfinished ones are marked as stopped and dropped. Leaving the workspace, or starting a new run while a refine is in flight, cancels it the same way.
@@ -297,6 +311,7 @@ main/
 │   │   ├── LeftPanel.tsx        # Settings sidebar: source, formats, voice, audience, engine
 │   │   ├── RightPanel.tsx       # Output canvas: drafts, comparison, refine, export
 │   │   ├── KeyConsentDialog.tsx # The "use Sankshep's key instead?" prompt
+│   │   ├── DuplicateFormatsDialog.tsx # The "only new formats / regenerate all" prompt
 │   │   ├── HistoryView.tsx
 │   │   ├── AnalyticsView.tsx
 │   │   └── AdminPanel.tsx

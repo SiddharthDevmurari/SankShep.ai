@@ -1,16 +1,17 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { AnimatePresence, MotionConfig, motion, useInView } from 'motion/react'
-import { Check, KeyRound, Square, WandSparkles } from 'lucide-react'
+import { Check, FileText, KeyRound, Square, WandSparkles } from 'lucide-react'
 import { ArrowRight, BrandMark, SitePage } from '../components/site/SiteChrome'
 import { ALL_FORMATS, MAX_COMPARE } from '../workspace/LeftPanel'
 
 /*
  * Design read: a features page for people deciding whether Sankshep is worth trying, in the
  * landing page's paper/ink/matcha language. ENERGY 2 / RHYTHM 3 / MOTION 2.
- * The page reads like four short chapters, each with a different composition: a split with a
- * setup checklist, a dark band whose tiles take the shape of each format, a pinned draft that
- * changes as you scroll, and two small previews you can press. Every visual is a mock of the real
+ * The page reads like five short chapters, each with a different composition: a split with a
+ * setup checklist, a dark band whose tiles take the shape of each format, a switch showing what a
+ * repeat Generate sends and keeps, a pinned draft that changes as you scroll, and two small
+ * previews you can press. Every visual is a mock of the real
  * workspace, labelled as a preview, and uses one example document, so nothing reads as live data.
  * Motion plays once on view (the two previews play when pressed); MotionConfig honours reduced motion.
  */
@@ -20,6 +21,7 @@ const EASE = [0.22, 1, 0.36, 1] as const
 const CHAPTERS = [
   { id: 'no-setup', title: 'Works without setup', line: 'No API keys to find. Sign in and generate.' },
   { id: 'one-to-many', title: 'One source, many drafts', line: 'A PDF or a link becomes briefs, posts, slides and more.' },
+  { id: 'no-waste', title: 'Your tokens, respected', line: 'New formats are added. Drafts you have are never paid for twice.' },
   { id: 'refine', title: 'Talk to your draft', line: 'Ask for changes the way you’d ask a colleague.' },
   { id: 'your-key', title: 'Your key, your call', line: 'If your own key fails, we ask before switching.' },
 ] as const
@@ -33,6 +35,7 @@ export default function FeaturesPage() {
         <Hero />
         <NoSetup />
         <OneToMany />
+        <NoWaste />
         <Refine />
         <YourKey />
         <Everyday />
@@ -436,7 +439,129 @@ function Tile({ label, delay, start, className = '', children }: { label: string
   )
 }
 
-/* ─── 03 Talk to your draft (pinned draft, scrolling instructions) ───────── */
+/* ─── 03 Your tokens, respected ──────────────────────────────────────────── */
+
+function NoWaste() {
+  return (
+    <section id="no-waste" className="scroll-mt-28 border-b border-hair bg-paper">
+      <div className="mx-auto grid max-w-[1200px] grid-cols-1 gap-14 px-5 py-20 sm:px-8 lg:grid-cols-[minmax(0,5fr)_minmax(0,6fr)] lg:items-center lg:gap-20 lg:py-28">
+        <motion.div {...fadeUp}>
+          <ChapterLabel n={3}>Your tokens, respected</ChapterLabel>
+          <h2 className="font-headline mt-5 text-[clamp(2.6rem,5vw,4.2rem)] text-ink">
+            Every token buys <Accent>something new.</Accent>
+          </h2>
+          <p className="mt-6 text-[18px] font-medium leading-snug text-ink">
+            Asked for two formats, then decided you want two more? Sankshep won’t quietly write the first two again.
+          </p>
+          <p className="mt-4 max-w-[52ch] text-[16px] leading-[1.75] text-ink-soft">
+            Before anything is sent, it checks which drafts are already on your canvas from the same source and settings. If some are,
+            it asks: <span className="font-medium text-ink">generate only the new formats</span>, or regenerate everything. Pick the
+            first and only the drafts you don’t have yet are written. The ones you already have stay exactly as they are, edits
+            included.
+          </p>
+          <p className="mt-4 max-w-[52ch] text-[16px] leading-[1.75] text-ink-soft">
+            The same care runs through the rest of the app: small edits in Refine don’t send your whole document again, and Stop
+            ends a run the moment you no longer need it.
+          </p>
+          <WhyItMatters>
+            tokens cost money on a paid key and run out on a free one. We treat them as yours, and spend them only on work you
+            don’t already have.
+          </WhyItMatters>
+        </motion.div>
+        <TokenVisual />
+      </div>
+    </section>
+  )
+}
+
+/** An example canvas: two drafts already written (one edited), two formats just added. */
+const TOKEN_TILES: { format: string; onCanvas: boolean; edited?: boolean }[] = [
+  { format: 'Executive Summary', onCanvas: true, edited: true },
+  { format: 'Video', onCanvas: true },
+  { format: 'Advisory', onCanvas: false },
+  { format: 'Infographic', onCanvas: false },
+]
+
+/** Switch between the two choices to see what each one would send and what it would keep. */
+function TokenVisual() {
+  const [choice, setChoice] = useState<'new' | 'all'>('new')
+  const sentCount = TOKEN_TILES.filter((t) => choice === 'all' || !t.onCanvas).length
+
+  return (
+    <motion.div {...fadeUp} transition={{ ...fadeUp.transition, delay: 0.1 }} className="rounded-[28px] border border-hair bg-paper-deep p-3 shadow-[0_30px_70px_-40px_rgba(15,16,15,0.45)] sm:p-4">
+      <div className="rounded-[20px] border border-hair bg-white p-5 sm:p-6">
+        <div className="flex items-center justify-between gap-3">
+          <p className="text-[13px] font-semibold text-ink">You press Generate with four formats</p>
+          <PreviewTag />
+        </div>
+
+        <div role="radiogroup" aria-label="What to generate" className="mt-4 grid grid-cols-2 gap-1 rounded-xl bg-paper-deep p-1">
+          {([['new', 'Generate only new formats'], ['all', 'Regenerate all']] as const).map(([value, label]) => {
+            const active = choice === value
+            return (
+              <button
+                key={value}
+                type="button"
+                role="radio"
+                aria-checked={active}
+                onClick={() => setChoice(value)}
+                className={`min-h-11 rounded-lg px-2 text-[13px] font-semibold transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink/30 ${
+                  active ? (value === 'new' ? 'bg-ink text-paper' : 'bg-white text-ink ring-1 ring-inset ring-line') : 'text-ink-soft hover:text-ink'
+                }`}
+              >
+                {label}
+              </button>
+            )
+          })}
+        </div>
+
+        <ul className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-2">
+          {TOKEN_TILES.map((t) => {
+            const info = ALL_FORMATS.find((f) => f.label === t.format)
+            const Icon = info?.icon ?? FileText
+            const sent = choice === 'all' || !t.onCanvas
+            const status = !sent ? (t.edited ? 'Kept, with your edits' : 'Kept as it is')
+              : t.onCanvas ? (t.edited ? 'Written again, edits lost' : 'Written again')
+              : 'New, sent to the AI'
+            return (
+              <li
+                key={t.format}
+                className={`flex min-w-0 items-center gap-3 rounded-xl px-3.5 py-3 transition-colors duration-300 ${
+                  !sent ? 'bg-paper-deep/70' : t.onCanvas ? 'bg-white ring-1 ring-inset ring-red-200' : 'bg-white ring-1 ring-inset ring-matcha-deep'
+                }`}
+              >
+                <Icon className="h-[18px] w-[18px] shrink-0 text-ink-mute" strokeWidth={1.8} aria-hidden />
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-[13.5px] font-semibold text-ink">{info?.short ?? t.format}</span>
+                  <span className={`block truncate text-[12px] ${sent && t.onCanvas ? 'text-red-700' : 'text-ink-soft'}`}>{status}</span>
+                </span>
+                {!sent && <Check className="h-4 w-4 shrink-0 text-ink-soft" strokeWidth={2.5} aria-hidden />}
+              </li>
+            )
+          })}
+        </ul>
+
+        {/* One segment per format: filled means it is sent to the AI this time */}
+        <div className="mt-5 border-t border-hair pt-4" aria-live="polite">
+          <div className="flex items-baseline justify-between gap-3">
+            <p className="text-[13px] text-ink-soft">
+              <span className="font-mono text-[15px] font-semibold text-ink tabular-nums">{sentCount} of {TOKEN_TILES.length}</span> formats sent to the AI
+            </p>
+            <p className="text-[12.5px] text-ink-mute">{choice === 'new' ? 'Only what you don’t have yet' : 'Everything, again'}</p>
+          </div>
+          <div className="mt-2.5 grid grid-cols-4 gap-1.5" aria-hidden>
+            {TOKEN_TILES.map((t) => {
+              const sent = choice === 'all' || !t.onCanvas
+              return <span key={t.format} className={`h-2 rounded-full transition-colors duration-300 ${sent ? 'bg-ink' : 'bg-hair'}`} />
+            })}
+          </div>
+        </div>
+      </div>
+    </motion.div>
+  )
+}
+
+/* ─── 04 Talk to your draft (pinned draft, scrolling instructions) ───────── */
 
 const DRAFT_START =
   'Small shops just got a real reason to go solar. Under the new 2026 rooftop policy, the government covers 40% of installation costs, and every state now has to offer net-metering, which means shops can sell the power they don’t use back to the grid. For a typical corner store, that turns a big upfront cost into a much smaller one.'
@@ -474,7 +599,7 @@ function Refine() {
     <section id="refine" className="scroll-mt-28 border-b border-hair bg-paper-deep">
       <div className="mx-auto max-w-[1200px] px-5 pt-20 sm:px-8 lg:pt-28">
         <motion.div {...fadeUp} className="max-w-[40rem]">
-          <ChapterLabel n={3}>Talk to your draft</ChapterLabel>
+          <ChapterLabel n={4}>Talk to your draft</ChapterLabel>
           <h2 className="font-headline mt-5 text-[clamp(2.6rem,5vw,4.2rem)] text-ink">
             Don’t rewrite it. <Accent>Just ask.</Accent>
           </h2>
@@ -595,7 +720,7 @@ function RefineVisual({ step }: { step: number }) {
   )
 }
 
-/* ─── 04 Your key, your call ─────────────────────────────────────────────── */
+/* ─── 05 Your key, your call ─────────────────────────────────────────────── */
 
 function YourKey() {
   return (
@@ -606,7 +731,7 @@ function YourKey() {
           <StopPreview />
         </div>
         <motion.div {...fadeUp} className="order-1 lg:order-2 lg:pt-6">
-          <ChapterLabel n={4}>Your key, your call</ChapterLabel>
+          <ChapterLabel n={5}>Your key, your call</ChapterLabel>
           <h2 className="font-headline mt-5 text-[clamp(2.6rem,5vw,4.2rem)] text-ink">
             Your key, <Accent>your call.</Accent>
           </h2>
