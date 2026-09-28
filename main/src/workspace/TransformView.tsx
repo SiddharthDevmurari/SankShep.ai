@@ -4,10 +4,10 @@ import { LeftPanel, type LeftPanelConfig, type LeftPanelStatus } from './LeftPan
 import { RightPanel, type Notice } from './RightPanel'
 import { KeyConsentDialog } from './KeyConsentDialog'
 import { DuplicateFormatsDialog } from './DuplicateFormatsDialog'
-import { runPipeline, type Audience, type EngineConfig, type FormatResult, type ModelRun, type OutputFormat } from '../lib/pipeline'
+import { isLocalEngine, runPipeline, type Audience, type EngineConfig, type FormatResult, type ModelRun, type OutputFormat } from '../lib/pipeline'
 import type { ToneOption } from '../lib/pipeline'
-import { isAbortError, OwnKeyError, refKey, withoutKey } from '../lib/providers'
-import { logActivity, previewOf, summariseResults } from '../lib/activity'
+import { isAbortError, OwnKeyError, refKey, withoutKey, type ModelRef } from '../lib/providers'
+import { logActivity, previewOf, summariseResults, withoutContent } from '../lib/activity'
 
 /** What the last run used, so refining a draft goes back to the same model, key and audience. */
 export interface RunContext {
@@ -33,7 +33,10 @@ export function TransformView({ onOpenHistory }: { onOpenHistory?: () => void })
   // Changes only when a run replaces the canvas; adding formats to it keeps the id, so edits survive.
   const [canvasId, setCanvasId] = useState(0)
   // Formats being added to the canvas right now (a "generate only new" run), shown as they're written.
+  // On the local engine: every format of the run that hasn't started streaming yet.
   const [pendingFormats, setPendingFormats] = useState<OutputFormat[]>([])
+  // A run on the local engine, which writes one draft at a time and streams it onto the canvas.
+  const [stream, setStream] = useState<LiveStream | null>(null)
   // What the drafts on the canvas were written from, so a later Generate can tell which formats it already has.
   const canvasBrief = useRef<{ key: string; language: string } | null>(null)
   // A Generate that asked for formats the canvas already has, waiting for the user's choice.
@@ -77,18 +80,21 @@ export function TransformView({ onOpenHistory }: { onOpenHistory?: () => void })
     setDuplicateCheck(null)
     setGenerating(true)
     setTone(cfg.tone)
+    const local = isLocalEngine(cfg.engine)
     if (mode === 'replace') {
       setCanvasId((id) => id + 1)
       setRuns([])
       setRunContext(null)
       setParsedSource('')
-      setPendingFormats([])
+      // The local engine's queue shows as tabs waiting their turn.
+      setPendingFormats(local ? formats : [])
       setSelectedFormats(formats)
       canvasBrief.current = null
     } else {
       setPendingFormats(formats)
       setSelectedFormats((prev) => [...prev, ...formats.filter((f) => !prev.includes(f))])
     }
+    setStream(local ? { model: cfg.engine.models[0].model, writing: null } : null)
 
     const t0 = Date.now()
     const baseLog = {
@@ -104,8 +110,23 @@ export function TransformView({ onOpenHistory }: { onOpenHistory?: () => void })
     const controller = new AbortController()
     runAbort.current = controller
 
+    // Streamed drafts land on the canvas as they're written. Each state update bails out when nothing
+    // changed, since this runs for every few tokens.
+    const onDraft = (ref: ModelRef, result: FormatResult) => {
+      if (runAbort.current !== controller) return // A newer run owns the canvas now.
+      setRuns((prev) => upsertResult(prev, ref, result))
+      const f = result.format
+      if (result.live) {
+        setPendingFormats((prev) => (prev.includes(f) ? prev.filter((x) => x !== f) : prev))
+        setStream((s) => (s && s.writing !== f ? { ...s, writing: f } : s))
+      } else {
+        setStream((s) => (s?.writing === f ? { ...s, writing: null } : s))
+      }
+    }
+
     try {
       const output = await runPipeline({
+        onDraft: local ? onDraft : undefined,
         content: cfg.content,
         images: cfg.images,
         url: cfg.url,
@@ -139,8 +160,13 @@ export function TransformView({ onOpenHistory }: { onOpenHistory?: () => void })
         language: formats.includes('Language Translation') || !canvasBrief.current ? cfg.targetLanguage : canvasBrief.current.language,
       }
       const what = mode === 'merge' ? 'new drafts' : 'drafts'
+      // Streamed drafts the stop cut off: kept, frozen where they stopped.
+      const cut = fresh.flatMap((run) => Object.values(run.results).filter((r) => r.stopped).map((r) => r.format))
+      const finished = kept - cut.length
       const notes = [
-        stopped && `Generation stopped. ${kept} of ${asked} ${what} ${kept === 1 ? 'was' : 'were'} finished and ${kept === 1 ? 'is' : 'are'} shown; the rest weren't written.`,
+        stopped && (cut.length
+          ? `Generation stopped. ${finished} of ${asked} ${what} ${finished === 1 ? 'was' : 'were'} finished; ${cut.join(', ')} stopped mid-draft and ${cut.length === 1 ? 'is' : 'are'} kept as far as ${cut.length === 1 ? 'it' : 'they'} got. The rest weren't written.`
+          : `Generation stopped. ${kept} of ${asked} ${what} ${kept === 1 ? 'was' : 'were'} finished and ${kept === 1 ? 'is' : 'are'} shown; the rest weren't written.`),
         output.sourceNote,
       ].filter((n): n is string => !!n)
       if (notes.length) setNotice({ text: notes.join('\n\n'), kind: 'info' })
@@ -152,8 +178,9 @@ export function TransformView({ onOpenHistory }: { onOpenHistory?: () => void })
       for (const run of fresh) {
         if (Object.keys(run.results).length === 0) continue // Stopped before this model wrote anything.
         const summary = summariseResults(run.results)
-        written += summary.successCount
-        void logActivity({
+        // A draft a stop cut off mid-stream stays on the canvas, but isn't counted as written.
+        written += Object.values(run.results).filter((r) => r.status === 'success' && !r.stopped).length
+        const entry = {
           ...baseLog,
           ...previewOf(source),
           formats: Object.keys(run.results),
@@ -164,7 +191,9 @@ export function TransformView({ onOpenHistory }: { onOpenHistory?: () => void })
           error_count: summary.errorCount,
           error_message: summary.errorMessage,
           duration_ms: output.durationMs,
-        })
+        }
+        // Private mode: History gets the counts, never the text.
+        void logActivity(local ? withoutContent(entry) : entry)
       }
       setSession((s) => ({ drafts: s.drafts + written, lastMs: output.durationMs }))
     } catch (err) {
@@ -179,19 +208,21 @@ export function TransformView({ onOpenHistory }: { onOpenHistory?: () => void })
         return
       }
       console.error('Pipeline error:', err)
-      void logActivity({
+      const entry = {
         ...baseLog,
         formats,
-        status: 'error',
+        status: 'error' as const,
         success_count: 0,
         error_count: formats.length,
         error_message: err instanceof Error ? err.message : String(err),
         duration_ms: Date.now() - t0,
-      })
+      }
+      void logActivity(local ? withoutContent(entry) : entry)
       setNotice({ text: `Generation failed: ${err instanceof Error ? err.message : String(err)}`, kind: 'error' })
     } finally {
       if (runAbort.current === controller) runAbort.current = null
       setPendingFormats([])
+      setStream(null)
       setGenerating(false)
     }
   }
@@ -271,6 +302,7 @@ export function TransformView({ onOpenHistory }: { onOpenHistory?: () => void })
               generating={generating}
               engineLabel={status?.engineLabel ?? null}
               engineReady={status?.engineReady ?? true}
+              local={status?.local ?? false}
               onOpenHistory={onOpenHistory}
             />
           </div>
@@ -289,6 +321,7 @@ export function TransformView({ onOpenHistory }: { onOpenHistory?: () => void })
               onStop={handleStop}
               canvasId={canvasId}
               pendingFormats={pendingFormats}
+              stream={stream}
             />
           </div>
         </section>
@@ -312,6 +345,19 @@ export function TransformView({ onOpenHistory }: { onOpenHistory?: () => void })
 
 type RunMode = 'replace' | 'merge'
 
+/** A run on the local engine: its model, and the format streaming right now (none while the model loads). */
+export interface LiveStream {
+  model: string
+  writing: OutputFormat | null
+}
+
+/** Puts `result` in `ref`'s run, adding the run when the canvas doesn't have it yet. */
+function upsertResult(runs: ModelRun[], ref: ModelRef, result: FormatResult): ModelRun[] {
+  const key = refKey(ref)
+  if (!runs.some((run) => refKey(run.ref) === key)) return [...runs, { ref, results: { [result.format]: result } as Record<OutputFormat, FormatResult> }]
+  return runs.map((run) => (refKey(run.ref) === key ? { ...run, results: { ...run.results, [result.format]: result } } : run))
+}
+
 /**
  * Everything that shapes a draft apart from its format: the source, voice, audience, custom instructions
  * and models. Two Generates with the same key would write the same draft for a format; keys are left out,
@@ -327,19 +373,26 @@ function briefKey(cfg: LeftPanelConfig): string {
   })
 }
 
-/** Formats every model on the canvas has a finished draft for; a failed draft doesn't count, so it's written again. */
+/**
+ * Formats every model on the canvas has a finished draft for; a failed draft doesn't count, so it's
+ * written again, and neither does one a stop cut off mid-stream.
+ */
 function draftedFormats(runs: ModelRun[]): Set<OutputFormat> {
   const [first, ...rest] = runs
   const done = new Set<OutputFormat>()
+  const complete = (r?: FormatResult) => r?.status === 'success' && !r.stopped
   for (const [f, r] of Object.entries(first?.results ?? {}) as [OutputFormat, FormatResult][]) {
-    if (r.status === 'success' && rest.every((run) => run.results[f]?.status === 'success')) done.add(f)
+    if (complete(r) && rest.every((run) => complete(run.results[f]))) done.add(f)
   }
   return done
 }
 
-/** The drafts a stopped run finished; the ones the stop cut off are dropped. */
+/**
+ * The drafts a stopped run finished. The ones the stop cut off are dropped, except streamed drafts
+ * that got partway: those stay as far as they got.
+ */
 function finishedOnly(results: Record<OutputFormat, FormatResult>): Record<OutputFormat, FormatResult> {
-  return Object.fromEntries(Object.entries(results).filter(([, r]) => !r.stopped)) as Record<OutputFormat, FormatResult>
+  return Object.fromEntries(Object.entries(results).filter(([, r]) => !r.stopped || r.output.trim())) as Record<OutputFormat, FormatResult>
 }
 
 const PANEL_ID = 'ws-config-panel'
@@ -352,17 +405,19 @@ interface SessionPanelProps {
   generating: boolean
   engineLabel: string | null
   engineReady: boolean
+  /** Private mode: the engine is the local Ollama. */
+  local: boolean
   onOpenHistory?: () => void
 }
 
 /** Live readout for the header's right side: engine state, this session's output, and a way into History. */
-function SessionPanel({ drafts, lastMs, generating, engineLabel, engineReady, onOpenHistory }: SessionPanelProps) {
-  // The dot marks a real state: key missing, drafting in progress, or ready to run.
+function SessionPanel({ drafts, lastMs, generating, engineLabel, engineReady, local, onOpenHistory }: SessionPanelProps) {
+  // The dot marks a real state: key missing (or local engine offline), drafting in progress, or ready to run.
   const engine = !engineReady
-    ? { label: 'Key needed', dot: 'bg-red-600', ping: false }
+    ? { label: local ? 'Offline' : 'Key needed', dot: 'bg-red-600', ping: false }
     : generating
       ? { label: 'Drafting…', dot: 'bg-matcha-deep', ping: true }
-      : { label: 'Ready', dot: 'bg-green-600', ping: false }
+      : { label: local ? 'Private' : 'Ready', dot: 'bg-green-600', ping: false }
 
   return (
     <div

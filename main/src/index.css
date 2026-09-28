@@ -232,8 +232,28 @@ body {
   animation: sk-grow 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
+/* Where streamed text is arriving; it blinks only while a draft is being written. */
+@keyframes sk-blink {
+  50% { opacity: 0; }
+}
+/* The caret rides at the end of the last line of a streaming draft (RichText's blocks sit directly inside). */
+.sk-live > :is(p, h2, h3):last-child::after,
+.sk-live > :is(ul, ol):last-child > li:last-child::after {
+  content: '';
+  display: inline-block;
+  width: 0.5em;
+  height: 1.05em;
+  margin-left: 0.15em;
+  vertical-align: -0.15em;
+  border-radius: 2px;
+  background: var(--color-matcha-deep);
+  animation: sk-blink 1s steps(1) infinite;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .sk-skeleton, .sk-sweep, .sk-grow { animation: none; }
+  .sk-live > :is(p, h2, h3):last-child::after,
+  .sk-live > :is(ul, ol):last-child > li:last-child::after { animation: none; }
 }
 
 .no-scrollbar { scrollbar-width: none; }

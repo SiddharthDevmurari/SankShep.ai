@@ -7,9 +7,14 @@
  * server-side (api/chat.ts). A failing own key is never swapped for the shared
  * keys silently: chat() throws OwnKeyError and the workspace asks the user first.
  * User keys live only in memory and are never logged or sent to Supabase.
+ *
+ * 'ollama' is the on-device engine (lib/local.ts): no key, no server, nothing leaves the machine.
  */
 
-export type ProviderId = 'groq' | 'gemini' | 'mistral'
+import { localGenerate } from './local'
+
+export type CloudProviderId = 'groq' | 'gemini' | 'mistral'
+export type ProviderId = CloudProviderId | 'ollama'
 
 /**
  * What a model reads: text only, or text and images. Only models that can write
@@ -31,6 +36,7 @@ export interface ProviderInfo {
   models: ModelInfo[]
 }
 
+/** The cloud providers, the ones the model picker lists. */
 export const PROVIDERS: ProviderInfo[] = [
   {
     id: 'groq',
@@ -83,9 +89,21 @@ export type ApiKeys = Partial<Record<ProviderId, string>>
 // which fails every format after the first.
 export const DEFAULT_MODEL: ModelRef = { provider: 'groq', model: 'openai/gpt-oss-120b' }
 
-export function providerInfo(id: ProviderId) {
-  return PROVIDERS.find((p) => p.id === id)!
+/** Its models are whatever the user's Ollama has installed, so none are listed here (see lib/local.ts). */
+export const LOCAL_PROVIDER: ProviderInfo = {
+  id: 'ollama',
+  name: 'On-device',
+  keyPlaceholder: '',
+  keyUrl: 'https://ollama.com/download',
+  host: 'localhost:11434',
+  models: [],
 }
+
+export function providerInfo(id: ProviderId) {
+  return id === 'ollama' ? LOCAL_PROVIDER : PROVIDERS.find((p) => p.id === id)!
+}
+
+export const isLocal = (ref: ModelRef) => ref.provider === 'ollama'
 
 export function modelInfo(ref: ModelRef) {
   return providerInfo(ref.provider).models.find((m) => m.id === ref.model)
@@ -142,6 +160,8 @@ interface ChatOptions {
   temperature?: number
   /** Aborting it stops the request at once, including any wait between retries. */
   signal?: AbortSignal
+  /** Streams the text so far; only the on-device engine streams, cloud answers arrive whole. */
+  onText?: (text: string) => void
 }
 
 /**
@@ -230,6 +250,18 @@ function sleep(ms: number, signal?: AbortSignal) {
  * switching to the shared keys, so the user decides. Aborting `opts.signal` rejects with an AbortError.
  */
 export async function chat(ref: ModelRef, messages: ChatMessage[], keys: ApiKeys, opts: ChatOptions = {}): Promise<ChatResult> {
+  if (isLocal(ref)) {
+    // Text only: images never go to the local model (the pipeline reads them with on-device OCR first).
+    const result = await localGenerate(ref.model, {
+      system: messages.filter((m) => m.role === 'system').map((m) => m.content).join('\n\n'),
+      prompt: messages.filter((m) => m.role === 'user').map((m) => m.content).join('\n\n'),
+      maxTokens: opts.maxTokens ?? 2048,
+      temperature: opts.temperature ?? 0.3,
+      signal: opts.signal,
+      onText: opts.onText,
+    })
+    return { ...result, content: stripThinking(result.content) }
+  }
   const info = providerInfo(ref.provider)
   if (!canWrite(modelInfo(ref)?.kind)) {
     throw new Error(`${ref.model} is a ${modelInfo(ref)?.kind ?? 'non-text'} model and can't write drafts.`)

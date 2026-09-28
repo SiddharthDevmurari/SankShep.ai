@@ -1,18 +1,23 @@
 import { useState, useRef, useCallback, useEffect } from 'react'
 import {
   AlignLeft, AtSign, Briefcase, Check, ChartPie, ChevronDown, Clapperboard, Eye, EyeOff, FileText, Globe, Languages,
-  Lightbulb, Link2, Newspaper, Plus, Presentation, ShieldAlert, Square, Upload, X,
+  Lightbulb, Link2, Lock, Newspaper, Plus, Presentation, ShieldAlert, Square, Upload, X,
 } from 'lucide-react'
 import { AUDIENCE_PRESETS, type Audience, type EngineConfig, type EngineMode, type OutputFormat, type ToneOption } from '../lib/pipeline'
 import type { InputType } from '../lib/activity'
 import {
   DEFAULT_MODEL, PROVIDERS, hasKey, modelInfo, parseRefKey, providerInfo, refKey,
-  type ApiKeys, type ImageInput, type ModelKind, type ProviderId,
+  type ApiKeys, type ImageInput, type ModelKind, type ModelRef, type ProviderId,
 } from '../lib/providers'
 import { describeReader, pickImageReader } from '../lib/ingest'
+import { PREFERRED_LOCAL_MODEL } from '../lib/local'
 import { extractDocument, isDocumentFile } from '../lib/documents'
 import { fetchSavedAudiences, removeAudience, saveAudience } from '../lib/audiences'
 import { useAuth } from '../contexts/AuthContext'
+import {
+  LocalEngineDetails, LocalEngineStatus, ProcessingModeSwitch, storeProcessingMode, storedProcessingMode, useLocalEngine,
+  type ProcessingMode,
+} from './LocalEngine'
 
 export interface LeftPanelConfig {
   content: string
@@ -32,9 +37,11 @@ export interface LeftPanelConfig {
 /** What the canvas shows about the form while it waits or drafts: the source and the engine. */
 export interface LeftPanelStatus {
   engineLabel: string
-  /** Every selected provider has a key to use. */
+  /** Every selected provider has a key to use; in Private mode, the local engine is connected. */
   engineReady: boolean
   sourceLabel: string | null
+  /** Private mode: drafts are written on this device. */
+  local: boolean
 }
 
 export const STEP_IDS = {
@@ -158,6 +165,8 @@ const INPUT_MODES: { id: InputMode; label: string; icon: typeof FileText }[] = [
 
 const FIELD_FOCUS = 'focus-within:border-ink focus-within:ring-4 focus-within:ring-matcha/50'
 
+const PROCESSING_ID = 'ws-processing'
+
 export function LeftPanel({ onGenerate, onStop, generating, onStatusChange }: Props) {
   const [inputMode, setInputMode] = useState<InputMode>('file')
   const [rawText, setRawText] = useState('')
@@ -243,12 +252,39 @@ export function LeftPanel({ onGenerate, onStop, generating, onStatusChange }: Pr
   const [keys, setKeys] = useState<ApiKeys>({})
   const [engineOpen, setEngineOpen] = useState(false)
 
+  // Processing mode: cloud providers, or the user's own Ollama (Private mode).
+  const [processing, setProcessing] = useState<ProcessingMode>(storedProcessingMode)
+  const local = processing === 'local'
+  const localEngine = useLocalEngine(local)
+  // The installed model the user picked; falls back to the best one Ollama has.
+  const [localChoice, setLocalChoice] = useState<string | null>(null)
+  const localModels = localEngine.status.state === 'ready' ? localEngine.status.models : []
+  const localModel = localChoice && localModels.includes(localChoice) ? localChoice : localModels[0] ?? PREFERRED_LOCAL_MODEL
+  const localReady = localEngine.status.state === 'ready'
+
+  const changeProcessing = (mode: ProcessingMode) => {
+    setProcessing(mode)
+    storeProcessingMode(mode)
+    setFormError(null)
+  }
+
+  // A run that ends may have found Ollama gone (quit, crashed); check again so the panel says so.
+  const wasGenerating = useRef(generating)
+  useEffect(() => {
+    if (wasGenerating.current && !generating && local) void localEngine.refresh()
+    wasGenerating.current = generating
+  }, [generating, local, localEngine.refresh])
+
   const fileInputRef = useRef<HTMLInputElement>(null)
   const showLangField = formats.includes('Language Translation')
 
-  const selectedRefs = (engineMode === 'single' ? [singleModel] : compareModels).map(parseRefKey)
+  const selectedRefs: ModelRef[] = local
+    ? [{ provider: 'ollama', model: localModel }]
+    : (engineMode === 'single' ? [singleModel] : compareModels).map(parseRefKey)
   const usedProviders = [...new Set(selectedRefs.map((r) => r.provider))]
-  const missingKey = usedProviders.find((p) => !hasKey(p, keys)) ?? null
+  const missingKey = local ? null : usedProviders.find((p) => !hasKey(p, keys)) ?? null
+  // Private mode can't use a link: it would be fetched by a cloud service.
+  const linkBlocked = local && inputMode === 'url'
 
   const savedChoice = audienceChoice?.startsWith('saved:')
     ? savedAudiences.find((a) => a.name === audienceChoice.slice(6)) ?? null
@@ -390,6 +426,15 @@ export function LeftPanel({ onGenerate, onStop, generating, onStatusChange }: Pr
     const content = resolveContent()
     const sourceImages = inputMode === 'file' ? images : []
     const url = inputMode === 'url' ? urlValue.trim() : ''
+    if (local && !localReady) {
+      setFormError('Connect the local engine first: follow the setup steps at the top of this panel, or switch to Cloud APIs.')
+      requestAnimationFrame(() => document.getElementById(PROCESSING_ID)?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }))
+      return
+    }
+    if (linkBlocked) {
+      setFormError('Private mode can’t read links: they’re fetched by a cloud service. Paste the page’s text or upload the file instead.')
+      return
+    }
     if (url && !/^(https?:\/\/)?[^\s/]+\.[^\s]{2,}/i.test(url)) {
       setFormError('That doesn’t look like a web address. Paste the full link, starting with https://.')
       return
@@ -411,7 +456,7 @@ export function LeftPanel({ onGenerate, onStop, generating, onStatusChange }: Pr
       openStep(STEP_IDS.audience, () => setAudienceOpen(true))
       return
     }
-    if (engineMode === 'compare' && new Set(compareModels).size < compareModels.length) {
+    if (!local && engineMode === 'compare' && new Set(compareModels).size < compareModels.length) {
       setFormError('Each model in the comparison must be different.')
       openStep(STEP_IDS.engine, () => setEngineOpen(true))
       return
@@ -430,7 +475,8 @@ export function LeftPanel({ onGenerate, onStop, generating, onStatusChange }: Pr
       : null
     onGenerate({
       content, images: sourceImages, url: url || undefined, formats, tone, customSchema, targetLanguage, inputType: inputMode, sourceName, audience,
-      engine: { mode: engineMode, models: selectedRefs, keys },
+      // No keys in Private mode: nothing is sent to a provider.
+      engine: local ? { mode: 'single', models: selectedRefs, keys: {} } : { mode: engineMode, models: selectedRefs, keys },
     })
   }
 
@@ -447,19 +493,25 @@ export function LeftPanel({ onGenerate, onStop, generating, onStatusChange }: Pr
 
   const sourceLabel =
     inputMode === 'file' ? uploadedFile?.name ?? null
-    : inputMode === 'url' ? urlValue.trim() || null
+    : inputMode === 'url' ? (linkBlocked ? null : urlValue.trim() || null)
     : wordCount ? `${wordCount.toLocaleString()} words pasted` : null
 
   const audienceLabel = audience?.name.trim() || null
   // "No specific audience" is a valid choice; only a custom profile without a name is unfinished.
   const audienceReady = audienceChoice === null || !!audience
-  const engineLabel = engineMode === 'single'
-    ? `${providerInfo(selectedRefs[0].provider).name} · ${shortModelId(selectedRefs[0].model)}`
-    : `Comparing ${selectedRefs.length} models`
-  const engineReady = !missingKey
+  const engineLabel = local
+    ? `On-device · ${localModel}`
+    : engineMode === 'single'
+      ? `${providerInfo(selectedRefs[0].provider).name} · ${shortModelId(selectedRefs[0].model)}`
+      : `Comparing ${selectedRefs.length} models`
+  const engineReady = local ? localReady : !missingKey
+  // What the engine step and the review say is missing, if anything.
+  const engineIssue = local
+    ? localEngine.status.state === 'checking' ? null : localReady ? null : 'Local engine not connected'
+    : missingKey ? `${providerInfo(missingKey).name} key needed` : null
   useEffect(() => {
-    onStatusChange?.({ sourceLabel, engineLabel, engineReady })
-  }, [onStatusChange, sourceLabel, engineLabel, engineReady])
+    onStatusChange?.({ sourceLabel, engineLabel, engineReady, local })
+  }, [onStatusChange, sourceLabel, engineLabel, engineReady, local])
 
   const imageReader = images.length ? describeReader(pickImageReader(selectedRefs, keys)) : null
 
@@ -471,6 +523,18 @@ export function LeftPanel({ onGenerate, onStop, generating, onStatusChange }: Pr
         <div className="border-b border-line px-5 pb-4 pt-5">
           <h2 className="font-display text-[19px] font-bold leading-tight text-ink">Source &amp; configuration</h2>
           <p className="mt-1 text-[12.5px] leading-snug text-ink-mute">Five steps, then review and generate. Audience and engine start from defaults.</p>
+        </div>
+
+        {/* Processing mode: decides where the source goes, so it sits above every step. */}
+        <div id={PROCESSING_ID} className="scroll-mt-4 space-y-3 border-b border-line px-5 py-4">
+          <ProcessingModeSwitch mode={processing} onChange={changeProcessing} disabled={generating} />
+          {local ? (
+            <LocalEngineStatus status={localEngine.status} checking={localEngine.checking} model={localModel} onRefresh={() => void localEngine.refresh()} />
+          ) : (
+            <p className="text-[12.5px] leading-snug text-ink-mute">
+              Drafts are written by Groq, Mistral or Gemini. Switch to Private to keep documents on this device.
+            </p>
+          )}
         </div>
 
         <div className="divide-y divide-line">
@@ -492,6 +556,7 @@ export function LeftPanel({ onGenerate, onStop, generating, onStatusChange }: Pr
                   >
                     <Icon className="h-4 w-4" strokeWidth={1.8} />
                     {label}
+                    {local && id === 'url' && <Lock className={`h-3 w-3 ${active ? 'text-paper/60' : 'text-ink-mute'}`} aria-label="off in Private mode" />}
                   </button>
                 )
               })}
@@ -560,7 +625,26 @@ export function LeftPanel({ onGenerate, onStop, generating, onStatusChange }: Pr
             )}
 
             {/* Link */}
-            {inputMode === 'url' && (
+            {linkBlocked && (
+              <div className="sk-rise mt-3 flex items-start gap-3 rounded-xl border border-line bg-white px-4 py-3.5">
+                <Lock className="mt-0.5 h-4 w-4 shrink-0 text-ink-mute" aria-hidden />
+                <div className="min-w-0">
+                  <p className="text-[13.5px] font-semibold text-ink">Links are off in Private mode</p>
+                  <p className="mt-0.5 text-[12.5px] leading-snug text-ink-mute">
+                    Pages are fetched through a cloud reader, so the link would leave this device. Paste the page’s text, or upload it as a file.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => { setInputMode('text'); setFormError(null) }}
+                    className="mt-2 min-h-9 text-[13px] font-medium text-ink underline decoration-ink/30 underline-offset-4 hover:decoration-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink/30"
+                  >
+                    Paste text instead
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {inputMode === 'url' && !linkBlocked && (
               <div className="mt-3">
                 <label className={`flex h-12 items-center gap-3 rounded-xl border border-line bg-white px-4 transition-shadow ${FIELD_FOCUS}`}>
                   <Globe className="h-[18px] w-[18px] shrink-0 text-ink-mute" />
@@ -600,7 +684,7 @@ export function LeftPanel({ onGenerate, onStop, generating, onStatusChange }: Pr
             id={STEP_IDS.outputs}
             n="02"
             title="Outputs"
-            hint="Each format is drafted in parallel. Instructions shape every draft."
+            hint={local ? 'Formats are drafted one at a time on this device. Instructions shape every draft.' : 'Each format is drafted in parallel. Instructions shape every draft.'}
             action={
               <button
                 type="button"
@@ -894,14 +978,18 @@ export function LeftPanel({ onGenerate, onStop, generating, onStatusChange }: Pr
             id={STEP_IDS.engine}
             n="05"
             title="AI engine & provider"
-            hint="Your model, your key."
+            hint={local ? 'Runs on this device through Ollama.' : 'Your model, your key.'}
             collapsible={{
               open: engineOpen,
               onToggle: () => setEngineOpen((v) => !v),
-              summary: missingKey ? `${providerInfo(missingKey).name} key needed` : engineLabel,
-              warn: !!missingKey,
+              summary: engineIssue ?? engineLabel,
+              warn: !!engineIssue,
             }}
           >
+            {local ? (
+              <LocalEngineDetails status={localEngine.status} model={localModel} onModelChange={setLocalChoice} />
+            ) : (
+            <>
             <div role="radiogroup" aria-label="Engine mode" className="grid grid-cols-2 gap-1 rounded-xl border border-line bg-white p-1">
               {([['single', 'Single provider'], ['compare', 'Compare models']] as const).map(([mode, label]) => {
                 const active = engineMode === mode
@@ -977,6 +1065,8 @@ export function LeftPanel({ onGenerate, onStop, generating, onStatusChange }: Pr
                 />
               ))}
             </div>
+            </>
+            )}
           </Step>
         </div>
 
@@ -991,7 +1081,7 @@ export function LeftPanel({ onGenerate, onStop, generating, onStatusChange }: Pr
               missing={outputCount === 0}
             />
             <SummaryCell label="Voice" value={`${toneLabel(tone)}${audienceLabel ? ` · ${audienceLabel}` : ''}${showLangField ? ` · ${targetLanguage}` : ''}`} />
-            <SummaryCell label="Engine" value={missingKey ? `${providerInfo(missingKey).name} key needed` : engineLabel} missing={!!missingKey} />
+            <SummaryCell label="Engine" value={engineIssue ?? engineLabel} missing={!!engineIssue} />
           </dl>
         </div>
       </div>
@@ -1018,13 +1108,17 @@ export function LeftPanel({ onGenerate, onStop, generating, onStatusChange }: Pr
         ) : (
           <button
             onClick={handleGenerate}
-            className="relative flex h-12 w-full items-center justify-center gap-3 overflow-hidden rounded-xl bg-ink text-[15.5px] font-semibold text-paper transition-[transform,background-color] duration-200 hover:bg-ink-soft focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-matcha active:scale-[0.99]"
+            // A disconnected local engine can't write anything; the setup card above says what to do.
+            disabled={local && !localReady}
+            className="relative flex h-12 w-full items-center justify-center gap-3 overflow-hidden rounded-xl bg-ink text-[15.5px] font-semibold text-paper transition-[transform,background-color] duration-200 hover:bg-ink-soft focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-matcha active:scale-[0.99] disabled:cursor-not-allowed disabled:bg-white disabled:text-[14px] disabled:font-medium disabled:text-ink-mute disabled:ring-1 disabled:ring-inset disabled:ring-line disabled:active:scale-100"
           >
+            {local && <Lock className={`h-4 w-4 ${localReady ? 'text-matcha' : ''}`} aria-hidden />}
             <span>
-              {engineMode === 'compare' ? `Compare ${selectedRefs.length} models`
+              {local && !localReady ? (localEngine.status.state === 'checking' ? 'Looking for the local engine…' : 'Connect the local engine to generate')
+                : !local && engineMode === 'compare' ? `Compare ${selectedRefs.length} models`
                 : outputCount > 1 ? `Generate ${outputCount} drafts` : 'Generate draft'}
             </span>
-            <span className="hidden items-center gap-1 text-[12px] font-medium text-paper/70 sm:flex" aria-hidden>
+            <span className={`hidden items-center gap-1 text-[12px] font-medium text-paper/70 ${local && !localReady ? '' : 'sm:flex'}`} aria-hidden>
               <kbd className="rounded border border-paper/25 px-1.5 py-0.5 font-sans">{isMac ? '⌘' : 'Ctrl'}</kbd>
               <kbd className="rounded border border-paper/25 px-1.5 py-0.5 font-sans">↵</kbd>
             </span>

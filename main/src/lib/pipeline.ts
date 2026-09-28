@@ -7,10 +7,17 @@
  * In comparison mode every selected model gets its own full set of format
  * nodes, all running concurrently (Promise.allSettled). Each node calls the
  * provider directly with the user's own key (lib/providers.ts).
+ *
+ * On the on-device engine (Private mode) the format nodes run one at a time, since
+ * they share one GPU, and each draft streams to the canvas through `onDraft`.
  */
 
-import { abortError, chat, isAbortError, OwnKeyError, requestSignal, type ApiKeys, type ImageInput, type ModelRef, type ProviderId } from './providers'
+import {
+  abortError, chat, isAbortError, isLocal, OwnKeyError, requestSignal,
+  type ApiKeys, type CloudProviderId, type ImageInput, type ModelRef, type ProviderId,
+} from './providers'
 import { describeReader, pickImageReader, readImages } from './ingest'
+import { LOCAL_SOURCE_CHARS } from './local'
 
 export type OutputFormat =
   | 'Video'
@@ -54,6 +61,9 @@ export interface EngineConfig {
   keys: ApiKeys
 }
 
+/** Private mode: the run's model is the user's own Ollama, and nothing is sent off the device. */
+export const isLocalEngine = (engine: EngineConfig) => engine.models.some(isLocal)
+
 export interface PipelineInput {
   content: string          // source text or file-extracted text (may be empty when images or a link carry the source)
   images?: ImageInput[]
@@ -66,6 +76,11 @@ export interface PipelineInput {
   engine: EngineConfig
   /** Aborting it stops the run: drafts already written come back, the rest come back `stopped`. */
   signal?: AbortSignal
+  /**
+   * Streaming engines only: called with a `live` result as each draft is written, then once more with
+   * its final result. Drafts that never started streaming only come back in the run's output.
+   */
+  onDraft?: (ref: ModelRef, result: FormatResult) => void
 }
 
 export interface FormatResult {
@@ -75,8 +90,13 @@ export interface FormatResult {
   error?: string
   model?: string           // the model id the provider reports for this draft
   provider?: ProviderId
-  /** The run was stopped before this draft was written. */
+  /**
+   * The run was stopped before this draft was finished. `output` is empty, or on a streaming engine
+   * the text written up to the stop.
+   */
   stopped?: boolean
+  /** Still streaming: `output` is the text so far. */
+  live?: boolean
 }
 
 /** One model's full set of drafts. */
@@ -123,7 +143,11 @@ async function readUrl(raw: string, signal?: AbortSignal): Promise<string> {
 
 async function ingestNode(input: PipelineInput): Promise<{ text: string; readBy: string | null }> {
   const parts = [input.content.trim()]
-  if (input.url?.trim()) parts.push(await readUrl(input.url, input.signal))
+  if (input.url?.trim()) {
+    // Links are fetched through Jina Reader, a cloud service; the workspace blocks them in Private mode too.
+    if (isLocalEngine(input.engine)) throw new Error('Links are read through a cloud service, so Private mode can’t use them. Paste the page’s text instead.')
+    parts.push(await readUrl(input.url, input.signal))
+  }
   let readBy: string | null = null
   if (input.images?.length) {
     const read = await readImages(input.images, pickImageReader(input.engine.models, input.engine.keys), input.engine.keys, input.signal)
@@ -153,12 +177,15 @@ function parseNode(raw: string): string {
 /**
  * Characters of source each provider gets per draft. Groq's free tier allows 8,000 tokens a
  * minute across prompt and draft, so one request must stay well under that; Mistral and
- * Gemini take far more.
+ * Gemini take far more. The on-device engine is held to a 4,096-token window (lib/local.ts).
  */
-const SOURCE_BUDGET: Record<ProviderId, number> = { groq: 12_000, mistral: 60_000, gemini: 200_000 }
+const SOURCE_BUDGET: Record<ProviderId, number> = { groq: 12_000, mistral: 60_000, gemini: 200_000, ollama: LOCAL_SOURCE_CHARS }
 
-/** Parallel drafts per provider. More than this only trips per-minute limits sooner. */
-const CONCURRENCY: Record<ProviderId, number> = { groq: 2, mistral: 2, gemini: 3 }
+/**
+ * Parallel drafts per provider. More than this only trips per-minute limits sooner. The on-device
+ * engine writes one at a time: parallel requests on one GPU each need their own context memory.
+ */
+const CONCURRENCY: Record<ProviderId, number> = { groq: 2, mistral: 2, gemini: 3, ollama: 1 }
 
 const SAMPLE_WINDOWS = 6
 
@@ -396,33 +423,53 @@ async function formatNode(
   input: PipelineInput,
   ref: ModelRef,
 ): Promise<FormatResult> {
-  try {
-    if (format === 'Language Translation') {
-      const { text, model } = await translateNode(parsedSource, input, ref)
-      return { format, output: text, status: 'success', model, provider: ref.provider }
-    }
-    const { system, user } = buildPrompt(format, parsedSource, input.tone, input.customSchema ?? '', input.targetLanguage)
-    const result = await chat(
-      ref,
-      [
-        { role: 'system', content: system + audienceInstruction(input.audience) },
-        { role: 'user', content: user },
-      ],
-      input.engine.keys,
-      { maxTokens: 2048, temperature: 0.72, signal: input.signal },
-    )
-    return { format, output: result.content, status: 'success', model: result.model, provider: ref.provider }
-  } catch (err) {
-    // A failing own key stops the whole run so the user can choose; it is not one draft's error.
-    if (err instanceof OwnKeyError) throw err
-    if (isAbortError(err)) return { format, output: '', status: 'error', error: 'Stopped before this draft was written.', stopped: true }
-    return {
-      format,
-      output: '',
-      status: 'error',
-      error: err instanceof Error ? err.message : String(err),
+  // A streaming engine shows the draft as it's written; `partial` is what a stop leaves on the canvas.
+  let partial = ''
+  const onText = input.onDraft && isLocal(ref)
+    ? (text: string) => {
+        partial = text
+        input.onDraft!(ref, { format, output: text, status: 'success', model: ref.model, provider: ref.provider, live: true })
+      }
+    : undefined
+
+  const write = async (): Promise<FormatResult> => {
+    try {
+      if (format === 'Language Translation') {
+        const { text, model } = await translateNode(parsedSource, input, ref, onText)
+        return { format, output: text, status: 'success', model, provider: ref.provider }
+      }
+      const { system, user } = buildPrompt(format, parsedSource, input.tone, input.customSchema ?? '', input.targetLanguage)
+      const result = await chat(
+        ref,
+        [
+          { role: 'system', content: system + audienceInstruction(input.audience) },
+          { role: 'user', content: user },
+        ],
+        input.engine.keys,
+        { maxTokens: 2048, temperature: 0.72, signal: input.signal, onText },
+      )
+      return { format, output: result.content, status: 'success', model: result.model, provider: ref.provider }
+    } catch (err) {
+      // A failing own key stops the whole run so the user can choose; it is not one draft's error.
+      if (err instanceof OwnKeyError) throw err
+      if (isAbortError(err)) {
+        // Stopped mid-stream: the text so far stays, frozen where it stopped.
+        if (partial.trim()) return { format, output: partial, status: 'success', stopped: true, model: ref.model, provider: ref.provider }
+        return { format, output: '', status: 'error', error: 'Stopped before this draft was written.', stopped: true }
+      }
+      return {
+        format,
+        output: '',
+        status: 'error',
+        error: err instanceof Error ? err.message : String(err),
+      }
     }
   }
+
+  const result = await write()
+  // Replaces the live copy on the canvas. Drafts that never streamed arrive with the run's output instead.
+  if (partial) input.onDraft?.(ref, result)
+  return result
 }
 
 // ─── Node: Translate ─────────────────────────────────────────────────────────
@@ -432,7 +479,7 @@ async function formatNode(
  * (Indic scripts take 2–4× the tokens of English), so a chunk must leave its translation room
  * inside TRANSLATION_MAX_TOKENS.
  */
-const TRANSLATION_CHUNK: Record<ProviderId, number> = { groq: 2_500, mistral: 4_000, gemini: 8_000 }
+const TRANSLATION_CHUNK: Record<ProviderId, number> = { groq: 2_500, mistral: 4_000, gemini: 8_000, ollama: 1_200 }
 const TRANSLATION_MAX_TOKENS = 6_000
 /** Below this a chunk that still overflows is sent as it is, rather than split again. */
 const MIN_SPLIT_CHARS = 300
@@ -457,8 +504,11 @@ function chunkText(text: string, size: number): string[] {
  * Translates the whole source, not a sample: chunk by chunk in order, joined back together.
  * A chunk whose translation hits the output limit is halved and retried, so nothing is cut off.
  */
-async function translateNode(source: string, input: PipelineInput, ref: ModelRef): Promise<{ text: string; model: string }> {
+async function translateNode(source: string, input: PipelineInput, ref: ModelRef, onText?: (text: string) => void): Promise<{ text: string; model: string }> {
   let model = ref.model
+  // The translation finished so far, in order; a streaming chunk shows after it.
+  let written = ''
+  const stream = onText && ((text: string) => onText(written ? `${written}\n\n${text}` : text))
   const translate = async (chunk: string): Promise<string> => {
     const { system, user } = buildPrompt('Language Translation', chunk, input.tone, input.customSchema ?? '', input.targetLanguage)
     const result = await chat(
@@ -468,10 +518,13 @@ async function translateNode(source: string, input: PipelineInput, ref: ModelRef
         { role: 'user', content: user },
       ],
       input.engine.keys,
-      { maxTokens: TRANSLATION_MAX_TOKENS, temperature: 0.2, signal: input.signal },
+      { maxTokens: TRANSLATION_MAX_TOKENS, temperature: 0.2, signal: input.signal, onText: stream },
     )
     model = result.model
-    if (!result.truncated || chunk.length < MIN_SPLIT_CHARS) return result.content
+    if (!result.truncated || chunk.length < MIN_SPLIT_CHARS) {
+      written = written ? `${written}\n\n${result.content}` : result.content
+      return result.content
+    }
     const halves = chunkText(chunk, Math.ceil(chunk.length / 2))
     const parts: string[] = []
     for (const half of halves) parts.push(await translate(half))
@@ -494,7 +547,7 @@ async function translateNode(source: string, input: PipelineInput, ref: ModelRef
 export type RefineContext = 'draft' | 'full'
 
 /** The small, fast model each provider routes with; the draft itself is still refined by the model that wrote it. */
-const ROUTER_MODEL: Record<ProviderId, string> = {
+const ROUTER_MODEL: Record<CloudProviderId, string> = {
   groq: 'openai/gpt-oss-20b',
   mistral: 'mistral-small-latest',
   gemini: 'gemini-3.5-flash-lite',
@@ -517,7 +570,7 @@ If unsure, answer SOURCE. Reply with exactly one word: DRAFT or SOURCE.`
  * since sending the source costs tokens but leaving it out can cost accuracy. OwnKeyError and a
  * stop are thrown, as in regenerateFormat.
  */
-export async function routeRefinement(refinement: string, format: OutputFormat, provider: ProviderId, keys: ApiKeys, signal?: AbortSignal): Promise<RefineContext> {
+export async function routeRefinement(refinement: string, format: OutputFormat, provider: CloudProviderId, keys: ApiKeys, signal?: AbortSignal): Promise<RefineContext> {
   // The router's own signal: the user's stop cancels it, and so does the router finishing or timing out,
   // so a slow classification never keeps retrying in the background.
   const own = new AbortController()
@@ -560,7 +613,8 @@ export async function routeRefinement(refinement: string, format: OutputFormat, 
 /**
  * Rewrites one draft with the user's instruction. Other failures come back as an error result
  * holding the unchanged draft; OwnKeyError (the user decides whether the shared keys take over)
- * and a stop through `signal` are thrown instead.
+ * and a stop through `signal` are thrown instead. On the on-device engine the new draft streams
+ * through `onText`.
  */
 export async function regenerateFormat(
   format: OutputFormat,
@@ -571,13 +625,24 @@ export async function regenerateFormat(
   keys: ApiKeys,
   audience?: Audience | null,
   signal?: AbortSignal,
+  onText?: (text: string) => void,
 ): Promise<FormatResult> {
   try {
-    // Route first: draft-only refinements skip the source entirely. With no source there is nothing to route.
-    const context: RefineContext = originalSource.trim() ? await routeRefinement(refinement, format, ref.provider, keys, signal) : 'draft'
+    let context: RefineContext
+    let sourceRoom: number
+    if (ref.provider === 'ollama') {
+      // No router: it is a cloud call. The draft and its rewrite already fill most of the 4,096-token
+      // window, so the source goes in only when a useful share of it still fits.
+      sourceRoom = LOCAL_SOURCE_CHARS - currentOutput.length
+      context = originalSource.trim() && sourceRoom >= 1_500 ? 'full' : 'draft'
+    } else {
+      // Route first: draft-only refinements skip the source entirely. With no source there is nothing to route.
+      context = originalSource.trim() ? await routeRefinement(refinement, format, ref.provider, keys, signal) : 'draft'
+      sourceRoom = Math.max(4_000, SOURCE_BUDGET[ref.provider] - currentOutput.length)
+    }
     // The source shares the provider's per-request budget with the draft being refined.
     const sourceBlock = context === 'full'
-      ? `Original source:\n${fitSource(originalSource, Math.max(4_000, SOURCE_BUDGET[ref.provider] - currentOutput.length))}\n\n`
+      ? `Original source:\n${fitSource(originalSource, sourceRoom)}\n\n`
       : ''
     const result = await chat(
       ref,
@@ -597,7 +662,7 @@ export async function regenerateFormat(
       ],
       keys,
       // A refined translation is rewritten whole, so it needs the translation's room, not a draft's.
-      { maxTokens: format === 'Language Translation' ? TRANSLATION_MAX_TOKENS : 2048, temperature: 0.65, signal },
+      { maxTokens: format === 'Language Translation' ? TRANSLATION_MAX_TOKENS : 2048, temperature: 0.65, signal, onText },
     )
     return { format, output: result.content, status: 'success', model: result.model, provider: ref.provider }
   } catch (err) {
@@ -667,8 +732,9 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineOutput>
 
     const smallest = Math.min(...input.engine.models.map((r) => SOURCE_BUDGET[r.provider]))
     const sampled = formatsToRun.some((f) => f !== 'Language Translation')
+    const local = isLocalEngine(input.engine)
     const sourceNote = sampled && parsedSource.length > smallest
-      ? `The source is ${WORDS.format(wordCount(parsedSource))} words, more than ${input.engine.models.length > 1 ? 'some of these models' : 'this model'} can take in one request, so the drafts were written from passages spread across the whole document (about ${WORDS.format(wordCount(fitSource(parsedSource, smallest)))} words)${formatsToRun.includes('Language Translation') ? '. The translation covers the full text' : ''}. Gemini models read much longer sources.`
+      ? `The source is ${WORDS.format(wordCount(parsedSource))} words, more than ${local ? 'the on-device engine' : input.engine.models.length > 1 ? 'some of these models' : 'this model'} can take in one request, so the drafts were written from passages spread across the whole document (about ${WORDS.format(wordCount(fitSource(parsedSource, smallest)))} words)${formatsToRun.includes('Language Translation') ? '. The translation covers the full text' : ''}. ${local ? 'Private mode holds each request to a 4,096-token window so the model fits in 8 GB of GPU memory; Cloud mode reads much longer sources.' : 'Gemini models read much longer sources.'}`
       : null
 
     return { parsedSource, runs, durationMs: Date.now() - t0, imageReadBy: ingested.readBy, sourceNote }

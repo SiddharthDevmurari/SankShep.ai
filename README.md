@@ -6,7 +6,7 @@
 
 **One source in. Every format out.**
 
-A generative AI workspace that turns a single report, article or advisory into executive summaries, social posts, slide decks, video scripts and translations, all drafted in parallel, then refined in plain language.
+A generative AI workspace that turns a single report, article or advisory into executive summaries, social posts, slide decks, video scripts and translations, all drafted in parallel, then refined in plain language. For documents that can't leave the building, **Private mode** does the whole job on your own computer.
 
 *Smart India Hackathon 2026 · Problem statement: Gen AI Platform for Automated Content Transformation*
 
@@ -19,7 +19,7 @@ A generative AI workspace that turns a single report, article or advisory into e
 [![Supabase](https://img.shields.io/badge/Supabase-Auth_%2B_Postgres-0f100f?logo=supabase&logoColor=d4ed64)](https://supabase.com)
 [![Vercel](https://img.shields.io/badge/Vercel-Functions-0f100f?logo=vercel&logoColor=d4ed64)](https://vercel.com)
 
-[What it does](#what-it-does) · [Features](#features) · [Quick start](#quick-start) · [How it works](#how-it-works) · [Architecture](#architecture) · [Deploy](#deploy) · [Team](#team)
+[What it does](#what-it-does) · [Private mode](#private-mode-ai-that-never-leaves-your-computer) · [Features](#features) · [Quick start](#quick-start) · [How it works](#how-it-works) · [Architecture](#architecture) · [Deploy](#deploy) · [Team](#team)
 
 </div>
 
@@ -35,6 +35,49 @@ Organisations spend hours turning the same source material into briefs, posts, d
 
 No API keys are needed to start: sign in (or use the demo account) and press Generate.
 
+## Private mode: AI that never leaves your computer
+
+**Sankshep's flagship privacy feature.** Most AI writing tools can only work by sending your document to someone else's servers. Contracts, financial statements, board papers and anything under NDA can't go there. Private mode moves every step onto the user's own machine: the file is read in the browser, and every draft is written by **Qwen 2.5 VL (`qwen2.5vl:7b`) running locally through [Ollama](https://ollama.com)**. No Sankshep server, no AI provider and no API key is involved.
+
+One switch at the top of the workspace sidebar chooses the mode:
+
+| | **Cloud APIs** (fast) | **Private** (on-device) |
+|---|---|---|
+| Who writes the drafts | Groq, Mistral or Gemini | Your own GPU, through Ollama at `localhost:11434` |
+| Your document's text | Sent to the AI provider | **Stays on your computer** |
+| Images and scanned pages | Read by a vision model | **Read by OCR in the browser**, then sent to the model as text |
+| Refining a draft | A cloud router picks the context | **Stays local:** no router call, the draft (and the source, when it fits) goes to the same local model |
+| Links as a source | Fetched through Jina Reader | **Switched off**, because a link can only be fetched by a cloud service |
+| What History saves | A source excerpt and the drafts | **Counts, formats and the model name only,** never the text or file name |
+| How drafts arrive | All formats in parallel | **Streamed** onto the canvas as they're written, one format at a time |
+
+**Built for ordinary laptops.** Every request passes `num_ctx: 4096` and `temperature: 0.3` to Ollama. A 4,096-token window keeps a 7B model's memory inside an 8 GB GPU (larger windows can run such cards out of memory), and the draft length is capped so prompt and draft never overflow the window, which would make Ollama silently drop the start of the document. Formats are written one at a time, since parallel requests on one GPU each need their own context memory.
+
+**Stop means stop.** The run's `AbortController` is wired into the stream: pressing **Stop generating** closes the connection, Ollama stops generating at once, and the half-written draft stays on the canvas, frozen where it stopped and marked as *Stopped mid-draft*.
+
+**Setup, guided in the app.** When Private is chosen, the workspace checks `http://localhost:11434/api/tags` and shows either **● Local engine ready · qwen2.5vl:7b** or a setup card that tells apart the three ways it can fail (Ollama not running, Ollama blocking the site, model not installed) and picks out the step that's left. It re-checks on its own every 10 seconds and whenever you return to the tab; Generate stays disabled until the engine is ready.
+
+### Set up Private mode
+
+1. Install [Ollama](https://ollama.com/download) and open it.
+2. Download the model (about 6 GB, once):
+   ```bash
+   ollama pull qwen2.5vl:7b
+   ```
+   Any installed Qwen 2.5 model is detected; if there are several, pick one in the **AI engine** step.
+3. **Only for the deployed site** (not needed on `localhost`): let the site reach Ollama, then quit and reopen Ollama.
+   ```bash
+   # Windows (PowerShell)
+   setx OLLAMA_ORIGINS "https://sankshep-ai.vercel.app"
+   # macOS
+   launchctl setenv OLLAMA_ORIGINS "https://sankshep-ai.vercel.app"
+   # Linux (run instead of the service)
+   OLLAMA_ORIGINS="https://sankshep-ai.vercel.app" ollama serve
+   ```
+   Naming the site, rather than `*`, keeps other websites you visit from using your local models.
+
+Private mode works in Chrome, Edge and Firefox. Safari doesn't let secure websites reach apps on the same computer, so it needs one of the others (or the app running on `localhost`). If the browser asks whether the site may reach apps on your device, choose **Allow**.
+
 ## Features
 
 ### The workspace
@@ -45,6 +88,7 @@ No API keys are needed to start: sign in (or use the demo account) and press Gen
 
 | | |
 |---|---|
+| **Private mode (on-device AI)** | One switch moves the whole job onto the user's computer: drafts are written by `qwen2.5vl:7b` through a local Ollama, streamed onto the canvas, with nothing sent to Sankshep or any AI provider. See [Private mode](#private-mode-ai-that-never-leaves-your-computer). |
 | **Zero-config AI** | Shared Groq, Gemini and Mistral keys live on the server (`/api/chat`), and a model is already chosen, so the first draft is one click away. Anyone can add their own key in the **AI engine** step instead. |
 | **One source, many formats** | Executive Summary, LinkedIn Post, Twitter/X thread, Video script and storyboard, Slide deck (exports to PowerPoint), Blog Post, Advisory, Infographic brief, Simplified Explanation, and translation into six Indian languages. Or describe a format in your own words. Every selected format is drafted in parallel from the same source. |
 | **Smart generation check (your tokens, respected)** | Tokens cost money on a paid key and run out on a free one, so Sankshep never spends them on a draft you already have. When you press Generate, it compares your selection with the drafts already on the canvas from the same source and settings. If some are there, a prompt says *"Some of these formats have already been generated."* and offers **Generate only new formats** (sends just the new ones; every existing draft stays, edits and refinements included), **Regenerate all**, or **Cancel**. An all-new selection is simply added next to the existing drafts. The new formats show as tabs being written while the others stay readable. |
@@ -52,7 +96,7 @@ No API keys are needed to start: sign in (or use the demo account) and press Gen
 | **Consent-based key fallback** | If your own key fails (rejected, out of quota, rate-limited beyond a short wait, or the provider keeps erroring), nothing switches behind your back. The run pauses and a prompt shows the provider's exact error and asks: *"Would you like to generate this using Sankshep.ai's free API key instead?"* **Use Sankshep Key** re-runs through the shared keys; **Cancel** leaves the workspace idle and sends nothing else. |
 | **Stop mid-generation** | While drafting, Generate becomes **Stop generating** (also in the canvas header, so it works with the sidebar collapsed), and Refine becomes **Stop**. Stopping aborts the requests at once through an `AbortController`; drafts that already finished stay on the canvas, the rest are dropped, and a note says how many were kept. |
 | **Every kind of source** | PDF and DOCX are turned into text in the browser. Scanned PDFs (no text layer) have their first 10 pages read like images. Links are fetched and read as the page's text. |
-| **Image reading** | Images and scanned pages are read by a Gemini or Mistral vision model, or by **on-device OCR** (Tesseract.js) if no vision model is available. |
+| **Image reading** | Images and scanned pages are read by a Gemini or Mistral vision model, or by **on-device OCR** (Tesseract.js) if no vision model is available. In Private mode they are always read by on-device OCR. |
 | **Model comparison** | Run the same brief through up to **3 models** and read the drafts side by side, each with word counts and one-click copy. |
 | **Audience targeting** | The audience is who will read, watch or receive the final content (choosing HR/Sales means the drafts are written to be handed to HR and sales staff). Four presets, or describe your own and **save it to your account** for next time. |
 | **Full-length translation** | Translation covers the whole source, line by line, in chunks, however long the document is. |
@@ -128,6 +172,10 @@ Run these inside `main/`:
 | "Port 8443 is already in use" | Another copy of the dev server is running. Close it, or run `npx vite --port 5173`. |
 | A Mistral model says it isn't available | The Mistral plan behind the key doesn't include that model. Pick `open-mistral-nemo` or another provider. |
 | A long document is slow | Free Groq keys allow about 8,000 tokens a minute; the app waits and retries rather than failing. Gemini handles long sources fastest. Press **Stop generating** at any point to keep what has finished. |
+| "Ollama isn't running on this device" | Open the Ollama app (or run `ollama serve`); the card turns ready by itself within 10 seconds. |
+| "Ollama is running, but it blocks this site" | Set `OLLAMA_ORIGINS` to the site's address as shown in the card, then quit and reopen Ollama. |
+| "Your machine ran out of memory loading qwen2.5vl:7b" | Close other apps using the GPU and generate again. Ollama moves part of the model to the CPU when the GPU is short of memory, which works but writes more slowly. |
+| The first Private draft takes a while to start | The first run loads the model from disk into memory, which can take a minute; later drafts start at once while it stays loaded. |
 | A 400 from `activity_logs` in the browser console | Harmless: the database is missing the optional section 10 columns, so the app retries the insert without them. Run section 10 of `schema.sql` to silence it. |
 
 ## Install the app
@@ -224,19 +272,25 @@ A user's own key goes straight from their browser to the provider. Without one (
 | **Saved audience profiles** | Shown in the Audience step | | | Stored on your account |
 | **Password** | Typed here | **Never sent** | **Never sent** | Salted hash (Supabase Auth) |
 
+This table is for Cloud mode. In **Private mode** the source, uploaded files and drafts never leave the browser and the local Ollama: nothing goes to the Sankshep server or an AI provider, links can't be used, and History stores only counts, formats and the model name (see [Private mode](#private-mode-ai-that-never-leaves-your-computer)).
+
 The full detail is on the in-app [Privacy Policy](main/src/pages/legal/PrivacyPolicyPage.tsx) page (`/privacy-policy`).
 
 ## Architecture
 
-The React app talks to Supabase (auth and data) directly. AI requests go either straight to the provider (user's key) or through one small server function, [`api/chat.ts`](main/api/chat.ts), which holds the shared keys. In development, Vite serves the same function (see `vite.config.ts`).
+The React app talks to Supabase (auth and data) directly. AI requests go either straight to the provider (user's key) or through one small server function, [`api/chat.ts`](main/api/chat.ts), which holds the shared keys. In development, Vite serves the same function (see `vite.config.ts`). In Private mode the only AI request is from the browser to the Ollama on the same computer.
 
 ```mermaid
 flowchart TB
-    subgraph Browser["Browser · React 19 + Vite"]
-        UI["Workspace UI"]
-        PARSE["pdf.js · mammoth · Tesseract.js"]
+    subgraph Device["The user's computer"]
+        subgraph Browser["Browser · React 19 + Vite"]
+            UI["Workspace UI"]
+            PARSE["pdf.js · mammoth · Tesseract.js"]
+        end
+        OLLAMA["Ollama · qwen2.5vl:7b<br/>localhost:11434"]
     end
     UI --- PARSE
+    UI -- "Private mode<br/>streamed, num_ctx 4096" --> OLLAMA
     UI -- "own key" --> P["Groq · Gemini · Mistral"]
     UI -- "shared keys" --> API["/api/chat<br/>Vercel function"]
     API --> P
@@ -251,6 +305,7 @@ flowchart TB
 | Interface | React 19, TypeScript 5.7, Vite 8, Tailwind CSS v4, React Router 7, Motion (animations), Lucide icons |
 | AI pipeline | LangGraph-style node graph in TypeScript: parallel (format × model) nodes, a refine router node, one `AbortController` per run |
 | AI providers | Groq, Google Gemini and Mistral REST APIs; shared keys via a Vercel function |
+| On-device AI | Ollama running `qwen2.5vl:7b`, called from the browser with streamed `/api/generate` (NDJSON) |
 | Documents | pdf.js (PDF), mammoth (DOCX), Tesseract.js (on-device OCR), pptxgenjs (PowerPoint export) |
 | Data & auth | Supabase Auth and Postgres with row-level security |
 | Hosting | Vercel: static site plus the `/api/chat` serverless function (`vercel.json` included) |
@@ -279,6 +334,7 @@ flowchart TB
 - **Signing out always clears the session on this device,** even when Supabase can't be reached.
 - **Shared API keys stay on the server.** They are environment variables read by `/api/chat`; the website's code contains none.
 - **Users' own keys are never persisted,** not to Supabase, logs or browser storage, and are never replaced by the shared keys without the user's say-so.
+- **Private mode keeps documents on the device.** Drafting, refining and image reading all run on the user's computer; the only record that reaches the database is the run's counts, formats and model name. The setup guide recommends allowing only this site in `OLLAMA_ORIGINS`, never `*`.
 
 ### Project structure
 
@@ -290,6 +346,7 @@ main/
 │   ├── lib/
 │   │   ├── pipeline.ts          # Ingest → clean → parallel (format × model) drafts, translation, refine router
 │   │   ├── providers.ts         # Model catalogue, chat client, OwnKeyError, abort signals
+│   │   ├── local.ts             # Private mode: Ollama detection and streamed generation (num_ctx 4096)
 │   │   ├── documents.ts         # PDF / DOCX → text; scanned PDF → page images
 │   │   ├── ingest.ts            # Image → text: vision model or on-device OCR
 │   │   ├── audiences.ts         # Custom audience profiles saved to the account
@@ -310,7 +367,8 @@ main/
 │   │   └── legal/               # Privacy Policy and Terms
 │   ├── workspace/
 │   │   ├── TransformView.tsx    # Sidebar + canvas layout; runs, stops and logs each generation
-│   │   ├── LeftPanel.tsx        # Settings sidebar: source, formats, voice, audience, engine
+│   │   ├── LeftPanel.tsx        # Settings sidebar: processing mode, source, formats, voice, audience, engine
+│   │   ├── LocalEngine.tsx      # Cloud / Private switch, local engine status and setup guide
 │   │   ├── RightPanel.tsx       # Output canvas: drafts, comparison, refine, export
 │   │   ├── KeyConsentDialog.tsx # The "use Sankshep's key instead?" prompt
 │   │   ├── DuplicateFormatsDialog.tsx # The "only new formats / regenerate all" prompt
@@ -356,6 +414,7 @@ Supabase needs no configuration.
 - **Links behind a login** can't be read. Paste the page's text instead.
 - **Long sources on Groq** are drafted from passages spread across the document (translation still covers everything). Pick a Gemini model to have the whole source read.
 - **Free-tier limits:** long documents on free Groq keys take a few minutes, and some Mistral models aren't included in the free plan.
+- **Private mode trades speed and reach for privacy.** Formats are written one at a time, long sources are drafted from passages (about 6,000 characters fit the 4,096-token window), links can't be used, and it needs Ollama on the same computer with a browser other than Safari (or the app on `localhost`). Compare mode isn't available in Private mode.
 - **AI drafts can include facts that aren't in the source.** Check them before use.
 
 ## Team

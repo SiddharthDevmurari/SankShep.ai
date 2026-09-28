@@ -1,17 +1,18 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { AnimatePresence, MotionConfig, motion, useInView } from 'motion/react'
-import { Check, FileText, KeyRound, Square, WandSparkles } from 'lucide-react'
+import { AppWindow, Check, Cloud, Cpu, FileText, KeyRound, Lock, Server, Square, WandSparkles } from 'lucide-react'
 import { ArrowRight, BrandMark, SitePage } from '../components/site/SiteChrome'
 import { ALL_FORMATS, MAX_COMPARE } from '../workspace/LeftPanel'
 
 /*
  * Design read: a features page for people deciding whether Sankshep is worth trying, in the
  * landing page's paper/ink/matcha language. ENERGY 2 / RHYTHM 3 / MOTION 2.
- * The page reads like five short chapters, each with a different composition: a split with a
+ * The page reads like six short chapters, each with a different composition: a split with a
  * setup checklist, a dark band whose tiles take the shape of each format, a switch showing what a
- * repeat Generate sends and keeps, a pinned draft that changes as you scroll, and two small
- * previews you can press. Every visual is a mock of the real
+ * repeat Generate sends and keeps, a pinned draft that changes as you scroll, two small
+ * previews you can press, and a second dark band mapping where a document goes in each processing
+ * mode. Every visual is a mock of the real
  * workspace, labelled as a preview, and uses one example document, so nothing reads as live data.
  * Motion plays once on view (the two previews play when pressed); MotionConfig honours reduced motion.
  */
@@ -24,6 +25,7 @@ const CHAPTERS = [
   { id: 'no-waste', title: 'Your tokens, respected', line: 'New formats are added. Drafts you have are never paid for twice.' },
   { id: 'refine', title: 'Talk to your draft', line: 'Ask for changes the way you’d ask a colleague.' },
   { id: 'your-key', title: 'Your key, your call', line: 'If your own key fails, we ask before switching.' },
+  { id: 'private-mode', title: 'Private mode', line: 'Drafts written on your own computer. Nothing leaves it.' },
 ] as const
 
 const EXAMPLE_FILE = 'solar-policy-report.pdf'
@@ -38,6 +40,7 @@ export default function FeaturesPage() {
         <NoWaste />
         <Refine />
         <YourKey />
+        <PrivateMode />
         <Everyday />
         <Closing />
       </SitePage>
@@ -931,6 +934,180 @@ function StopPreview() {
         </div>
       </div>
     </div>
+  )
+}
+
+/* ─── 06 Private mode (dark band) ────────────────────────────────────────── */
+
+const PRIVATE_FACTS: { title: string; body: string }[] = [
+  { title: 'Drafts on your own GPU', body: 'Qwen 2.5 VL runs through Ollama. The page talks to it at localhost:11434, straight from your browser, with no server in between and no API key.' },
+  { title: 'Scans read in the browser', body: 'Images and scanned pages are read with on-device OCR, then passed to the model as text. That keeps each request small and fast.' },
+  { title: 'History without the text', body: 'A private run records counts, formats and the model name. The source, the file name and every draft stay off the database.' },
+  { title: 'Fits an 8 GB laptop GPU', body: 'Each request is held to a 4,096-token window, so a 7B model runs on an ordinary laptop, one draft at a time.' },
+]
+
+function PrivateMode() {
+  return (
+    <section id="private-mode" className="scroll-mt-28 bg-ink text-paper">
+      <div className="mx-auto max-w-[1200px] px-5 py-20 sm:px-8 lg:py-28">
+        <div className="grid grid-cols-1 gap-14 lg:grid-cols-[minmax(0,5fr)_minmax(0,6fr)] lg:items-center lg:gap-20">
+          <motion.div {...fadeUp}>
+            <ChapterLabel n={6} dark>Private mode</ChapterLabel>
+            <h2 className="font-headline mt-5 text-[clamp(2.6rem,5vw,4.2rem)]">
+              Your documents <Accent dark>never leave</Accent> your computer.
+            </h2>
+            <p className="mt-6 text-[18px] font-medium leading-snug text-paper">
+              Most AI writing tools only work by sending your document to someone else’s servers. Sankshep can do the whole job on your own
+              machine.
+            </p>
+            <p className="mt-4 max-w-[52ch] text-[16px] leading-[1.75] text-paper/75">
+              Switch the workspace to Private and every draft is written by Qwen 2.5 VL, running locally through Ollama. Drafts stream onto
+              the canvas as they’re written, Stop freezes them exactly where they are, and refining a draft stays on your machine too.
+              Links are switched off in this mode, because a link can only be fetched by a cloud service.
+            </p>
+            <WhyItMatters dark>
+              legal, finance and government teams can finally use AI on the documents they need it for most: the ones that can’t be uploaded
+              anywhere.
+            </WhyItMatters>
+          </motion.div>
+          <DataPathPreview />
+        </div>
+
+        <dl className="mt-16 grid grid-cols-1 gap-x-10 sm:grid-cols-2 lg:grid-cols-4">
+          {PRIVATE_FACTS.map((item, i) => (
+            <motion.div
+              key={item.title}
+              initial={{ opacity: 0, y: 14 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, margin: '-60px' }}
+              transition={{ duration: 0.55, delay: i * 0.06, ease: EASE }}
+              className="border-t border-paper/15 py-6"
+            >
+              <dt className="text-[16px] font-semibold text-paper">{item.title}</dt>
+              <dd className="mt-2 text-[14.5px] leading-relaxed text-paper/70">{item.body}</dd>
+            </motion.div>
+          ))}
+        </dl>
+      </div>
+    </section>
+  )
+}
+
+type PathMode = 'cloud' | 'local'
+
+/**
+ * Where a document goes in each mode, as a map: the dashed line is the user's computer. Private lights
+ * the path to Ollama inside it; Cloud lights the path out to Sankshep's server and the provider.
+ */
+function DataPathPreview() {
+  const [mode, setMode] = useState<PathMode>('local')
+  const local = mode === 'local'
+
+  return (
+    <div className="rounded-[28px] border border-paper/15 bg-paper/5 p-3 sm:p-4">
+      <div className="rounded-[20px] bg-white p-4 text-ink sm:p-6">
+        <div className="flex items-center justify-between gap-3">
+          <p className="text-[13px] font-semibold text-ink">Where your document goes</p>
+          <PreviewTag />
+        </div>
+
+        <div role="radiogroup" aria-label="Processing mode" className="mt-4 grid grid-cols-2 gap-1 rounded-full border border-line bg-white p-1">
+          {([['cloud', 'Cloud APIs', Cloud], ['local', 'Private', Lock]] as const).map(([id, label, Icon]) => (
+            <button
+              key={id}
+              type="button"
+              role="radio"
+              aria-checked={mode === id}
+              onClick={() => setMode(id)}
+              className={`flex h-10 items-center justify-center gap-2 rounded-full text-[13.5px] font-medium transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink/30 ${
+                mode === id ? 'bg-ink text-paper' : 'text-ink-soft hover:bg-paper-deep hover:text-ink'
+              }`}
+            >
+              <Icon className={`h-4 w-4 ${mode === id ? 'text-matcha' : ''}`} strokeWidth={1.8} aria-hidden />
+              {label}
+            </button>
+          ))}
+        </div>
+
+        {/* Your computer: the dashed boundary */}
+        <div className="relative mt-6 rounded-2xl border-[1.5px] border-dashed border-ink/25 bg-paper px-2.5 pb-3 pt-7 sm:px-4">
+          <span className="absolute left-3 top-2 text-[11.5px] font-semibold text-ink-soft sm:left-4">Your computer</span>
+          <div className="grid grid-cols-[minmax(0,1fr)_16px_minmax(0,1fr)_16px_minmax(0,1fr)] items-center gap-1 sm:grid-cols-[minmax(0,1fr)_22px_minmax(0,1fr)_22px_minmax(0,1fr)]">
+            <PathNode icon={FileText} label="Your document" sub="PDF, DOCX, scan" on />
+            <PathArrow on />
+            <PathNode icon={AppWindow} label="Sankshep" sub="in your browser" on />
+            <PathArrow on={local} />
+            <PathNode icon={Cpu} label="Ollama" sub="qwen2.5vl:7b" on={local} />
+          </div>
+        </div>
+
+        {/* The way out: only Cloud mode takes it */}
+        <div className="grid grid-cols-[minmax(0,1fr)_16px_minmax(0,1fr)_16px_minmax(0,1fr)] gap-1 px-2.5 sm:grid-cols-[minmax(0,1fr)_22px_minmax(0,1fr)_22px_minmax(0,1fr)] sm:px-4">
+          <span className="col-start-3 flex justify-center py-1.5"><PathArrow on={!local} down /></span>
+        </div>
+        <div className="relative rounded-2xl border border-hair px-2.5 pb-3 pt-7 sm:px-4">
+          <span className="absolute left-3 top-2 text-[11.5px] font-semibold text-ink-soft sm:left-4">The internet</span>
+          {local && (
+            <span className="absolute right-3 top-2 rounded-md bg-matcha px-2 py-0.5 text-[11.5px] font-semibold text-ink sm:right-4">Nothing sent</span>
+          )}
+          <div className="grid grid-cols-[minmax(0,1fr)_16px_minmax(0,1fr)_16px_minmax(0,1fr)] items-center gap-1 sm:grid-cols-[minmax(0,1fr)_22px_minmax(0,1fr)_22px_minmax(0,1fr)]">
+            <span />
+            <span />
+            <PathNode icon={Server} label="Sankshep server" sub="shared keys" on={!local} />
+            <PathArrow on={!local} />
+            <PathNode icon={Cloud} label="AI provider" sub="Groq, Mistral, Gemini" on={!local} />
+          </div>
+        </div>
+
+        <p className="mt-4 flex items-start gap-2.5 text-[13px] leading-snug text-ink-soft" aria-live="polite">
+          {local ? (
+            <>
+              <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-green-600" aria-hidden />
+              <span><span className="font-semibold text-ink">Local engine ready · qwen2.5vl:7b.</span> The document is read, drafted and refined inside the dashed line.</span>
+            </>
+          ) : (
+            <>
+              <Cloud className="mt-0.5 h-4 w-4 shrink-0 text-ink-mute" aria-hidden />
+              <span><span className="font-semibold text-ink">Fastest, on any device.</span> The text crosses to Sankshep’s server and the AI provider to be drafted.</span>
+            </>
+          )}
+        </p>
+      </div>
+    </div>
+  )
+}
+
+function PathNode({ icon: Icon, label, sub, on }: { icon: typeof FileText; label: string; sub: string; on: boolean }) {
+  return (
+    <div
+      className={`flex min-w-0 flex-col items-center gap-1.5 rounded-xl border px-1.5 py-2.5 text-center transition-[opacity,border-color,background-color] duration-500 sm:px-2.5 ${
+        on ? 'border-ink/20 bg-white' : 'border-hair bg-transparent opacity-40'
+      }`}
+    >
+      <span className={`grid h-8 w-8 place-items-center rounded-lg transition-colors duration-500 ${on ? 'bg-ink text-matcha' : 'bg-paper-deep text-ink-mute'}`}>
+        <Icon className="h-4 w-4" strokeWidth={1.8} aria-hidden />
+      </span>
+      {/* Phones get the name only, wrapped; the detail line needs the wider layout. */}
+      <span className="w-full break-words text-[11.5px] font-semibold leading-tight text-ink [text-wrap:balance] sm:truncate sm:text-[12.5px]">{label}</span>
+      <span className="hidden w-full truncate text-[11px] leading-tight text-ink-soft sm:block">{sub}</span>
+    </div>
+  )
+}
+
+function PathArrow({ on, down }: { on: boolean; down?: boolean }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      aria-hidden
+      className={`mx-auto h-4 w-4 transition-colors duration-500 ${down ? 'rotate-90' : ''} ${on ? 'text-ink' : 'text-ink/15'}`}
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M5 12h14M13 6l6 6-6 6" />
+    </svg>
   )
 }
 

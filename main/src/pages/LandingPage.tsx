@@ -160,7 +160,7 @@ function Hero() {
           </div>
           <div className="mt-8 flex items-center gap-5 text-[13px] text-ink-soft">
             <span className="flex items-center gap-1.5"><Check className="h-4 w-4 text-matcha-deep" /> No credit card</span>
-            <span className="flex items-center gap-1.5"><Check className="h-4 w-4 text-matcha-deep" /> Private by default</span>
+            <span className="flex items-center gap-1.5"><Check className="h-4 w-4 text-matcha-deep" /> Fully on-device Private mode</span>
           </div>
         </div>
         <HeroExplainer />
@@ -292,20 +292,65 @@ const STAGES = [
   { icon: Send, title: 'Deliver', desc: 'You get polished, ready-to-share files — with every claim linked back to the source.', tags: ['Deck', 'PDF', 'Word', 'Social'], live: 'Source-linked deliverables exported to you.' },
 ]
 
+/** What each processing mode sends off the user's computer; the rows match the workspace's actual behaviour. */
+const DATA_ROWS: { what: string; cloud: string; local: string }[] = [
+  { what: 'Your document’s text', cloud: 'Sent to the AI provider', local: 'Stays on your computer' },
+  { what: 'Drafts and refinements', cloud: 'Written by the provider', local: 'Written by your own GPU' },
+  { what: 'Images and scanned pages', cloud: 'Read by a vision model', local: 'Read by OCR in the browser' },
+  { what: 'Saved to History', cloud: 'Excerpt and drafts', local: 'Counts only, never text' },
+]
+
 function Security() {
   const items = [
-    { icon: Shield, title: 'Runs locally & on-premise', body: 'Deploy inside your own perimeter. Nothing leaves your infrastructure.' },
-    { icon: NoTrain, title: 'Zero training on your data', body: 'Your documents are never used to train models. Ever.' },
-    { icon: Check, title: '100% source verification', body: 'Every claim links back to the exact passage in your source.' },
+    { icon: Shield, title: 'Runs on your own machine', body: 'Private mode writes every draft with Qwen 2.5 VL through Ollama on your computer. Nothing is sent to Sankshep or to any AI provider.' },
+    { icon: NoTrain, title: 'Nothing to train on', body: 'No provider receives your text, so no one can keep it, log it or train a model on it.' },
+    { icon: Check, title: 'Fits an everyday laptop', body: 'Each request is held to a 4,096-token window, so a 7B model runs in 8 GB of GPU memory and drafts stream in as they’re written.' },
   ]
   return (
     <section id="security" className="bg-ink text-paper">
       <div className="mx-auto max-w-[1200px] px-5 py-20 sm:px-8 lg:py-28">
-        <div className="max-w-2xl">
-          <span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-matcha">Privacy first</span>
-          <Reveal as="h2" text="Built for teams that care about privacy." accentClass="text-matcha" className="font-display mt-4 text-[clamp(2.2rem,4.8vw,3.6rem)] text-paper" />
+        <div className="grid gap-10 lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)] lg:items-end lg:gap-16">
+          <div>
+            <span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-matcha">Privacy first</span>
+            <Reveal as="h2" text="Your documents never have to *leave your computer.*" accentClass="text-matcha" className="font-display mt-4 text-[clamp(2.2rem,4.8vw,3.6rem)] text-paper" />
+          </div>
+          <div>
+            <p className="text-[16px] leading-relaxed text-paper/75">
+              Contracts, financials, board papers: some documents can’t go to a cloud AI at all. Sankshep’s Private mode is built for them.
+              One switch in the workspace moves every step onto your own machine, from reading the file to writing the last draft.
+            </p>
+            <Link to="/features#private-mode" className="group mt-6 inline-flex items-center gap-1.5 text-[14px] font-medium text-matcha">
+              See how Private mode works <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+            </Link>
+          </div>
         </div>
-        <div className="mt-14 grid gap-px overflow-hidden rounded-2xl border border-hair-dark bg-hair-dark md:grid-cols-3">
+
+        {/* The difference, row by row: what leaves the computer in each mode */}
+        <div className="mt-14 overflow-hidden rounded-2xl border border-hair-dark">
+          <table className="w-full border-collapse text-left text-[14px]">
+            <caption className="sr-only">What leaves your computer in Cloud mode and in Private mode</caption>
+            <thead>
+              <tr className="border-b border-hair-dark text-[12.5px] text-paper/55">
+                <th scope="col" className="px-5 py-3.5 font-medium lg:px-7">What leaves your computer</th>
+                <th scope="col" className="hidden px-5 py-3.5 font-medium sm:table-cell lg:px-7">Cloud mode</th>
+                <th scope="col" className="px-5 py-3.5 font-medium text-matcha lg:px-7">Private mode</th>
+              </tr>
+            </thead>
+            <tbody>
+              {DATA_ROWS.map((r) => (
+                <tr key={r.what} className="border-b border-hair-dark last:border-b-0">
+                  <th scope="row" className="px-5 py-4 font-medium text-paper lg:px-7">{r.what}</th>
+                  <td className="hidden px-5 py-4 text-paper/55 sm:table-cell lg:px-7">{r.cloud}</td>
+                  <td className="px-5 py-4 lg:px-7">
+                    <span className="flex items-start gap-2 text-paper"><Check className="mt-0.5 h-4 w-4 shrink-0 text-matcha" />{r.local}</span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        <div className="mt-6 grid gap-px overflow-hidden rounded-2xl border border-hair-dark bg-hair-dark md:grid-cols-3">
           {items.map(({ icon: Icon, title, body }) => (
             <div key={title} className="bg-ink p-7 lg:p-9">
               <Icon className="h-6 w-6 text-matcha" />

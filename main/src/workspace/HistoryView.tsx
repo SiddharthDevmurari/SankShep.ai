@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useState } from 'react'
-import { ChevronDown, History, ListFilter, RefreshCw } from 'lucide-react'
+import { ChevronDown, History, ListFilter, Lock, RefreshCw } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import { fetchUserGenerations, toDraftEntries, type DraftEntry } from '../lib/activity'
 import { ErrorNotice, SchemaNotice } from './ActivityFeed'
@@ -167,7 +167,7 @@ function HistoryRow({ entry, index }: { entry: DraftEntry; index: number }) {
       </div>
 
       <WordCell label="Input" words={entry.inputWords} estimated={entry.inputEstimated} />
-      <WordCell label="Output" words={entry.outputWords} failed={entry.failed} />
+      <WordCell label="Output" words={entry.outputWords} failed={entry.failed} onDevice={entry.onDevice} />
 
       <p className="col-span-2 text-[13px] text-ink-mute md:col-span-1 md:text-right">
         <time dateTime={entry.createdAt}>
@@ -180,13 +180,17 @@ function HistoryRow({ entry, index }: { entry: DraftEntry; index: number }) {
   )
 }
 
-function WordCell({ label, words, estimated, failed }: { label: string; words: number | null; estimated?: boolean; failed?: boolean }) {
+function WordCell({ label, words, estimated, failed, onDevice }: { label: string; words: number | null; estimated?: boolean; failed?: boolean; onDevice?: boolean }) {
   return (
     <div className="md:text-right">
       <span className="block text-[11.5px] text-ink-mute md:hidden">{label}</span>
       {failed ? (
         <span className="inline-flex items-center gap-1.5 text-[13px] font-medium text-red-700">
           <span className="h-1.5 w-1.5 rounded-full bg-red-600" aria-hidden /> Failed
+        </span>
+      ) : words == null && onDevice ? (
+        <span className="inline-flex items-center gap-1.5 text-[13px] text-ink-mute" title="Written in Private mode. The draft stayed on your device and was never saved here.">
+          <Lock className="h-3.5 w-3.5" aria-hidden /> Kept on device
         </span>
       ) : words == null ? (
         <span className="text-[13px] text-ink-mute">Not recorded</span>

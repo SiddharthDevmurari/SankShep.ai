@@ -1,16 +1,16 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import {
-  ArrowUp, Check, CircleAlert, Copy, Download, Eye, Hourglass, Info, PenLine, ScrollText, Square, WandSparkles, X,
+  ArrowUp, Check, CircleAlert, Copy, Download, Eye, Hourglass, Info, Lock, PenLine, ScrollText, Square, WandSparkles, X,
 } from 'lucide-react'
 import type { OutputFormat, FormatResult, ModelRun } from '../lib/pipeline'
 import { regenerateFormat } from '../lib/pipeline'
-import { logActivity, previewOf, storedModel } from '../lib/activity'
-import { isAbortError, OwnKeyError, providerInfo, withoutKey, type ApiKeys } from '../lib/providers'
+import { logActivity, previewOf, storedModel, withoutContent } from '../lib/activity'
+import { isAbortError, isLocal, OwnKeyError, providerInfo, withoutKey, type ApiKeys } from '../lib/providers'
 import { KeyConsentDialog } from './KeyConsentDialog'
 import type { ToneOption } from '../lib/pipeline'
 import { RichText } from './RichText'
 import { StepNumber, toneLabel, type LeftPanelStatus } from './LeftPanel'
-import type { RunContext } from './TransformView'
+import type { LiveStream, RunContext } from './TransformView'
 import { BrandMark } from '../components/site/SiteChrome'
 import { buildPptx, fileSlug, saveFile, toPlainText, type ExportKind } from '../lib/exporters'
 
@@ -38,6 +38,8 @@ interface Props {
   canvasId: number
   /** Formats being added to the drafts already on the canvas; they show as tabs being written. */
   pendingFormats: OutputFormat[]
+  /** A run on the local engine: drafts stream in one at a time, and `pendingFormats` wait their turn. */
+  stream: LiveStream | null
 }
 
 const EMPTY_QUOTE =
@@ -55,7 +57,7 @@ function countWords(text: string) {
   return t ? t.split(/\s+/).length : 0
 }
 
-export function RightPanel({ runs, runContext, parsedSource, tone, generating, selectedFormats, notice, onDismissNotice, status, onStop, canvasId, pendingFormats }: Props) {
+export function RightPanel({ runs, runContext, parsedSource, tone, generating, selectedFormats, notice, onDismissNotice, status, onStop, canvasId, pendingFormats, stream }: Props) {
   const comparing = runs.length > 1
   const results: Partial<Record<OutputFormat, FormatResult>> = runs[0]?.results ?? {}
   const [activeTab, setActiveTab] = useState<OutputFormat | null>(null)
@@ -85,13 +87,28 @@ export function RightPanel({ runs, runContext, parsedSource, tone, generating, s
   // Merge API results with locally-regenerated overrides
   const merged: Partial<Record<OutputFormat, FormatResult>> = { ...results, ...localResults }
 
+  // A refinement streaming from the local engine; the draft it replaces stays in `merged` until it lands.
+  const [refineLive, setRefineLive] = useState<{ format: OutputFormat; text: string } | null>(null)
+
   // Determine active tab
   const isPending = (f: OutputFormat) => pendingFormats.includes(f)
-  const tabs = selectedFormats.filter((f) => isPending(f) || merged[f] || runs.some((r) => r.results[f]))
+  const drafted = selectedFormats.filter((f) => merged[f] || runs.some((r) => r.results[f]))
+  const tabs = selectedFormats.filter((f) => isPending(f) || drafted.includes(f))
   const currentTab = activeTab && tabs.includes(activeTab) ? activeTab : tabs[0] ?? null
   const pendingTab = !!currentTab && isPending(currentTab)
   const activeResult = currentTab && !pendingTab ? merged[currentTab] : null
-  const output = activeResult?.output ?? ''
+  // Text still being written on this device, for a new draft or a refinement.
+  const liveText = refineLive && refineLive.format === currentTab ? refineLive.text : activeResult?.live ? activeResult.output : null
+  const isLive = liveText !== null
+  const output = liveText ?? activeResult?.output ?? ''
+
+  // While the local engine writes, the canvas follows the draft being written, until the user picks a tab.
+  const [followLive, setFollowLive] = useState(true)
+  const streaming = !!stream
+  useEffect(() => { if (streaming) setFollowLive(true) }, [streaming])
+  useEffect(() => {
+    if (followLive && stream?.writing) setActiveTab(stream.writing)
+  }, [followLive, stream?.writing])
 
   // Grow the editor with its content so the page scrolls, not the textarea.
   useLayoutEffect(() => {
@@ -100,6 +117,15 @@ export function RightPanel({ runs, runContext, parsedSource, tone, generating, s
     el.style.height = 'auto'
     el.style.height = `${el.scrollHeight}px`
   }, [output, currentTab, viewMode, showSource])
+
+  // Streaming text keeps the newest line in view, unless the reader has scrolled up to read.
+  const canvasRef = useRef<HTMLDivElement>(null)
+  const stickToEnd = useRef(true)
+  useEffect(() => { stickToEnd.current = true }, [currentTab])
+  useEffect(() => {
+    const el = canvasRef.current
+    if (isLive && el && stickToEnd.current) el.scrollTop = el.scrollHeight
+  }, [isLive, output])
 
   /* ─── Copy ──────────────────────────────────────────────────────────────── */
   const handleCopy = async () => {
@@ -151,30 +177,36 @@ export function RightPanel({ runs, runContext, parsedSource, tone, generating, s
     refineAbort.current?.abort()
     setKeyConsent(null)
     setAllowedKeys(null)
+    setRefineLive(null)
   }, [canvasId])
   useEffect(() => () => refineAbort.current?.abort(), [])
 
   /** `keys` defaults to the run's (or the ones the user allowed for it); after consent it is those minus the failing provider's. */
   const handleRegenerate = async (keys?: ApiKeys) => {
-    if (!currentTab || !activeResult || !refinement.trim() || regenerating || !runContext) return
+    if (!currentTab || !activeResult || !refinement.trim() || regenerating || !runContext || streaming) return
     const useKeys = keys ?? allowedKeys ?? runContext.engine.keys
+    const ref = runs[0].ref
+    const local = isLocal(ref)
     setRegenerating(true)
     setLocalNotice(null)
     const controller = new AbortController()
     refineAbort.current = controller
     const t0 = Date.now()
+    const tab = currentTab
     let result: FormatResult
     try {
       // Refine with the model and key that wrote the draft (refining is single-model only).
+      // A local rewrite streams over the draft; the draft itself changes only once the rewrite is done.
       result = await regenerateFormat(
-        currentTab,
+        tab,
         activeResult.output,
         refinement,
         parsedSource,
-        runs[0].ref,
+        ref,
         useKeys,
         runContext.audience,
         controller.signal,
+        local ? (text) => { if (!controller.signal.aborted) setRefineLive({ format: tab, text }) } : undefined,
       )
     } catch (err) {
       // A stop keeps the draft and the typed instruction as they were; a failing own key asks first.
@@ -184,26 +216,29 @@ export function RightPanel({ runs, runContext, parsedSource, tone, generating, s
     } finally {
       if (refineAbort.current === controller) refineAbort.current = null
       setRegenerating(false)
+      setRefineLive(null)
     }
     // Stopped after the answer arrived (Stop, or a new run replacing these drafts): drop it.
     if (controller.signal.aborted) return
     const model = storedModel(result)
-    void logActivity({
-      action: 'regenerate',
+    const entry = {
+      action: 'regenerate' as const,
       ...previewOf(parsedSource),
-      formats: [currentTab],
+      formats: [tab],
       tone,
       refinement: refinement.trim() || null,
-      outputs: result.status === 'success' ? { [currentTab]: result.output } : null,
-      models: model ? { [currentTab]: model } : null,
+      outputs: result.status === 'success' ? { [tab]: result.output } : null,
+      models: model ? { [tab]: model } : null,
       status: result.status,
       success_count: result.status === 'success' ? 1 : 0,
       error_count: result.status === 'success' ? 0 : 1,
       error_message: result.error ?? null,
       duration_ms: Date.now() - t0,
-    })
-    // Only update the current tab — all other tabs are untouched
-    setLocalResults((prev) => ({ ...prev, [currentTab]: result }))
+    }
+    // Private mode: History gets the counts, never the text.
+    void logActivity(local ? withoutContent(entry) : entry)
+    // Only update the refined tab — all other tabs are untouched
+    setLocalResults((prev) => ({ ...prev, [tab]: result }))
     setRefinement('')
   }
 
@@ -240,7 +275,8 @@ export function RightPanel({ runs, runContext, parsedSource, tone, generating, s
   )
 
   /* ─── Loading state ─────────────────────────────────────────────────────── */
-  if (generating && tabs.length === 0) {
+  // The local engine's queued tabs exist from the start; its canvas opens with the first streamed words.
+  if (generating && (stream ? drafted.length === 0 : tabs.length === 0)) {
     // Images are read by a vision model or on-device OCR before any writing starts, so they run longer.
     const imageSource = !!status?.sourceLabel && /\.(png|jpe?g|webp)$/i.test(status.sourceLabel)
     return (
@@ -262,7 +298,20 @@ export function RightPanel({ runs, runContext, parsedSource, tone, generating, s
         />
         <div className="flex-1 overflow-y-auto px-6 py-10 sm:px-10">
           <div className="mx-auto w-full max-w-[640px]" aria-live="polite">
-            {imageSource ? (
+            {stream ? (
+              <div className="flex items-start gap-3 rounded-xl bg-matcha/25 px-4 py-3.5 ring-1 ring-matcha-deep/60">
+                <Lock className="mt-0.5 h-4 w-4 shrink-0 text-ink" />
+                <div>
+                  <p className="text-[14px] font-semibold text-ink">
+                    Loading <span className="font-mono text-[13px]">{stream.model}</span> on this device.
+                  </p>
+                  <p className="mt-0.5 text-[13px] leading-relaxed text-ink-soft">
+                    {imageSource ? 'The image is read with on-device OCR first. ' : ''}
+                    The first run loads the model into memory, which can take a minute. Drafts then stream in one at a time, and nothing leaves this computer.
+                  </p>
+                </div>
+              </div>
+            ) : imageSource ? (
               <div className="flex items-start gap-3 rounded-xl bg-matcha/25 px-4 py-3.5 ring-1 ring-matcha-deep/60">
                 <Hourglass className="mt-0.5 h-4 w-4 shrink-0 text-ink" />
                 <div>
@@ -280,7 +329,7 @@ export function RightPanel({ runs, runContext, parsedSource, tone, generating, s
                 <li key={f} className="sk-rise flex items-center gap-4 px-4 py-3.5" style={{ animationDelay: `${i * 60}ms` }}>
                   <span className="w-40 shrink-0 truncate text-[14px] font-medium text-ink">{SHORT_LABEL[f] ?? f}</span>
                   <span className="sk-skeleton h-2 flex-1 rounded-full" />
-                  <span className="text-[12.5px] text-ink-mute">Writing…</span>
+                  <span className="text-[12.5px] text-ink-mute">{!stream ? 'Writing…' : i === 0 ? 'Starts first' : 'Queued'}</span>
                 </li>
               ))}
             </ul>
@@ -332,17 +381,19 @@ export function RightPanel({ runs, runContext, parsedSource, tone, generating, s
                 key={fmt}
                 role="tab"
                 aria-selected={active}
-                aria-busy={writing}
-                onClick={() => setActiveTab(fmt)}
+                aria-busy={writing || !!r?.live}
+                onClick={() => { setActiveTab(fmt); if (streaming) setFollowLive(false) }}
                 className={`flex h-9 shrink-0 items-center gap-2 rounded-full px-4 text-[13px] font-medium transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink/20 ${
                   active
                     ? 'bg-white text-ink shadow-[0_0_0_1px_rgba(231,228,217,0.9),0_2px_8px_-3px_rgba(15,16,15,0.18)]'
                     : writing ? 'text-ink-mute hover:text-ink' : 'text-ink-soft hover:text-ink'
                 }`}
               >
-                {writing
-                  ? <span className="h-3 w-3 animate-spin rounded-full border-[1.5px] border-ink/15 border-t-ink/70" aria-label="being written" />
-                  : r?.status === 'error' && <span className="h-1.5 w-1.5 rounded-full bg-red-600" aria-label="failed" />}
+                {writing && stream
+                  ? <Hourglass className="h-3 w-3 text-ink-mute" aria-label="queued" />
+                  : writing || r?.live
+                    ? <span className="h-3 w-3 animate-spin rounded-full border-[1.5px] border-ink/15 border-t-ink/70" aria-label="being written" />
+                    : r?.status === 'error' && <span className="h-1.5 w-1.5 rounded-full bg-red-600" aria-label="failed" />}
                 {SHORT_LABEL[fmt] ?? fmt}
               </button>
             )
@@ -350,7 +401,13 @@ export function RightPanel({ runs, runContext, parsedSource, tone, generating, s
         </div>
 
         {pendingTab ? (
-          <p className="text-[13px] text-ink-mute">Writing this draft…</p>
+          <p className="text-[13px] text-ink-mute">{stream ? 'Waiting its turn…' : 'Writing this draft…'}</p>
+        ) : isLive ? (
+          <p className="flex items-center gap-2 text-[13px] text-ink-mute" aria-live="off">
+            <Lock className="h-3.5 w-3.5" aria-hidden />
+            {refineLive ? 'Rewriting' : 'Writing'} on this device
+            <span className="font-mono text-[12px] text-ink tabular-nums">{countWords(output).toLocaleString()} words</span>
+          </p>
         ) : comparing ? (
           <p className="text-[13px] text-ink-mute">
             Comparing <span className="font-mono font-medium text-ink tabular-nums">{runs.length}</span> models
@@ -383,8 +440,33 @@ export function RightPanel({ runs, runContext, parsedSource, tone, generating, s
         )}
       </div>
 
+      {/* The local engine: which draft is being written, how many wait, and the stop */}
+      {stream && (
+        <div className="flex shrink-0 flex-wrap items-center gap-x-4 gap-y-2 border-b border-hair bg-paper px-4 py-2.5 lg:px-5" aria-live="polite">
+          <span className="relative h-1 w-16 shrink-0 overflow-hidden rounded-full bg-hair" aria-hidden>
+            <span className="sk-sweep absolute inset-y-0 left-0 w-1/3 rounded-full bg-matcha-deep" />
+          </span>
+          <p className="min-w-0 flex-1 text-[13px] text-ink-soft">
+            <span className="font-semibold text-ink">
+              {stream.writing ? `Writing ${SHORT_LABEL[stream.writing] ?? stream.writing}` : 'Loading the model'}
+            </span>
+            {' · on this device'}
+            {pendingFormats.length > 0 && <>{' · '}{pendingFormats.length} queued</>}
+            <span className="hidden sm:inline">{' · '}one draft at a time</span>
+          </p>
+          <button
+            type="button"
+            onClick={onStop}
+            className="flex min-h-9 items-center gap-2 rounded-lg px-3 text-[12.5px] font-medium text-red-700 ring-1 ring-inset ring-red-200 transition-colors hover:bg-red-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-600"
+          >
+            <Square className="h-2.5 w-2.5 fill-current" aria-hidden />
+            Stop generating
+          </button>
+        </div>
+      )}
+
       {/* Adding formats: say exactly which are being written, that the rest stay, and offer the stop here too */}
-      {pendingFormats.length > 0 && (
+      {!stream && pendingFormats.length > 0 && (
         <div className="flex shrink-0 flex-wrap items-center gap-x-4 gap-y-2 border-b border-hair bg-paper px-4 py-2.5 lg:px-5" aria-live="polite">
           <span className="relative h-1 w-16 shrink-0 overflow-hidden rounded-full bg-hair" aria-hidden>
             <span className="sk-sweep absolute inset-y-0 left-0 w-1/3 rounded-full bg-matcha-deep" />
@@ -408,7 +490,10 @@ export function RightPanel({ runs, runContext, parsedSource, tone, generating, s
       )}
 
       {pendingTab && currentTab ? (
-        <PendingDraft format={currentTab} />
+        <PendingDraft
+          format={currentTab}
+          queue={stream ? (stream.writing === null && pendingFormats[0] === currentTab ? 'loading' : 'queued') : undefined}
+        />
       ) : comparing && currentTab ? (
         <CompareView runs={runs} format={currentTab} />
       ) : (
@@ -429,8 +514,25 @@ export function RightPanel({ runs, runContext, parsedSource, tone, generating, s
 
         {/* Reading canvas */}
         <div className="relative min-w-0 flex-1 bg-paper">
-          <div className="h-full overflow-y-auto px-4 pb-44 pt-8 sm:px-8">
-            {isError ? (
+          <div
+            ref={canvasRef}
+            onScroll={(e) => {
+              const el = e.currentTarget
+              stickToEnd.current = el.scrollHeight - el.scrollTop - el.clientHeight < 160
+            }}
+            className="h-full overflow-y-auto px-4 pb-44 pt-8 sm:px-8"
+          >
+            {activeResult?.stopped && !isLive && output && (
+              <p className="mx-auto mb-4 flex max-w-[900px] items-start gap-2.5 rounded-xl border border-line bg-white px-4 py-3 text-[13px] leading-snug text-ink-soft">
+                <Info className="mt-0.5 h-4 w-4 shrink-0 text-ink-mute" aria-hidden />
+                <span>
+                  <span className="font-semibold text-ink">Stopped mid-draft.</span> This is as far as it got. Refine it below, or generate this format again to write it in full.
+                </span>
+              </p>
+            )}
+            {isLive && currentTab ? (
+              <LiveDraft format={currentTab} content={output} refining={!!refineLive} />
+            ) : isError ? (
               <div className="sk-sheet mx-auto max-w-[720px] rounded-2xl bg-white px-8 py-12 text-center">
                 <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-red-50 text-red-600 ring-1 ring-red-100">
                   <CircleAlert className="h-5 w-5" />
@@ -488,8 +590,10 @@ export function RightPanel({ runs, runContext, parsedSource, tone, generating, s
                 type="text"
                 value={refinement}
                 onChange={(e) => setRefinement(e.target.value)}
-                placeholder={`Refine this ${SHORT_LABEL[currentTab!] ?? currentTab}: “shorter”, “add a risk table”…`}
-                className="min-w-0 flex-1 bg-transparent text-[14.5px] text-ink outline-none placeholder:text-ink-mute"
+                // The local engine writes one thing at a time: refining waits for the run to finish.
+                disabled={streaming}
+                placeholder={streaming ? 'Refine once the on-device engine finishes writing…' : `Refine this ${SHORT_LABEL[currentTab!] ?? currentTab}: “shorter”, “add a risk table”…`}
+                className="min-w-0 flex-1 bg-transparent text-[14.5px] text-ink outline-none placeholder:text-ink-mute disabled:cursor-not-allowed"
               />
               <span className="hidden font-mono text-[10.5px] text-ink-mute md:block">this draft only</span>
               {regenerating ? (
@@ -507,7 +611,7 @@ export function RightPanel({ runs, runContext, parsedSource, tone, generating, s
               ) : (
                 <button
                   type="submit"
-                  disabled={!refinement.trim()}
+                  disabled={!refinement.trim() || streaming}
                   className="flex h-11 shrink-0 items-center gap-2 rounded-[15px] bg-ink px-5 text-[13.5px] font-semibold text-paper transition-all hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-matcha active:translate-y-0 disabled:translate-y-0 disabled:opacity-40"
                 >
                   <ArrowUp className="h-4 w-4" />
@@ -523,21 +627,46 @@ export function RightPanel({ runs, runContext, parsedSource, tone, generating, s
   )
 }
 
-/** A format being added to the canvas: a sheet that says it's being written, in place of the draft. */
-function PendingDraft({ format }: { format: OutputFormat }) {
+/**
+ * A format being added to the canvas: a sheet that says it's being written, in place of the draft.
+ * On the local engine (`queue`) it is waiting its turn, or first in line while the model loads.
+ */
+function PendingDraft({ format, queue }: { format: OutputFormat; queue?: 'loading' | 'queued' }) {
   return (
     <div className="min-h-0 flex-1 overflow-y-auto bg-paper px-4 pb-16 pt-8 sm:px-8" aria-live="polite">
       <div className="sk-sheet mx-auto max-w-[900px] rounded-2xl bg-white px-8 py-10 sm:px-14 sm:py-14">
-        <p className="text-[12.5px] font-semibold text-ink-mute">Writing…</p>
+        <p className="text-[12.5px] font-semibold text-ink-mute">{queue === 'queued' ? 'Queued' : queue === 'loading' ? 'Starts next' : 'Writing…'}</p>
         <h2 className="mt-3 font-display text-[clamp(1.9rem,3vw,2.6rem)] font-bold text-ink">{format}</h2>
         <div className="mt-8 space-y-3" aria-hidden>
           {['w-11/12', 'w-full', 'w-4/5', 'w-full', 'w-2/3'].map((w, i) => (
             <span key={i} className={`sk-skeleton block h-2.5 rounded-full ${w}`} />
           ))}
         </div>
-        <p className="mt-8 text-[13px] text-ink-mute">The other drafts are ready to read, edit and refine while this one is written.</p>
+        <p className="mt-8 text-[13px] text-ink-mute">
+          {queue === 'queued'
+            ? 'The on-device engine writes one draft at a time so it stays within your GPU’s memory. This one starts when the draft ahead of it is done.'
+            : queue === 'loading'
+              ? 'The model is loading into memory. This draft starts streaming as soon as it’s ready.'
+              : 'The other drafts are ready to read, edit and refine while this one is written.'}
+        </p>
       </div>
     </div>
+  )
+}
+
+/** A draft streaming from the local engine: shown as it's written, read-only until it's done. */
+function LiveDraft({ format, content, refining }: { format: OutputFormat; content: string; refining: boolean }) {
+  return (
+    <article aria-busy="true" className="sk-sheet mx-auto max-w-[900px] rounded-2xl bg-white px-8 py-10 sm:px-14 sm:py-14">
+      <p className="flex items-center gap-2 text-[12.5px] font-semibold text-ink-mute">
+        <span className="h-3 w-3 animate-spin rounded-full border-[1.5px] border-ink/15 border-t-ink/70" aria-hidden />
+        {refining ? 'Rewriting on this device…' : 'Writing on this device…'}
+      </p>
+      <h2 className="mt-3 font-display text-[clamp(1.9rem,3vw,2.6rem)] font-bold text-ink">{format}</h2>
+      <div className="sk-live mt-6">
+        <RichText text={content} />
+      </div>
+    </article>
   )
 }
 

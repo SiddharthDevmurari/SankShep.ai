@@ -6,10 +6,10 @@
  *   1. a selected model that reads images
  *   2. a Gemini or Mistral vision model (the user's key or the shared keys)
  *   3. Tesseract OCR in the browser (text only; no API key, nothing uploaded),
- *      also used when the vision model can't be reached
+ *      also used when the vision model can't be reached, and always on the on-device engine
  */
 
-import { chat, hasKey, isAbortError, modelInfo, OwnKeyError, throwIfAborted, type ApiKeys, type ImageInput, type ModelRef } from './providers'
+import { chat, hasKey, isAbortError, isLocal, modelInfo, OwnKeyError, throwIfAborted, type ApiKeys, type ImageInput, type ModelRef } from './providers'
 
 export type ImageReader = { method: 'vision'; ref: ModelRef } | { method: 'ocr' }
 
@@ -22,6 +22,8 @@ const FALLBACK_VISION: ModelRef[] = [
 ]
 
 export function pickImageReader(selected: ModelRef[], keys: ApiKeys): ImageReader {
+  // Private mode: borrowing a cloud vision model would send the image off the device.
+  if (selected.some(isLocal)) return { method: 'ocr' }
   const usable = (ref: ModelRef) => modelInfo(ref)?.kind === 'vision' && hasKey(ref.provider, keys)
   const ref = selected.find(usable) ?? FALLBACK_VISION.find(usable)
   return ref ? { method: 'vision', ref } : { method: 'ocr' }

@@ -123,6 +123,14 @@ export function previewOf(content: string) {
   return { input_preview: content.slice(0, PREVIEW_CHARS), input_chars: content.length, input_words: countWords(content) }
 }
 
+/**
+ * A Private-mode entry: counts, formats, timing and the model stay; every piece of the user's text
+ * (source excerpt, file name, drafts, instructions) is dropped, so none of it reaches the database.
+ */
+export function withoutContent(entry: NewActivity): NewActivity {
+  return { ...entry, input_preview: null, source_name: null, outputs: null, custom_schema: null, refinement: null }
+}
+
 /* ─── Read ──────────────────────────────────────────────────────────────── */
 
 /** Key in `outputs` holding models and word count when the database has no columns for them. Never a format name. */
@@ -211,6 +219,8 @@ export interface DraftEntry {
   inputEstimated: boolean
   outputWords: number | null
   failed: boolean
+  /** Written in Private mode: the draft stayed on the user's device, so only its model is on record. */
+  onDevice: boolean
   tone: string | null
   sourceName: string | null
   createdAt: string
@@ -222,7 +232,7 @@ export interface DraftEntry {
  */
 function splitStoredModel(value: string | null | undefined): { provider: ProviderId | null; model: string | null } {
   if (!value) return { provider: null, model: null }
-  const match = /^(groq|gemini|mistral):(.+)$/.exec(value)
+  const match = /^(groq|gemini|mistral|ollama):(.+)$/.exec(value)
   if (match) return { provider: match[1] as ProviderId, model: match[2] }
   const owner = PROVIDERS.find((p) => p.models.some((m) => m.id === value))
   return { provider: owner?.id ?? 'groq', model: value }
@@ -233,15 +243,19 @@ export function toDraftEntries(log: ActivityLog): DraftEntry[] {
   const estimate = exact == null && log.input_chars ? Math.max(1, Math.round(log.input_chars / CHARS_PER_WORD)) : null
   return log.formats.map((format) => {
     const output = log.outputs?.[format]
+    const stored = splitStoredModel(log.models?.[format])
+    // Private rows keep no drafts; only drafts that were written record a model (see summariseResults).
+    const onDevice = stored.provider === 'ollama' || (!log.outputs && Object.values(log.models ?? {}).some((m) => m.startsWith('ollama:')))
     return {
       key: `${log.id}:${format}`,
       action: log.action,
       format,
-      ...splitStoredModel(log.models?.[format]),
+      ...stored,
       inputWords: exact ?? estimate,
       inputEstimated: exact == null && estimate != null,
       outputWords: output != null ? countWords(output) : null,
-      failed: output == null && log.status !== 'success',
+      failed: onDevice ? !stored.model : output == null && log.status !== 'success',
+      onDevice,
       tone: log.tone,
       sourceName: log.source_name,
       createdAt: log.created_at,
