@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react'
 import { supabase, ADMIN_EMAIL, DEMO_EMAIL } from '../lib/supabase'
-import { logActivity } from '../lib/activity'
+import { fetchMyAccountDisabled, logActivity } from '../lib/activity'
 import { isStrongPassword, PASSWORD_POLICY_MESSAGE } from '../lib/password'
 import type { User } from '@supabase/supabase-js'
 
@@ -17,7 +17,14 @@ export interface AuthUser {
 interface AuthContextValue {
   user: AuthUser | null
   loading: boolean
-  signIn: (email: string, password: string) => Promise<{ error: string | null }>
+  /**
+   * The email of an account an admin disabled while it was signed in here; the sign-in page
+   * explains it. Cleared by clearDisabledNotice.
+   */
+  disabledEmail: string | null
+  clearDisabledNotice: () => void
+  /** `disabled`: the account exists but an admin has disabled it. */
+  signIn: (email: string, password: string) => Promise<{ error: string | null; disabled?: boolean }>
   signUp: (email: string, password: string) => Promise<{ error: string | null }>
   deleteAccount: () => Promise<{ error: string | null }>
   signOut: () => Promise<void>
@@ -35,8 +42,14 @@ function toAuthUser(u: User): AuthUser {
 
 const normaliseEmail = (email: string) => email.trim().toLowerCase()
 
+/** Supabase Auth refuses a disabled (banned) account with code `user_banned`, "User is banned". */
+function isBannedError(err: { code?: string; message?: string }) {
+  return err.code === 'user_banned' || /user is banned/i.test(err.message ?? '')
+}
+
 function friendlyAuthError(message: string): string {
   if (/invalid login credentials/i.test(message)) return 'Incorrect email or password.'
+  if (/user is banned/i.test(message)) return 'This account has been disabled by the administrator.'
 
   // Accounts are active immediately. This only happens if "Confirm email" is
   // still switched on in the Supabase dashboard.
@@ -63,6 +76,12 @@ function networkError(err: unknown): string {
 
 /** How long the first session check may take before the app stops waiting and shows the signed-out state. */
 const SESSION_CHECK_TIMEOUT_MS = 12_000
+
+/**
+ * How often a signed-in tab asks whether its account has been disabled. Disabling ends the account's
+ * sessions, but an access token already issued stays valid for up to an hour; this ends it sooner.
+ */
+const DISABLED_CHECK_MS = 2 * 60_000
 
 /* ─── Context ────────────────────────────────────────────────────────────── */
 
@@ -104,13 +123,41 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [])
 
+  // A signed-in account an admin disables is signed out here: on load, whenever the tab comes back
+  // into view, and every couple of minutes. Only a clear "disabled" answer signs out; a failed check doesn't.
+  const [disabledEmail, setDisabledEmail] = useState<string | null>(null)
+  useEffect(() => {
+    if (!user) return
+    let stopped = false
+    const check = async () => {
+      if (document.visibilityState !== 'visible') return
+      if ((await fetchMyAccountDisabled()) !== true || stopped) return
+      stopped = true
+      setDisabledEmail(user.email)
+      // The account's sessions are already gone on the server; clear this device's copy.
+      await supabase.auth.signOut({ scope: 'local' }).catch(() => {})
+      setUser(null)
+    }
+    void check()
+    const timer = window.setInterval(check, DISABLED_CHECK_MS)
+    document.addEventListener('visibilitychange', check)
+    window.addEventListener('focus', check)
+    return () => {
+      stopped = true
+      window.clearInterval(timer)
+      document.removeEventListener('visibilitychange', check)
+      window.removeEventListener('focus', check)
+    }
+  }, [user])
+
   const signIn = async (email: string, password: string) => {
+    setDisabledEmail(null)
     try {
       const { error } = await supabase.auth.signInWithPassword({
         email: normaliseEmail(email),
         password,
       })
-      if (error) return { error: friendlyAuthError(error.message) }
+      if (error) return { error: friendlyAuthError(error.message), disabled: isBannedError(error) }
     } catch (err) {
       return { error: networkError(err) }
     }
@@ -168,7 +215,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   return (
-    <AuthContext.Provider value={{ user, loading, signIn, signUp, deleteAccount, signOut }}>
+    <AuthContext.Provider value={{ user, loading, disabledEmail, clearDisabledNotice: () => setDisabledEmail(null), signIn, signUp, deleteAccount, signOut }}>
       {children}
     </AuthContext.Provider>
   )

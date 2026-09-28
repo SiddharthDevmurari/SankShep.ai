@@ -51,6 +51,9 @@ export interface AdminUserRow {
   last_sign_in_at: string | null
   generation_count: number
   last_activity_at: string | null
+  /** An admin has disabled the account. Missing until schema.sql section 11 has been run. */
+  is_disabled?: boolean
+  disabled_at?: string | null
 }
 
 export class SchemaMissingError extends Error {
@@ -284,6 +287,31 @@ export async function fetchGlobalActivity(
 export async function adminDeleteUser(userId: string): Promise<void> {
   const { error } = await supabase.rpc('admin_delete_user', { target_user_id: userId })
   if (error) throw new Error(error.message)
+}
+
+/**
+ * Admin only: disables an account (it keeps its data but can't sign in, and is signed out everywhere)
+ * or enables it again. The database refuses it for non-admins and for the admin account itself.
+ */
+export async function adminSetUserDisabled(userId: string, disable: boolean): Promise<void> {
+  const { error } = await supabase.rpc('admin_set_user_disabled', { target_user_id: userId, disable })
+  if (error) {
+    if (isMissingSchemaError(error)) throw new Error('Disabling accounts needs the latest database setup. Run main/supabase/schema.sql in the Supabase SQL Editor, then try again.')
+    throw new Error(error.message)
+  }
+}
+
+/**
+ * Whether an admin has disabled the signed-in account. Null when it can't be told (offline, or a
+ * database without schema.sql section 11), so a failed check never signs anyone out.
+ */
+export async function fetchMyAccountDisabled(): Promise<boolean | null> {
+  try {
+    const { data, error } = await supabase.rpc('my_account_disabled')
+    return error || typeof data !== 'boolean' ? null : data
+  } catch {
+    return null
+  }
 }
 
 /** Admin only: every registered account with usage totals. */

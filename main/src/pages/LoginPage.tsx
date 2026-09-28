@@ -3,7 +3,7 @@ import { Navigate, useNavigate, useLocation, Link } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { DEMO_EMAIL, DEMO_PASSWORD } from '../lib/supabase'
 import { PASSWORD_RULES, isStrongPassword, PASSWORD_POLICY_MESSAGE } from '../lib/password'
-import { Check, Eye, EyeOff } from 'lucide-react'
+import { ArrowUpRight, Check, Eye, EyeOff, UserX } from 'lucide-react'
 import { AnimatePresence, MotionConfig, motion } from 'motion/react'
 import { BrandMark } from '../components/site/SiteChrome'
 
@@ -22,7 +22,7 @@ const field =
   'w-full rounded-lg border border-hair bg-paper px-4 py-3 text-[15px] text-ink outline-none transition-colors placeholder:text-ink-mute/70 hover:border-line focus:border-ink focus:bg-white focus-visible:ring-2 focus-visible:ring-matcha'
 
 export default function LoginPage() {
-  const { user, loading: authLoading, signIn, signUp } = useAuth()
+  const { user, loading: authLoading, signIn, signUp, disabledEmail, clearDisabledNotice } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
   // Only return to a workspace page; anything else in navigation state is ignored.
@@ -35,15 +35,25 @@ export default function LoginPage() {
   const [showPass, setShowPass] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+  // The account an admin disabled: tried here, or signed out of the workspace because of it.
+  const [disabledFor, setDisabledFor] = useState<string | null>(disabledEmail)
+  const clearNotices = () => {
+    setError(null)
+    setDisabledFor(null)
+    clearDisabledNotice()
+  }
 
   const fillDemo = async () => {
     setEmail(DEMO_EMAIL)
     setPassword(DEMO_PASSWORD)
     setMode('login')
-    setError(null)
+    clearNotices()
     setLoading(true)
-    const { error } = await signIn(DEMO_EMAIL, DEMO_PASSWORD)
-    if (error) {
+    const { error, disabled } = await signIn(DEMO_EMAIL, DEMO_PASSWORD)
+    if (disabled) {
+      setDisabledFor(DEMO_EMAIL)
+      setLoading(false)
+    } else if (error) {
       setError(
         /incorrect email or password/i.test(error)
           ? 'The demo account isn’t set up in the database yet. Run main/supabase/reset_accounts.sql in the Supabase SQL Editor.'
@@ -57,7 +67,7 @@ export default function LoginPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setError(null)
+    clearNotices()
     if (mode === 'signup' && !isStrongPassword(password)) {
       setError(PASSWORD_POLICY_MESSAGE)
       return
@@ -65,8 +75,12 @@ export default function LoginPage() {
     setLoading(true)
 
     // Sign-up creates the account and signs in immediately, with no email step.
-    const { error } = mode === 'login' ? await signIn(email, password) : await signUp(email, password)
-    if (error) {
+    const result = mode === 'login' ? await signIn(email, password) : await signUp(email, password)
+    const { error } = result
+    if ('disabled' in result && result.disabled) {
+      setDisabledFor(email.trim())
+      setLoading(false)
+    } else if (error) {
       setError(error)
       setLoading(false)
     } else {
@@ -81,7 +95,7 @@ export default function LoginPage() {
   const switchMode = (next: 'login' | 'signup') => {
     if (next === mode) return
     setMode(next)
-    setError(null)
+    clearNotices()
   }
 
   return (
@@ -257,7 +271,9 @@ export default function LoginPage() {
                 </AnimatePresence>
               </div>
 
-              {error && (
+              {disabledFor ? (
+                <AccountDisabledNotice email={disabledFor} />
+              ) : error && (
                 <motion.div
                   role="alert"
                   initial={{ opacity: 0, y: -4 }}
@@ -310,5 +326,40 @@ export default function LoginPage() {
         </motion.div>
       </main>
     </MotionConfig>
+  )
+}
+
+/** Shown when an admin has disabled the account: what happened, what's kept, and who can undo it. */
+function AccountDisabledNotice({ email }: { email: string }) {
+  return (
+    <motion.div
+      role="alert"
+      initial={{ opacity: 0, y: -4 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.25, ease: EASE }}
+      className="overflow-hidden rounded-xl border border-amber-200 bg-amber-50"
+    >
+      <div className="flex items-start gap-3 px-4 pb-3.5 pt-4">
+        <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-white text-amber-700 ring-1 ring-amber-200" aria-hidden>
+          <UserX className="h-[18px] w-[18px]" strokeWidth={1.8} />
+        </span>
+        <div className="min-w-0">
+          <p className="text-[14.5px] font-semibold text-amber-950">This account has been disabled</p>
+          <p className="mt-1 text-[13.5px] leading-relaxed text-amber-950/80">
+            An administrator has disabled <span className="break-all font-medium text-amber-950">{email}</span>, so it can’t sign in.
+            Your drafts and history are kept. Contact the administrator to have the account enabled again.
+          </p>
+        </div>
+      </div>
+      <div className="flex items-center justify-between gap-3 border-t border-amber-200 bg-white/60 px-4 py-2.5">
+        <span className="text-[12.5px] text-amber-950/70">Once it’s enabled, sign in as usual.</span>
+        <Link
+          to="/contact"
+          className="inline-flex shrink-0 items-center gap-1 text-[13px] font-medium text-ink underline decoration-ink/30 underline-offset-4 hover:decoration-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink"
+        >
+          Contact the admin <ArrowUpRight className="h-3.5 w-3.5" aria-hidden />
+        </Link>
+      </div>
+    </motion.div>
   )
 }

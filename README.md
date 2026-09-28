@@ -104,7 +104,7 @@ Private mode works in Chrome, Edge and Firefox. Safari doesn't let secure websit
 | **Full-length translation** | Translation covers the whole source, line by line, in chunks, however long the document is. |
 | **History & Analytics** | Every draft is logged with its format, provider, model and word counts. Filter your history by format and see usage at a glance. |
 | **Install as an app** | Installable on Android, iPhone, iPad, Mac and Windows from the website itself (a PWA). The landing page shows **Download for Android** or **Download for iOS** on those devices. On phones and tablets, the three-line menu in the top navigation reaches every page. |
-| **Accounts & admin** | Email sign-up with no verification step, a shared demo account, self-service account deletion, and an admin panel for all users and activity. |
+| **Accounts & admin** | Email sign-up with no verification step, a shared demo account, self-service account deletion, and an admin panel for all users and activity. The admin can **disable** an account (it keeps its data but is signed out everywhere and can't sign in; anyone trying is told it's disabled and to contact the admin), **enable** it again, or delete it. |
 
 The public [`/features`](https://sankshep-ai.vercel.app/features) page walks through the main features with interactive previews.
 
@@ -326,7 +326,7 @@ flowchart TB
 | `/workspace` | Transform: configure and generate | Signed in |
 | `/workspace/history` | Every draft, filterable by format | Signed in |
 | `/workspace/analytics` | Totals, format usage, recent drafts | Signed in |
-| `/workspace/admin` | All users and all activity | Admin only |
+| `/workspace/admin` | All users (disable, enable, delete) and all activity | Admin only |
 | `POST /api/chat` | Shared-key AI requests | Server function |
 
 ### Security model
@@ -336,6 +336,7 @@ flowchart TB
 - **Signing out always clears the session on this device,** even when Supabase can't be reached.
 - **Shared API keys stay on the server.** They are environment variables read by `/api/chat`; the website's code contains none.
 - **Users' own keys are never persisted,** not to Supabase, logs or browser storage, and are never replaced by the shared keys without the user's say-so.
+- **Disabled accounts are locked by Supabase Auth itself.** Disabling sets the account's `banned_until`, so sign-in fails with `user_banned` and its sessions can't be refreshed; the account's existing sessions are deleted at the same moment. An access token issued earlier stays valid for up to an hour, so row-level security also refuses new activity from a disabled account, and an open workspace checks `my_account_disabled()` on focus and every two minutes and signs itself out. Only the admin can disable or enable, never the admin account itself, and all of it is checked in the database (`admin_set_user_disabled`).
 - **Private mode keeps documents on the device.** Drafting, refining and image reading all run on the user's computer; the only record that reaches the database is the run's counts, formats and model name. The setup guide recommends allowing only this site in `OLLAMA_ORIGINS`, never `*`.
 
 ### Project structure
@@ -394,10 +395,11 @@ main/
 
 1. Open the [Supabase SQL Editor](https://supabase.com/dashboard/project/onhqpaqqwsdnuxwkxksh/sql/new), paste [`main/supabase/schema.sql`](main/supabase/schema.sql), and run it. This creates `profiles` and `activity_logs`, the row-level security policies, the admin and deletion functions, and the shared demo account `demo@gmail.com` / `Demo@1234`. It is safe to run again.
    - Section 10 adds the `models` and `input_words` columns used by History. It's optional: without them the app keeps that data inside the existing `outputs` column.
+   - Section 11 adds disabling and enabling accounts from the Admin panel. Databases set up before it need the file run once more; until then the Disable button explains that.
 2. Under **Authentication → Sign In / Providers → Email**, turn **Confirm email** off and save. Accounts are created and signed in immediately, and no emails are sent.
 3. To create the admin, paste [`main/supabase/create_admin.sql`](main/supabase/create_admin.sql) into the SQL Editor, replace `CHANGE_ME` with a password of 8+ characters, and run it. Re-run it any time to reset the password. `admin@gmail.com` gets the admin role automatically.
 
-Users can delete their own account from the account menu in the workspace; the admin can delete any account from the Admin panel. The demo and admin accounts can't be deleted.
+Users can delete their own account from the account menu in the workspace; the admin can delete any account from the Admin panel, or disable it instead and enable it again later. The demo and admin accounts can't be deleted, and the admin account can't be disabled. `reset_accounts.sql` re-enables the admin and demo accounts if either was disabled.
 
 ## Deploy
 

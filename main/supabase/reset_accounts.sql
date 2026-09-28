@@ -70,6 +70,7 @@ begin
              email_confirmed_at = coalesce(email_confirmed_at, now()),
              raw_user_meta_data = '{}',   -- drops saved audience profiles
              last_sign_in_at    = null,
+             banned_until       = null,   -- re-enables the account if an admin had disabled it
              updated_at         = now()
        where id = acct_id;
 
@@ -78,9 +79,9 @@ begin
       delete from auth.refresh_tokens where user_id = acct_id::text;
     end if;
 
-    insert into public.profiles (id, email, role, last_sign_in_at)
-    values (acct_id, acct.email, acct.role, null)
-    on conflict (id) do update set role = excluded.role, last_sign_in_at = null;
+    insert into public.profiles (id, email, role, last_sign_in_at, disabled_at)
+    values (acct_id, acct.email, acct.role, null, null)
+    on conflict (id) do update set role = excluded.role, last_sign_in_at = null, disabled_at = null;
   end loop;
 end;
 $$;

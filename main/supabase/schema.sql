@@ -20,6 +20,9 @@ create table if not exists public.profiles (
   last_sign_in_at timestamptz
 );
 
+-- Set while an admin has disabled the account (section 11).
+alter table public.profiles add column if not exists disabled_at timestamptz;
+
 
 -- ─── 2. Activity log: every action a user takes ─────────────────────────────
 
@@ -58,6 +61,18 @@ as $$
   select exists (
     select 1 from public.profiles
     where id = auth.uid() and role = 'admin'
+  );
+$$;
+
+-- True while an admin has disabled the caller's account (section 11). An access token
+-- issued before the account was disabled stays valid until it expires; this closes the gap.
+create or replace function public.my_account_disabled()
+returns boolean
+language sql stable security definer set search_path = ''
+as $$
+  select coalesce(
+    (select u.banned_until > now() from auth.users u where u.id = auth.uid()),
+    false
   );
 $$;
 
@@ -166,11 +181,11 @@ create policy "profiles: read own or admin" on public.profiles
   for select to authenticated
   using (id = auth.uid() or public.is_admin());
 
--- activity_logs: users insert rows only for themselves.
+-- activity_logs: users insert rows only for themselves, and not while their account is disabled.
 drop policy if exists "activity: insert own" on public.activity_logs;
 create policy "activity: insert own" on public.activity_logs
   for insert to authenticated
-  with check (user_id = auth.uid());
+  with check (user_id = auth.uid() and not public.my_account_disabled());
 
 -- activity_logs: users read their own history; admin reads everyone's.
 drop policy if exists "activity: read own or admin" on public.activity_logs;
@@ -185,7 +200,9 @@ revoke all on public.profiles, public.activity_logs from anon;
 
 -- ─── 6. Admin RPC: every user with usage totals ─────────────────────────────
 
-create or replace function public.admin_list_users()
+-- Dropped first: create or replace can't change the columns a function returns.
+drop function if exists public.admin_list_users();
+create function public.admin_list_users()
 returns table (
   id               uuid,
   email            text,
@@ -193,7 +210,9 @@ returns table (
   created_at       timestamptz,
   last_sign_in_at  timestamptz,
   generation_count bigint,
-  last_activity_at timestamptz
+  last_activity_at timestamptz,
+  is_disabled      boolean,
+  disabled_at      timestamptz
 )
 language plpgsql stable security definer set search_path = ''
 as $$
@@ -206,10 +225,13 @@ begin
   return query
     select p.id, p.email, p.role, p.created_at, p.last_sign_in_at,
            count(a.id) filter (where a.action in ('generate', 'regenerate')),
-           max(a.created_at)
+           max(a.created_at),
+           coalesce(u.banned_until > now(), false),
+           p.disabled_at
       from public.profiles p
+      join auth.users u on u.id = p.id
       left join public.activity_logs a on a.user_id = p.id
-     group by p.id
+     group by p.id, u.banned_until
      order by p.created_at desc;
 end;
 $$;
@@ -217,6 +239,8 @@ $$;
 revoke execute on function public.admin_list_users() from public, anon;
 grant  execute on function public.admin_list_users() to authenticated;
 grant  execute on function public.is_admin()         to authenticated;
+revoke execute on function public.my_account_disabled() from public, anon;
+grant  execute on function public.my_account_disabled() to authenticated;
 
 
 -- ─── 7. Shared demo account (demo@gmail.com / Demo@1234) ────────────────────
@@ -336,5 +360,55 @@ update auth.users
 alter table public.activity_logs add column if not exists input_words integer;
 alter table public.activity_logs add column if not exists models      jsonb;   -- { "<format>": "<model id>" }
 
--- Make PostgREST see the new columns immediately.
+-- ─── 11. Disable and re-enable accounts ────────────────────────────────────
+-- A disabled account keeps its profile and history but can't be used. The lock
+-- is Supabase Auth's own ban (auth.users.banned_until): while it is in the
+-- future, sign-in fails with `user_banned` and sessions can't be refreshed.
+-- Disabling also ends every session the account has; the app checks
+-- my_account_disabled() (section 3) so an open workspace signs out within
+-- minutes rather than when its access token expires, and RLS (section 5)
+-- refuses new activity from it. profiles.disabled_at records when.
+
+create or replace function public.admin_set_user_disabled(target_user_id uuid, disable boolean)
+returns void
+language plpgsql security definer set search_path = ''
+as $$
+declare
+  target_email text;
+begin
+  if not public.is_admin() then
+    raise exception 'Admin access required' using errcode = '42501';
+  end if;
+
+  select lower(email) into target_email from auth.users where id = target_user_id;
+  if target_email is null then
+    raise exception 'User not found' using errcode = 'P0002';
+  end if;
+  if target_user_id = auth.uid() or target_email = public.admin_email() then
+    raise exception 'The admin account can''t be disabled.' using errcode = '42501';
+  end if;
+
+  -- A fixed far-future date rather than 'infinity', which Supabase Auth can't read back.
+  update auth.users
+     set banned_until = case when disable then now() + interval '100 years' else null end,
+         updated_at   = now()
+   where id = target_user_id;
+
+  update public.profiles
+     set disabled_at = case when disable then now() else null end
+   where id = target_user_id;
+
+  if disable then
+    -- Sign the account out everywhere: its refresh tokens stop working at once.
+    delete from auth.refresh_tokens where user_id = target_user_id::text;
+    delete from auth.sessions       where user_id = target_user_id;
+  end if;
+end;
+$$;
+
+revoke execute on function public.admin_set_user_disabled(uuid, boolean) from public, anon;
+grant  execute on function public.admin_set_user_disabled(uuid, boolean) to authenticated;
+
+
+-- Make PostgREST see the new columns and functions immediately.
 notify pgrst, 'reload schema';
