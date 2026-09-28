@@ -57,6 +57,8 @@ One switch at the top of the workspace sidebar chooses the mode:
 
 **Setup, guided in the app.** When Private is chosen, the workspace checks `http://localhost:11434/api/tags` and shows either **● Local engine ready · qwen2.5vl:7b** or a setup card that tells apart the three ways it can fail (Ollama not running, Ollama blocking the site, model not installed) and picks out the step that's left. It re-checks on its own every 10 seconds and whenever you return to the tab; Generate stays disabled until the engine is ready.
 
+**Hardware check before setup.** The setup card first reads what the browser shares about the computer (`navigator.deviceMemory`, `navigator.hardwareConcurrency`, and the GPU name from WebGL, or WebGPU's high-performance adapter) and shows it as RAM · CPU · GPU. A dedicated GPU or Apple Silicon, or at least 8 GB of RAM with 6 cores, shows **Hardware verified** and the setup steps. A phone or tablet, under 8 GB of RAM, or integrated graphics with fewer than 6 cores shows **Hardware insufficient for a local 7B model** instead: the steps are held back so nobody downloads a 6 GB model that would freeze their machine, and **Switch to Cloud APIs** is one press away. When the browser doesn't share enough (Firefox and Safari hide memory; Safari hides the GPU), the card says it couldn't verify and shows the steps. Browsers often see only the integrated chip on two-GPU laptops, so a warned user can still choose **Set it up anyway**.
+
 ### Set up Private mode
 
 1. Install [Ollama](https://ollama.com/download) and open it.
@@ -347,6 +349,7 @@ main/
 │   │   ├── pipeline.ts          # Ingest → clean → parallel (format × model) drafts, translation, refine router
 │   │   ├── providers.ts         # Model catalogue, chat client, OwnKeyError, abort signals
 │   │   ├── local.ts             # Private mode: Ollama detection and streamed generation (num_ctx 4096)
+│   │   ├── hardware.ts          # Private mode: can this computer run a 7B model? (RAM, cores, GPU)
 │   │   ├── documents.ts         # PDF / DOCX → text; scanned PDF → page images
 │   │   ├── ingest.ts            # Image → text: vision model or on-device OCR
 │   │   ├── audiences.ts         # Custom audience profiles saved to the account
@@ -368,7 +371,7 @@ main/
 │   ├── workspace/
 │   │   ├── TransformView.tsx    # Sidebar + canvas layout; runs, stops and logs each generation
 │   │   ├── LeftPanel.tsx        # Settings sidebar: processing mode, source, formats, voice, audience, engine
-│   │   ├── LocalEngine.tsx      # Cloud / Private switch, local engine status and setup guide
+│   │   ├── LocalEngine.tsx      # Cloud / Private switch, local engine status, hardware check and setup guide
 │   │   ├── RightPanel.tsx       # Output canvas: drafts, comparison, refine, export
 │   │   ├── KeyConsentDialog.tsx # The "use Sankshep's key instead?" prompt
 │   │   ├── DuplicateFormatsDialog.tsx # The "only new formats / regenerate all" prompt

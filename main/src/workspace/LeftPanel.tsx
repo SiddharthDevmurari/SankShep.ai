@@ -529,7 +529,13 @@ export function LeftPanel({ onGenerate, onStop, generating, onStatusChange }: Pr
         <div id={PROCESSING_ID} className="scroll-mt-4 space-y-3 border-b border-line px-5 py-4">
           <ProcessingModeSwitch mode={processing} onChange={changeProcessing} disabled={generating} />
           {local ? (
-            <LocalEngineStatus status={localEngine.status} checking={localEngine.checking} model={localModel} onRefresh={() => void localEngine.refresh()} />
+            <LocalEngineStatus
+              status={localEngine.status}
+              checking={localEngine.checking}
+              model={localModel}
+              onRefresh={() => void localEngine.refresh()}
+              onUseCloud={() => changeProcessing('cloud')}
+            />
           ) : (
             <p className="text-[12.5px] leading-snug text-ink-mute">
               Drafts are written by Groq, Mistral or Gemini. Switch to Private to keep documents on this device.

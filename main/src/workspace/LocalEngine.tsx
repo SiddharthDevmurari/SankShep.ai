@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { ArrowUpRight, Check, ChevronDown, Cloud, Copy, HardDrive, Lock, RefreshCw } from 'lucide-react'
+import { ArrowUpRight, Check, ChevronDown, Cloud, Copy, HardDrive, Info, Lock, RefreshCw, TriangleAlert } from 'lucide-react'
 import { detectOllama, LOCAL_NUM_CTX, LOCAL_TEMPERATURE, OLLAMA_URL, PREFERRED_LOCAL_MODEL, type LocalStatus } from '../lib/local'
+import { checkLocalHardwareCompatibility, MIN_CORES, MIN_RAM_GB, type GpuKind, type HardwareReport } from '../lib/hardware'
 
 /** Where drafts are written: the cloud providers, or the user's own machine through Ollama. */
 export type ProcessingMode = 'cloud' | 'local'
@@ -140,11 +141,13 @@ function safariBlocksLocalhost() {
  * The status under the mode switch: one quiet line once the engine is ready, otherwise the setup
  * steps for whatever is missing, with the step the user is on picked out.
  */
-export function LocalEngineStatus({ status, checking, model, onRefresh }: {
+export function LocalEngineStatus({ status, checking, model, onRefresh, onUseCloud }: {
   status: LocalStatus
   checking: boolean
   model: string
   onRefresh: () => void
+  /** Switches the sidebar back to Cloud APIs; offered when this computer can't run the model. */
+  onUseCloud: () => void
 }) {
   if (status.state === 'checking') {
     return (
@@ -173,14 +176,19 @@ export function LocalEngineStatus({ status, checking, model, onRefresh }: {
     )
   }
 
-  return <SetupCard status={status} checking={checking} onRefresh={onRefresh} />
+  return <SetupCard status={status} checking={checking} onRefresh={onRefresh} onUseCloud={onUseCloud} />
 }
 
-function SetupCard({ status, checking, onRefresh }: {
+function SetupCard({ status, checking, onRefresh, onUseCloud }: {
   status: Extract<LocalStatus, { state: 'offline' | 'blocked' | 'missing-model' }>
   checking: boolean
   onRefresh: () => void
+  onUseCloud: () => void
 }) {
+  const hardware = useHardwareReport()
+  // The check can miss a GPU the browser doesn't use (two-GPU laptops), so the user can set up anyway.
+  const [override, setOverride] = useState(false)
+  const holdSetup = hardware?.verdict === 'insufficient' && !override
   const [os, setOs] = useState<Os>(detectOs)
   const origin = typeof location !== 'undefined' ? location.origin : 'https://your-site'
   const localhost = onLocalhost()
@@ -217,6 +225,19 @@ function SetupCard({ status, checking, onRefresh }: {
 
   return (
     <section aria-labelledby="local-setup-title" className="sk-rise overflow-hidden rounded-xl border border-line bg-white">
+      <HardwareDiagnostics report={hardware} />
+
+      {/* Setup steps wait for the hardware verdict, so they never appear and then vanish. */}
+      {!hardware ? (
+        <p className="flex items-center gap-2.5 px-4 py-4 text-[13px] text-ink-mute" aria-live="polite">
+          <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-ink/15 border-t-ink/60" aria-hidden />
+          Checking whether this computer can run the model…
+        </p>
+      ) : holdSetup ? (
+        <InsufficientNotice report={hardware} onUseCloud={onUseCloud} onOverride={() => setOverride(true)} />
+      ) : (
+      <>
+      <HardwareVerdict report={hardware} overridden={override} />
       <div className="flex items-start gap-3 px-4 pb-3 pt-4">
         <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-paper-deep text-ink ring-1 ring-hair" aria-hidden>
           <HardDrive className="h-[18px] w-[18px]" strokeWidth={1.8} />
@@ -293,12 +314,160 @@ function SetupCard({ status, checking, onRefresh }: {
             : 'If your browser asks whether this site may reach apps on your device, choose Allow.'}
         </p>
       )}
+      </>
+      )}
 
       <div className="flex flex-wrap items-center gap-x-3 gap-y-2 border-t border-hair bg-paper px-4 py-3">
         <RefreshButton checking={checking} onRefresh={onRefresh} />
         <span className="text-[12px] text-ink-mute">Checks {OLLAMA_URL.replace('http://', '')} again on its own every few seconds.</span>
       </div>
     </section>
+  )
+}
+
+/* ─── Hardware check ────────────────────────────────────────────────────── */
+
+function useHardwareReport() {
+  const [report, setReport] = useState<HardwareReport | null>(null)
+  useEffect(() => {
+    let live = true
+    void checkLocalHardwareCompatibility().then((r) => { if (live) setReport(r) })
+    return () => { live = false }
+  }, [])
+  return report
+}
+
+const GPU_KIND_LABEL: Record<GpuKind, string> = {
+  dedicated: 'dedicated',
+  apple: 'Apple Silicon',
+  integrated: 'integrated',
+  unknown: 'not identified',
+}
+
+/** RAM, CPU and GPU as the browser reports them; a reading that fails the check is marked in red. */
+function HardwareDiagnostics({ report }: { report: HardwareReport | null }) {
+  const cells: { label: string; value: string | null; note: string; bad: boolean; title?: string }[] = [
+    {
+      label: 'RAM',
+      value: report ? (report.ramGb ? `${report.ramGb} GB` : 'Not shared') : null,
+      note: `min ${MIN_RAM_GB} GB`,
+      bad: report?.reason === 'low-ram',
+    },
+    {
+      label: 'CPU',
+      value: report ? (report.cores ? `${report.cores} cores` : 'Not shared') : null,
+      note: `${MIN_CORES}+ if no GPU`,
+      bad: report?.reason === 'weak',
+    },
+    {
+      label: 'GPU',
+      value: report ? report.gpu.name ?? 'Not shared' : null,
+      note: report ? GPU_KIND_LABEL[report.gpu.kind] : '',
+      bad: report?.reason === 'weak',
+      title: report?.gpu.name ?? undefined,
+    },
+  ]
+  return (
+    <div className="border-b border-hair bg-paper px-4 pb-3.5 pt-3">
+      <p className="flex items-baseline justify-between gap-3 text-[12px]">
+        <span className="font-semibold text-ink-soft">This computer</span>
+        <span className="text-ink-mute">as your browser reports it</span>
+      </p>
+      <dl className="mt-2 grid grid-cols-[minmax(0,0.85fr)_minmax(0,1fr)_minmax(0,1.5fr)] divide-x divide-hair overflow-hidden rounded-lg border border-line bg-white">
+        {cells.map((c) => (
+          <div key={c.label} className="min-w-0 px-2.5 py-2">
+            <dt className="text-[11px] font-medium text-ink-mute">{c.label}</dt>
+            <dd className={`mt-0.5 truncate text-[12.5px] ${c.bad ? 'font-semibold text-red-700' : c.value === 'Not shared' ? 'font-medium text-ink-mute' : 'font-semibold text-ink'}`} title={c.title}>
+              {c.value ?? <span className="sk-skeleton inline-block h-2.5 w-12 rounded-full align-middle" aria-label="Checking" />}
+            </dd>
+            <dd className="truncate text-[11px] text-ink-mute">{c.note}</dd>
+          </div>
+        ))}
+      </dl>
+    </div>
+  )
+}
+
+/** One line on what the check found, above the setup steps. */
+function HardwareVerdict({ report, overridden }: { report: HardwareReport; overridden: boolean }) {
+  if (overridden) {
+    return (
+      <p className="sk-rise mx-4 mt-3.5 flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-[12.5px] leading-snug text-amber-950">
+        <TriangleAlert className="mt-0.5 h-3.5 w-3.5 shrink-0 text-amber-700" aria-hidden />
+        Setting up despite the hardware check. If your computer slows to a crawl, quit Ollama and switch to Cloud APIs.
+      </p>
+    )
+  }
+  if (report.verdict === 'capable') {
+    return (
+      <div className="sk-rise px-4 pt-3.5">
+        <p className="flex flex-wrap items-center gap-x-2 text-[13px] font-semibold text-ink">
+          <span className="h-2 w-2 shrink-0 rounded-full bg-green-600" aria-hidden />
+          Hardware verified
+          <span className="font-normal text-ink-mute">· ready for 7B local inference</span>
+        </p>
+        <p className="mt-1 pl-4 text-[12.5px] leading-snug text-ink-mute">
+          This computer meets the requirements to run Qwen 2.5 VL 7B locally, and nothing you add leaves it.
+          {report.reason === 'cpu-ram' && ' Without a dedicated GPU the browser can see, drafts may write more slowly.'}
+        </p>
+      </div>
+    )
+  }
+  return (
+    <div className="sk-rise px-4 pt-3.5">
+      <p className="flex items-center gap-2 text-[13px] font-semibold text-ink">
+        <Info className="h-3.5 w-3.5 shrink-0 text-ink-mute" aria-hidden />
+        Couldn’t verify this computer
+      </p>
+      <p className="mt-1 pl-[22px] text-[12.5px] leading-snug text-ink-mute">
+        This browser doesn’t share enough about its hardware to check. Qwen 2.5 VL 7B needs at least {MIN_RAM_GB} GB of memory and runs
+        best with a dedicated GPU or Apple Silicon.
+      </p>
+    </div>
+  )
+}
+
+/** Hardware that can't run the model: the setup steps are held back, and Cloud APIs is one press away. */
+function InsufficientNotice({ report, onUseCloud, onOverride }: { report: HardwareReport; onUseCloud: () => void; onOverride: () => void }) {
+  const why = {
+    mobile: 'Ollama doesn’t run on phones or tablets, and a 7B vision model needs far more memory than they have. Private mode needs a Windows, macOS or Linux computer.',
+    'low-ram': `Your browser reports ${report.ramGb} GB of memory. Qwen 2.5 VL 7B needs about 6 GB for the model alone, plus room for everything else, so at least ${MIN_RAM_GB} GB in all. Running it here is likely to freeze your computer or the browser.`,
+    weak: `This computer shows integrated graphics and ${report.cores} processor cores. A 7B vision model needs a dedicated GPU, Apple Silicon, or at least ${MIN_RAM_GB} GB of memory with ${MIN_CORES} cores. Here it would crawl, and could freeze your computer or the browser.`,
+  }[report.reason as 'mobile' | 'low-ram' | 'weak']
+
+  return (
+    <div className="sk-rise px-4 py-4" role="alert">
+      <div className="rounded-lg border border-amber-200 bg-amber-50 px-3.5 py-3">
+        <p className="flex items-center gap-2 text-[13.5px] font-semibold text-amber-950">
+          <TriangleAlert className="h-4 w-4 shrink-0 text-amber-700" aria-hidden />
+          Hardware insufficient for a local 7B model
+        </p>
+        <p className="mt-1.5 text-[12.5px] leading-relaxed text-amber-950/85">{why}</p>
+      </div>
+      <button
+        type="button"
+        onClick={onUseCloud}
+        className="mt-3 flex min-h-11 w-full items-center justify-center gap-2 rounded-lg bg-ink px-4 text-[13.5px] font-semibold text-paper transition-colors hover:bg-ink-soft focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-matcha"
+      >
+        <Cloud className="h-4 w-4 shrink-0 text-matcha" aria-hidden />
+        Switch to Cloud APIs
+        <span className="font-normal text-paper/65">· fast, no setup</span>
+      </button>
+      {report.reason !== 'mobile' && (
+        <p className="mt-3 text-[12.5px] leading-snug text-ink-mute">
+          {report.reason === 'low-ram'
+            ? 'Browsers round the memory they report down, so the real figure can be a little higher.'
+            : 'Laptops with two graphics chips sometimes show the browser only the weaker one.'}{' '}
+          <button
+            type="button"
+            onClick={onOverride}
+            className="font-medium text-ink underline decoration-ink/30 underline-offset-4 hover:decoration-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink/30"
+          >
+            Set it up anyway
+          </button>
+        </p>
+      )}
+    </div>
   )
 }
 
