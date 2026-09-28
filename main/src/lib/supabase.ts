@@ -14,6 +14,11 @@ export const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_LCU-9w178iUjqA7haajEwg_3
 
 /** Must match public.admin_email() in supabase/schema.sql. */
 export const ADMIN_EMAIL = 'admin@gmail.com'
+/**
+ * Shown on the public sign-in page on purpose, so a project supervisor can open the Admin panel.
+ * Anyone who visits can therefore sign in as admin. Must match the password reset_accounts.sql sets.
+ */
+export const ADMIN_PASSWORD = 'A@dmin12345'
 
 /** Shared demo account, created by supabase/schema.sql. Must match public.demo_email(). */
 export const DEMO_EMAIL = 'demo@gmail.com'

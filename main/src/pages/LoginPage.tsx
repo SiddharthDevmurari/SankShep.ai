@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Navigate, useNavigate, useLocation, Link } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
-import { DEMO_EMAIL, DEMO_PASSWORD } from '../lib/supabase'
+import { ADMIN_EMAIL, ADMIN_PASSWORD, DEMO_EMAIL, DEMO_PASSWORD } from '../lib/supabase'
 import { PASSWORD_RULES, isStrongPassword, PASSWORD_POLICY_MESSAGE } from '../lib/password'
 import { ArrowUpRight, Check, Eye, EyeOff, UserX } from 'lucide-react'
 import { AnimatePresence, MotionConfig, motion } from 'motion/react'
@@ -43,25 +43,27 @@ export default function LoginPage() {
     clearDisabledNotice()
   }
 
-  const fillDemo = async () => {
-    setEmail(DEMO_EMAIL)
-    setPassword(DEMO_PASSWORD)
+  /** Signs in with one of the published shared accounts (demo, or admin for supervisors). */
+  const quickSignIn = async (account: 'demo' | 'admin') => {
+    const [acctEmail, acctPassword] = account === 'demo' ? [DEMO_EMAIL, DEMO_PASSWORD] : [ADMIN_EMAIL, ADMIN_PASSWORD]
+    setEmail(acctEmail)
+    setPassword(acctPassword)
     setMode('login')
     clearNotices()
     setLoading(true)
-    const { error, disabled } = await signIn(DEMO_EMAIL, DEMO_PASSWORD)
+    const { error, disabled } = await signIn(acctEmail, acctPassword)
     if (disabled) {
-      setDisabledFor(DEMO_EMAIL)
+      setDisabledFor(acctEmail)
       setLoading(false)
     } else if (error) {
       setError(
-        /incorrect email or password/i.test(error)
-          ? 'The demo account isn’t set up in the database yet. Run main/supabase/reset_accounts.sql in the Supabase SQL Editor.'
-          : error,
+        !/incorrect email or password/i.test(error) ? error
+        : account === 'demo' ? 'The demo account isn’t set up in the database yet. Run main/supabase/reset_accounts.sql in the Supabase SQL Editor.'
+        : 'The admin password in the database no longer matches the one shown here. Run main/supabase/reset_accounts.sql in the Supabase SQL Editor to reset it.',
       )
       setLoading(false)
     } else {
-      navigate(from, { replace: true })
+      navigate(account === 'admin' ? '/workspace/admin' : from, { replace: true })
     }
   }
 
@@ -309,7 +311,7 @@ export default function LoginPage() {
             </div>
             <button
               type="button"
-              onClick={fillDemo}
+              onClick={() => void quickSignIn('demo')}
               disabled={loading}
               className="group mt-4 flex w-full items-center justify-between gap-4 rounded-xl bg-matcha/25 px-4 py-3 text-left transition-all duration-200 hover:bg-matcha/55 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink active:scale-[0.985] disabled:cursor-not-allowed disabled:opacity-60"
             >
@@ -321,6 +323,30 @@ export default function LoginPage() {
                 Enter
               </span>
             </button>
+
+            {/* Supervisor access: the admin credentials, shown in full so they can also be typed on another device */}
+            <div className="mt-3 overflow-hidden rounded-xl border border-hair">
+              <div className="flex items-center justify-between gap-4 px-4 py-3">
+                <div className="min-w-0">
+                  <p className="text-[14.5px] font-medium text-ink">Supervisor access</p>
+                  <dl className="mt-1 grid grid-cols-[auto_minmax(0,1fr)] gap-x-3 gap-y-0.5 font-mono text-[12px]">
+                    <dt className="text-ink-mute">Email</dt>
+                    <dd className="truncate text-ink-soft">{ADMIN_EMAIL}</dd>
+                    <dt className="text-ink-mute">Password</dt>
+                    <dd className="truncate text-ink-soft">{ADMIN_PASSWORD}</dd>
+                  </dl>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => void quickSignIn('admin')}
+                  disabled={loading}
+                  className="shrink-0 rounded-lg bg-ink px-3.5 py-2 text-[13px] font-medium text-paper transition-colors hover:bg-ink-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  Sign in as admin
+                </button>
+              </div>
+              <p className="border-t border-hair bg-paper px-4 py-2 text-[12px] text-ink-mute">Opens the Admin panel: every user and all activity.</p>
+            </div>
           </section>
           </div>
         </motion.div>
