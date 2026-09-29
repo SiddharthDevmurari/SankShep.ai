@@ -63,6 +63,7 @@ main/test-api.mjs
 .agents/
 skills-lock.json
 
-# Everything in photos/ stays private except the logo, which README.md shows.
+# Everything in photos/ stays private except the logo and the button cards, which README.md shows.
 photos/*
 !photos/logo.jpeg
+!photos/buttons/

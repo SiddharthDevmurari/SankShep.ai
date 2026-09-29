@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="420" height="124" viewBox="0 0 420 124" role="img" aria-label="Idea Presentation">
+<rect x="2" y="2" width="416" height="120" rx="20" fill="#d4ed64" stroke="#0f100f" stroke-width="3"/>
+<defs><linearGradient id="s" x1="0" x2="1"><stop offset="0" stop-color="#fff" stop-opacity="0"/><stop offset=".5" stop-color="#fff" stop-opacity=".55"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>
+<clipPath id="c"><rect x="2" y="2" width="416" height="120" rx="20"/></clipPath></defs>
+<g clip-path="url(#c)"><rect x="-300" y="0" width="90" height="124" fill="url(#s)" transform="skewX(-20)"><animate attributeName="x" values="-200;540;540" keyTimes="0;.45;1" dur="3.2s" repeatCount="indefinite"/></rect></g>
+<rect x="24" y="30.0" width="64" height="64" rx="16" fill="#0f100f"/>
+<g transform="translate(38 44.0) scale(1.3)" fill="none" stroke="#d4ed64" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" color="#d4ed64"><rect x="3" y="5" width="22" height="15" rx="2"/><path d="M14 20v4M9 24h10M8 15l4-4 3 3 5-5"/></g>
+<text x="108" y="46.0" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="11.5" font-weight="800" letter-spacing="1.6" fill="#3b4214">SIH 2026 · PDF</text>
+<text x="108" y="72.0" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="23" font-weight="800" fill="#0f100f">Idea Presentation</text>
+<text x="108" y="95.0" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="14" font-weight="500" fill="#3b4214">SIH26154 idea deck · 6 slides</text>
+<rect x="302" y="18" width="96" height="24" rx="12" fill="#0f100f"/><text x="350" y="34.5" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="11" font-weight="800" letter-spacing="1.2" fill="#d4ed64">START HERE</text><path d="M364 90h22M377 79l11 11-11 11" fill="none" stroke="#0f100f" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
