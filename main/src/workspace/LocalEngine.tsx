@@ -6,25 +6,6 @@ import { checkLocalHardwareCompatibility, MIN_CORES, MIN_RAM_GB, type GpuKind, t
 /** Where drafts are written: the cloud providers, or the user's own machine through Ollama. */
 export type ProcessingMode = 'cloud' | 'local'
 
-const MODE_KEY = 'sankshep:processing-mode'
-
-/** The mode chosen last time on this browser; Private mode is a standing decision for the people who pick it. */
-export function storedProcessingMode(): ProcessingMode {
-  try {
-    return localStorage.getItem(MODE_KEY) === 'local' ? 'local' : 'cloud'
-  } catch {
-    return 'cloud'
-  }
-}
-
-export function storeProcessingMode(mode: ProcessingMode) {
-  try {
-    localStorage.setItem(MODE_KEY, mode)
-  } catch {
-    // Storage blocked (private window, site data off): the choice lasts for this visit only.
-  }
-}
-
 /* ─── Connection ────────────────────────────────────────────────────────── */
 
 /** Unready engines are checked again this often, so finishing setup in a terminal shows up without a click. */

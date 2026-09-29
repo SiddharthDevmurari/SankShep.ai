@@ -15,7 +15,7 @@ import { extractDocument, isDocumentFile } from '../lib/documents'
 import { fetchSavedAudiences, removeAudience, saveAudience } from '../lib/audiences'
 import { useAuth } from '../contexts/AuthContext'
 import {
-  LocalEngineDetails, LocalEngineStatus, ProcessingModeSwitch, storeProcessingMode, storedProcessingMode, useLocalEngine,
+  LocalEngineDetails, LocalEngineStatus, ProcessingModeSwitch, useLocalEngine,
   type ProcessingMode,
 } from './LocalEngine'
 
@@ -252,8 +252,9 @@ export function LeftPanel({ onGenerate, onStop, generating, onStatusChange }: Pr
   const [keys, setKeys] = useState<ApiKeys>({})
   const [engineOpen, setEngineOpen] = useState(false)
 
-  // Processing mode: cloud providers, or the user's own Ollama (Private mode).
-  const [processing, setProcessing] = useState<ProcessingMode>(storedProcessingMode)
+  // Processing mode: cloud providers, or the user's own Ollama (Private mode). The workspace always
+  // opens on Cloud APIs, which works with no setup; Private is chosen afresh each visit.
+  const [processing, setProcessing] = useState<ProcessingMode>('cloud')
   const local = processing === 'local'
   const localEngine = useLocalEngine(local)
   // The installed model the user picked; falls back to the best one Ollama has.
@@ -264,7 +265,6 @@ export function LeftPanel({ onGenerate, onStop, generating, onStatusChange }: Pr
 
   const changeProcessing = (mode: ProcessingMode) => {
     setProcessing(mode)
-    storeProcessingMode(mode)
     setFormError(null)
   }
 
