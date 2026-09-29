@@ -12,6 +12,10 @@ A generative AI workspace that turns a single report, article or advisory into e
 
 **Live: [sankshep-ai.vercel.app](https://sankshep-ai.vercel.app)**
 
+[![System Architecture (PDF)](https://img.shields.io/badge/System_Architecture-PDF-d4ed64?style=for-the-badge&logo=adobeacrobatreader&logoColor=d4ed64&labelColor=0f100f)](Sankshep-System-Architecture.pdf)
+[![Demo video](https://img.shields.io/badge/Demo_Video-YouTube-d4ed64?style=for-the-badge&logo=youtube&logoColor=d4ed64&labelColor=0f100f)](https://youtu.be/u4sPNRXTmRE)
+[![Live app](https://img.shields.io/badge/Live_App-Vercel-d4ed64?style=for-the-badge&logo=vercel&logoColor=d4ed64&labelColor=0f100f)](https://sankshep-ai.vercel.app)
+
 [![React](https://img.shields.io/badge/React-19-0f100f?logo=react&logoColor=d4ed64)](https://react.dev)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.7-0f100f?logo=typescript&logoColor=d4ed64)](https://www.typescriptlang.org)
 [![Vite](https://img.shields.io/badge/Vite-8-0f100f?logo=vite&logoColor=d4ed64)](https://vite.dev)
@@ -19,11 +23,26 @@ A generative AI workspace that turns a single report, article or advisory into e
 [![Supabase](https://img.shields.io/badge/Supabase-Auth_%2B_Postgres-0f100f?logo=supabase&logoColor=d4ed64)](https://supabase.com)
 [![Vercel](https://img.shields.io/badge/Vercel-Functions-0f100f?logo=vercel&logoColor=d4ed64)](https://vercel.com)
 
-[What it does](#what-it-does) · [Private mode](#private-mode-ai-that-never-leaves-your-computer) · [Features](#features) · [Quick start](#quick-start) · [How it works](#how-it-works) · [Architecture](#architecture) · [Deploy](#deploy) · [Team](#team)
+[Project documents](#project-documents) · [What it does](#what-it-does) · [Private mode](#private-mode-ai-that-never-leaves-your-computer) · [Features](#features) · [Quick start](#quick-start) · [How it works](#how-it-works) · [Architecture](#architecture) · [Deploy](#deploy) · [Team](#team)
 
 </div>
 
 ---
+
+## Project documents
+
+> [!IMPORTANT]
+> **System Architecture document: [Sankshep-System-Architecture.pdf](Sankshep-System-Architecture.pdf)** (2 pages). It shows the full pipeline, from sign-in to History, and the eight architectural layers. Click the link to open it in GitHub's PDF viewer.
+
+Submission deliverables for SIH 2026 · Problem statement **SIH26154** (NTRO) · Team **NeuralNinjasVgec**:
+
+| Deliverable | Where to find it |
+|---|---|
+| Source code | This repository (the app is in [`main/`](main)) |
+| README with setup instructions | This file: see [Quick start](#quick-start) |
+| **Architecture document** | **[Sankshep-System-Architecture.pdf](Sankshep-System-Architecture.pdf)**; text version in [`architecture_slide.md`](architecture_slide.md) |
+| Demo video | [youtu.be/u4sPNRXTmRE](https://youtu.be/u4sPNRXTmRE) |
+| Live prototype | [sankshep-ai.vercel.app](https://sankshep-ai.vercel.app) (use **Continue with the demo account** on the sign-in page) |
 
 ## What it does
 
@@ -279,6 +298,8 @@ This table is for Cloud mode. In **Private mode** the source, uploaded files and
 The full detail is on the in-app [Privacy Policy](main/src/pages/legal/PrivacyPolicyPage.tsx) page (`/privacy-policy`).
 
 ## Architecture
+
+> 📄 The full system architecture, with every pipeline step and layer, is in **[Sankshep-System-Architecture.pdf](Sankshep-System-Architecture.pdf)**.
 
 The React app talks to Supabase (auth and data) directly. AI requests go either straight to the provider (user's key) or through one small server function, [`api/chat.ts`](main/api/chat.ts), which holds the shared keys. In development, Vite serves the same function (see `vite.config.ts`). In Private mode the only AI request is from the browser to the Ollama on the same computer.
 
