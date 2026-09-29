@@ -13,6 +13,7 @@ A generative AI workspace that turns a single report, article or advisory into e
 **Live: [sankshep-ai.vercel.app](https://sankshep-ai.vercel.app)**
 
 [![System Architecture (PDF)](https://img.shields.io/badge/System_Architecture-PDF-d4ed64?style=for-the-badge&logo=adobeacrobatreader&logoColor=d4ed64&labelColor=0f100f)](Sankshep-System-Architecture.pdf)
+[![Idea presentation (PDF)](https://img.shields.io/badge/Idea_Presentation-PDF-d4ed64?style=for-the-badge&logo=adobeacrobatreader&logoColor=d4ed64&labelColor=0f100f)](NeuralNinjasVgec-132743.pdf)
 [![Demo video](https://img.shields.io/badge/Demo_Video-YouTube-d4ed64?style=for-the-badge&logo=youtube&logoColor=d4ed64&labelColor=0f100f)](https://youtu.be/u4sPNRXTmRE)
 [![Live app](https://img.shields.io/badge/Live_App-Vercel-d4ed64?style=for-the-badge&logo=vercel&logoColor=d4ed64&labelColor=0f100f)](https://sankshep-ai.vercel.app)
 
@@ -33,6 +34,8 @@ A generative AI workspace that turns a single report, article or advisory into e
 
 > [!IMPORTANT]
 > **System Architecture document: [Sankshep-System-Architecture.pdf](Sankshep-System-Architecture.pdf)** (2 pages). It shows the full pipeline, from sign-in to History, and the eight architectural layers. Click the link to open it in GitHub's PDF viewer.
+>
+> **Technical presentation: [NeuralNinjasVgec-132743.pdf](NeuralNinjasVgec-132743.pdf)** (6 slides): idea, technical approach, prototype, feasibility, impact and references.
 
 Submission deliverables for SIH 2026 · Problem statement **SIH26154** (NTRO) · Team **NeuralNinjasVgec**:
 
@@ -41,6 +44,7 @@ Submission deliverables for SIH 2026 · Problem statement **SIH26154** (NTRO) ·
 | Source code | This repository (the app is in [`main/`](main)) |
 | README with setup instructions | This file: see [Quick start](#quick-start) |
 | **Architecture document** | **[Sankshep-System-Architecture.pdf](Sankshep-System-Architecture.pdf)**; text version in [`architecture_slide.md`](architecture_slide.md) |
+| **Technical presentation** (SIH idea submission, 6 slides) | **[NeuralNinjasVgec-132743.pdf](NeuralNinjasVgec-132743.pdf)** |
 | Demo video | [youtu.be/u4sPNRXTmRE](https://youtu.be/u4sPNRXTmRE) |
 | Live prototype | [sankshep-ai.vercel.app](https://sankshep-ai.vercel.app) (use **Continue with the demo account** on the sign-in page) |
 
