@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useState, ReactNode } from 'react
 import { supabase, ADMIN_EMAIL, DEMO_EMAIL } from '../lib/supabase'
 import { fetchMyAccountDisabled, logActivity } from '../lib/activity'
 import { isStrongPassword, PASSWORD_POLICY_MESSAGE } from '../lib/password'
+import { checkNewAccountEmail } from '../lib/email'
 import type { User } from '@supabase/supabase-js'
 
 /* ─── Types ──────────────────────────────────────────────────────────────── */
@@ -168,6 +169,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // No email verification: the account is created and signed in immediately.
   const signUp = async (email: string, password: string) => {
     if (!isStrongPassword(password)) return { error: PASSWORD_POLICY_MESSAGE }
+    // With no confirmation email, this is the only check that the address is real.
+    const emailProblem = await checkNewAccountEmail(email)
+    if (emailProblem) return { error: emailProblem }
     try {
       const { data, error } = await supabase.auth.signUp({
         email: normaliseEmail(email),
