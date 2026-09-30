@@ -29,7 +29,7 @@ export interface ProxyResponse {
 
 type Env = Record<string, string | undefined>
 
-/** Comma- or newline-separated keys: GROQ_API_KEYS, GEMINI_API_KEYS, MISTRAL_API_KEYS. */
+/** Comma- or newline-separated keys: GROQ_API_KEYS, GEMINI_API_KEYS, MISTRAL_API_KEYS, and their *_BACKUP_API_KEYS. */
 function listKeys(value: string | undefined) {
   return (value ?? '').split(/[\s,]+/).map((k) => k.trim()).filter(Boolean)
 }
@@ -42,6 +42,8 @@ export function systemKeys(provider: ProviderId, env: Env): string[] {
       keys.push(...listKeys(env[name]))
     }
   }
+  // Backup keys go last, so they are only reached once every primary key has failed.
+  keys.push(...listKeys(env[`${provider.toUpperCase()}_BACKUP_API_KEYS`]))
   return [...new Set(keys)]
 }
 

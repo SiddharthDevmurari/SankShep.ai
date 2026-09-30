@@ -174,6 +174,7 @@ All optional for local development. Set them in Vercel for the deployed site (se
 | `GROQ_API_KEYS` | Shared Groq keys, comma-separated, tried in turn |
 | `GEMINI_API_KEYS` | Shared Gemini keys |
 | `MISTRAL_API_KEYS` | Shared Mistral keys |
+| `GROQ_BACKUP_API_KEYS`, `GEMINI_BACKUP_API_KEYS`, `MISTRAL_BACKUP_API_KEYS` | Backup shared keys, tried only after every primary key for that provider has failed |
 | `SANKSHEP_API_ORIGIN` | Local dev only: the site whose `/api/chat` to use when there are no local keys (defaults to `https://sankshep-ai.vercel.app`) |
 
 Don't name provider keys with a `VITE_` prefix: Vite builds every `VITE_` variable into the public website.
