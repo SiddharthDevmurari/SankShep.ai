@@ -148,6 +148,10 @@ function Hero() {
       <div className="pointer-events-none absolute inset-0 opacity-[0.5]" style={{ backgroundImage: 'radial-gradient(#e2dfd2 1px, transparent 1px)', backgroundSize: '22px 22px', maskImage: 'radial-gradient(ellipse 80% 60% at 50% 0%, black 40%, transparent 100%)' }} />
       <div className="relative mx-auto grid max-w-[1200px] items-center gap-14 px-5 pb-20 pt-16 sm:px-8 lg:grid-cols-[1.05fr_0.95fr] lg:pb-28 lg:pt-24">
         <div>
+          <div className="mb-6">
+            <p className="text-[13px] font-semibold text-ink-soft">Smart India Hackathon 2026 · SIH26154 · NTRO</p>
+            <p className="font-serif mt-1 text-[17px] leading-snug text-ink">Gen AI Platform for Automated Content Transformation</p>
+          </div>
           <span className="inline-flex items-center rounded-full border border-hair bg-white px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-ink-soft">AI Content Transformation</span>
           <Reveal as="h1" immediate text="Turn long, messy reports into ready-to-share content." className="font-display mt-6 text-[clamp(2.9rem,6.4vw,5rem)] text-ink" />
           <p className="mt-6 max-w-xl text-[17px] leading-relaxed text-ink-soft">Drop in research papers, policy briefs, YouTube links, or rough notes. Sankshep instantly creates clean summaries, video scripts, LinkedIn posts, and slide decks — keeping your data safe and private.</p>
