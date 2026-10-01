@@ -1,0 +1,41 @@
+- generic [ref=f24e3]:
+  - banner [ref=f24e739]:
+    - navigation "मुख्य" [ref=f24e741]:
+      - button "मेन्यू खोलें" [ref=f24e742]
+      - link "Sankshep होम" [ref=f24e744] [cursor=pointer]:
+        - /url: /
+      - button "Read in English" [ref=f24e746]: EN
+      - link "वर्कस्पेस खोलें" [ref=f24e747] [cursor=pointer]:
+        - /url: /workspace
+  - main [ref=f24e750]:
+    - generic [ref=f24e752]:
+      - complementary [ref=f24e753]:
+        - link "Sankshep होम" [ref=f24e754] [cursor=pointer]:
+          - /url: /
+          - generic [ref=f24e756]: Sankshep.ai
+        - heading "एक दस्तावेज़, हर फ़ॉर्मेट।" [level=2] [ref=f24e758]
+      - generic [ref=f24e759]:
+        - tablist "अकाउंट" [ref=f24e760]:
+          - tab "साइन इन" [selected] [ref=f24e761]
+          - tab "नया अकाउंट" [ref=f24e763]
+        - generic [ref=f24e765]:
+          - heading "फिर से स्वागत है।" [level=1] [ref=f24e766]
+          - paragraph [ref=f24e767]: साइन इन करें और वहीं से शुरू करें जहाँ छोड़ा था।
+        - generic [ref=f24e768]:
+          - generic [ref=f24e769]:
+            - text: ईमेल
+            - textbox "ईमेल" [ref=f24e770]:
+              - /placeholder: you@example.com
+          - generic [ref=f24e771]:
+            - text: पासवर्ड
+            - generic [ref=f24e772]:
+              - textbox "पासवर्ड" [ref=f24e773]:
+                - /placeholder: आपका पासवर्ड
+              - button "पासवर्ड दिखाएँ" [ref=f24e774]
+          - button "साइन इन करें" [ref=f24e778]
+        - generic [aria-hidden] [ref=f24e779]: या पहले घूमकर देखें
+        - button "डेमो अकाउंट से आगे बढ़ें demo@gmail.com प्रवेश करें" [ref=f24e782]:
+          - generic [ref=f24e783]:
+            - generic [ref=f24e784]: डेमो अकाउंट से आगे बढ़ें
+            - generic [ref=f24e785]: demo@gmail.com
+          - generic [ref=f24e786]: प्रवेश करें

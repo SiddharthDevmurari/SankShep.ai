@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { MotionConfig, motion } from 'motion/react'
 import { Check, Copy, Mail } from 'lucide-react'
 import { ArrowRight, GITHUB_URL, GithubIcon, SitePage } from '../components/site/SiteChrome'
+import { useCopy } from '../i18n'
 
 /** Inline LinkedIn mark: lucide-react 1.x has no brand icons. */
 const LinkedInIcon = ({ className }: { className?: string }) => (
@@ -59,23 +60,67 @@ const TEAM: Member[] = [
 
 const EASE = [0.22, 1, 0.36, 1] as const
 
+// Names, handles and addresses stay as each person writes them.
+const en = {
+  eyebrow: 'Contact',
+  title: 'Talk to the people who built it.',
+  lead: 'Questions about Sankshep.ai, the code, or our Smart India Hackathon build? Write to any of us directly, or open an issue on GitHub.',
+  contactsLabel: 'Team contacts',
+  bugTitle: 'Found a bug or have an idea?',
+  bugBody: 'Issues and pull requests on the repository reach the whole team at once.',
+  openIssue: 'Open an issue',
+  aboutProject: 'About the project',
+  onGithub: (name: string) => `${name} on GitHub`,
+  onLinkedin: (name: string) => `${name} on LinkedIn`,
+  viewProfile: 'View profile',
+  email: 'Email',
+  emailName: (name: string) => `Email ${name}`,
+  copyLabel: (name: string) => `Copy ${name}'s email address`,
+  copiedLabel: 'Email address copied',
+  copyTitle: 'Copy address',
+  copiedTitle: 'Copied',
+  copiedStatus: (email: string) => `${email} copied`,
+}
+
+const hi: typeof en = {
+  eyebrow: 'संपर्क',
+  title: 'इसे बनाने वालों से बात करें।',
+  lead: 'Sankshep.ai, इसके कोड या हमारे स्मार्ट इंडिया हैकाथॉन प्रोजेक्ट के बारे में कोई सवाल है? हममें से किसी को भी सीधे लिखें, या GitHub पर एक issue खोलें।',
+  contactsLabel: 'टीम के संपर्क',
+  bugTitle: 'कोई बग मिला या कोई सुझाव है?',
+  bugBody: 'रिपॉज़िटरी पर issue और pull request एक साथ पूरी टीम तक पहुँचते हैं।',
+  openIssue: 'Issue खोलें',
+  aboutProject: 'प्रोजेक्ट के बारे में',
+  onGithub: (name: string) => `GitHub पर ${name}`,
+  onLinkedin: (name: string) => `LinkedIn पर ${name}`,
+  viewProfile: 'प्रोफ़ाइल देखें',
+  email: 'ईमेल',
+  emailName: (name: string) => `${name} को ईमेल करें`,
+  copyLabel: (name: string) => `${name} का ईमेल पता कॉपी करें`,
+  copiedLabel: 'ईमेल पता कॉपी हो गया',
+  copyTitle: 'पता कॉपी करें',
+  copiedTitle: 'कॉपी हो गया',
+  copiedStatus: (email: string) => `${email} कॉपी हो गया`,
+}
+
 const initials = (name: string) => name.split(/\s+/).map((part) => part[0]).join('').slice(0, 2).toUpperCase()
 const githubHandle = (url: string) => '@' + url.replace(/\/+$/, '').split('/').pop()
 
 export default function ContactPage() {
+  const t = useCopy({ en, hi })
   return (
     <MotionConfig reducedMotion="user">
       <SitePage>
         {/* Headline is the page's focal point; the lead points straight at the right person */}
         <section className="mx-auto max-w-[1200px] px-5 pb-12 pt-14 sm:px-8 lg:pb-16 lg:pt-20">
-          <p className="text-[13.5px] font-semibold text-ink-soft">Contact</p>
+          <p className="text-[13.5px] font-semibold text-ink-soft">{t.eyebrow}</p>
           <motion.h1
             initial={{ opacity: 0, y: 24 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, ease: EASE }}
             className="font-display mt-4 max-w-[16ch] text-[clamp(2.9rem,6.4vw,5rem)] text-ink"
           >
-            Talk to the people who built it.
+            {t.title}
           </motion.h1>
           <motion.p
             initial={{ opacity: 0, y: 12 }}
@@ -83,13 +128,12 @@ export default function ContactPage() {
             transition={{ duration: 0.7, delay: 0.15, ease: EASE }}
             className="mt-7 max-w-[54ch] text-[18px] leading-relaxed text-ink-soft"
           >
-            Questions about Sankshep.ai, the code, or our Smart India Hackathon build? Write to any of us directly, or open an issue on
-            GitHub.
+            {t.lead}
           </motion.p>
         </section>
 
         {/* One card per person: GitHub, LinkedIn and email, each a real link */}
-        <section aria-label="Team contacts" className="mx-auto max-w-[1200px] px-5 pb-16 sm:px-8 lg:pb-24">
+        <section aria-label={t.contactsLabel} className="mx-auto max-w-[1200px] px-5 pb-16 sm:px-8 lg:pb-24">
           <ul className="grid gap-5 sm:grid-cols-2 lg:grid-cols-6">
             {TEAM.map((m, i) => (
               <motion.li
@@ -110,9 +154,9 @@ export default function ContactPage() {
         <section className="mx-auto max-w-[1200px] px-5 pb-24 sm:px-8">
           <div className="flex flex-col gap-6 rounded-3xl bg-ink px-8 py-12 text-paper sm:px-12 md:flex-row md:items-center md:justify-between">
             <div>
-              <p className="font-display max-w-md text-[clamp(1.6rem,3vw,2.2rem)] leading-tight">Found a bug or have an idea?</p>
+              <p className="font-display max-w-md text-[clamp(1.6rem,3vw,2.2rem)] leading-tight">{t.bugTitle}</p>
               <p className="mt-2 max-w-md text-[15px] leading-relaxed text-paper/75">
-                Issues and pull requests on the repository reach the whole team at once.
+                {t.bugBody}
               </p>
             </div>
             <div className="flex flex-wrap items-center gap-3">
@@ -122,13 +166,13 @@ export default function ContactPage() {
                 rel="noopener noreferrer"
                 className="flex items-center gap-2 rounded-full bg-matcha px-6 py-3.5 text-[15px] font-medium text-ink transition-transform hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-matcha/50"
               >
-                <GithubIcon className="h-4 w-4" /> Open an issue
+                <GithubIcon className="h-4 w-4" /> {t.openIssue}
               </a>
               <Link
                 to="/about"
                 className="flex items-center gap-2 rounded-full border border-paper/25 px-6 py-3.5 text-[15px] font-medium text-paper transition-colors hover:border-paper/60 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-matcha/50"
               >
-                About the project <ArrowRight className="h-4 w-4" />
+                {t.aboutProject} <ArrowRight className="h-4 w-4" />
               </Link>
             </div>
           </div>
@@ -145,6 +189,7 @@ const ICON_TILE =
 
 function MemberCard({ member, index }: { member: Member; index: number }) {
   const [copied, setCopied] = useState(false)
+  const t = useCopy({ en, hi })
 
   const copyEmail = async () => {
     try {
@@ -172,7 +217,7 @@ function MemberCard({ member, index }: { member: Member; index: number }) {
       </header>
 
       <div className="mt-6 space-y-1 border-t border-hair pt-4">
-        <a href={member.github} target="_blank" rel="noopener noreferrer" className={ROW} aria-label={`${member.name} on GitHub`}>
+        <a href={member.github} target="_blank" rel="noopener noreferrer" className={ROW} aria-label={t.onGithub(member.name)}>
           <span className={ICON_TILE}><GithubIcon className="h-[18px] w-[18px]" /></span>
           <span className="min-w-0">
             <span className="block text-[12px] text-ink-mute">GitHub</span>
@@ -180,19 +225,19 @@ function MemberCard({ member, index }: { member: Member; index: number }) {
           </span>
         </a>
 
-        <a href={member.linkedin} target="_blank" rel="noopener noreferrer" className={ROW} aria-label={`${member.name} on LinkedIn`}>
+        <a href={member.linkedin} target="_blank" rel="noopener noreferrer" className={ROW} aria-label={t.onLinkedin(member.name)}>
           <span className={ICON_TILE}><LinkedInIcon className="h-[17px] w-[17px]" /></span>
           <span className="min-w-0">
             <span className="block text-[12px] text-ink-mute">LinkedIn</span>
-            <span className="block truncate text-[14px] font-medium text-ink">View profile</span>
+            <span className="block truncate text-[14px] font-medium text-ink">{t.viewProfile}</span>
           </span>
         </a>
 
         <div className="flex items-center gap-1">
-          <a href={`mailto:${member.email}`} className={`${ROW} min-w-0 flex-1`} aria-label={`Email ${member.name}`}>
+          <a href={`mailto:${member.email}`} className={`${ROW} min-w-0 flex-1`} aria-label={t.emailName(member.name)}>
             <span className={ICON_TILE}><Mail className="h-[18px] w-[18px]" /></span>
             <span className="min-w-0">
-              <span className="block text-[12px] text-ink-mute">Email</span>
+              <span className="block text-[12px] text-ink-mute">{t.email}</span>
               {/* Wraps rather than truncating (an address has to be readable in full), preferably right after the @. */}
               <span className="block text-[14px] font-medium text-ink [overflow-wrap:anywhere]">
                 {member.email.split('@')[0]}@<wbr />{member.email.split('@')[1]}
@@ -202,14 +247,14 @@ function MemberCard({ member, index }: { member: Member; index: number }) {
           <button
             type="button"
             onClick={copyEmail}
-            aria-label={copied ? 'Email address copied' : `Copy ${member.name}'s email address`}
-            title={copied ? 'Copied' : 'Copy address'}
+            aria-label={copied ? t.copiedLabel : t.copyLabel(member.name)}
+            title={copied ? t.copiedTitle : t.copyTitle}
             className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-ink-mute transition-colors hover:bg-paper-deep hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink/30"
           >
             {copied ? <Check className="h-4 w-4 text-ink" /> : <Copy className="h-4 w-4" />}
           </button>
         </div>
-        <p role="status" className="sr-only">{copied ? `${member.email} copied` : ''}</p>
+        <p role="status" className="sr-only">{copied ? t.copiedStatus(member.email) : ''}</p>
       </div>
     </article>
   )

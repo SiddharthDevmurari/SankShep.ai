@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom'
 import { Menu, X } from 'lucide-react'
 import { useAuth } from '../../contexts/AuthContext'
+import { useCopy, useLang, type Lang } from '../../i18n'
 import logoUrl from '../../assets/logo.jpeg'
 
 export const GITHUB_URL = 'https://github.com/SiddharthDevmurari/SankShep.ai.git'
@@ -29,21 +30,88 @@ export const BrandMark = ({ className = 'h-9 w-9 rounded-xl' }: { className?: st
 // Double-border highlight shared by every capsule: hair ring, ink ring, hair ring, soft drop shadow
 export const CAPSULE_SHADOW = '0 0 0 1px #e7e4d9, 0 0 0 3px #0f100f, 0 0 0 5px #e7e4d9, 0 4px 24px -6px rgba(15,16,15,0.14)'
 
-const NAV_LINKS = [
-  { label: 'Features', to: '/features' },
-  { label: 'How it works', to: '/how-it-works' },
-  { label: 'About', to: '/about' },
-  { label: 'Contact', to: '/contact' },
-  { label: 'T&C', to: '/terms-and-conditions' },
-  { label: 'Privacy Policy', to: '/privacy-policy' },
-]
+const NAV_PATHS = ['/features', '/how-it-works', '/about', '/contact', '/terms-and-conditions', '/privacy-policy']
 
-const PILL_LINK = 'rounded-full px-4 py-2 text-[14px] text-ink-soft transition-colors hover:bg-paper-deep hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink/30'
+const en = {
+  nav: ['Features', 'How it works', 'About', 'Contact', 'T&C', 'Privacy Policy'],
+  navLabel: 'Main',
+  openMenu: 'Open menu',
+  closeMenu: 'Close menu',
+  github: 'Source code on GitHub',
+  githubLabel: 'Sankshep.ai source code on GitHub',
+  home: 'Sankshep home',
+  logout: 'Logout',
+  login: 'Log in / Sign up',
+  openWorkspace: 'Open Workspace',
+  footerLabel: 'Footer',
+  footer: ['Terms and Conditions', 'Privacy Policy', 'Github', 'Workspace', 'Features', 'How it works', 'The Pipeline', 'About Us', 'Contact Us'],
+}
+
+const hi: typeof en = {
+  nav: ['फ़ीचर्स', 'कैसे काम करता है', 'हमारे बारे में', 'संपर्क', 'नियम व शर्तें', 'गोपनीयता नीति'],
+  navLabel: 'मुख्य',
+  openMenu: 'मेन्यू खोलें',
+  closeMenu: 'मेन्यू बंद करें',
+  github: 'GitHub पर सोर्स कोड',
+  githubLabel: 'GitHub पर Sankshep.ai का सोर्स कोड',
+  home: 'Sankshep होम',
+  logout: 'लॉग आउट',
+  login: 'लॉग इन / साइन अप',
+  openWorkspace: 'वर्कस्पेस खोलें',
+  footerLabel: 'फ़ुटर',
+  footer: ['नियम और शर्तें', 'गोपनीयता नीति', 'GitHub', 'वर्कस्पेस', 'फ़ीचर्स', 'यह कैसे काम करता है', 'पाइपलाइन', 'हमारे बारे में', 'संपर्क करें'],
+}
+
+const LANG_SEGMENT = 'h-9 min-w-10 rounded-full px-2.5 text-[13.5px] font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink/30'
+
+/**
+ * EN | हिं switch in the capsule. Phones get a single button that flips to the other language
+ * (it shows the language you'd switch to), so the capsule still fits a narrow screen.
+ */
+function LangToggle() {
+  const { lang, setLang } = useLang()
+  const other: Lang = lang === 'en' ? 'hi' : 'en'
+  return (
+    <>
+      <div role="group" aria-label="Language / भाषा" className="hidden shrink-0 items-center gap-0.5 rounded-full bg-paper-deep p-1 sm:flex">
+        {(['en', 'hi'] as const).map((l) => (
+          <button
+            key={l}
+            type="button"
+            lang={l}
+            onClick={() => setLang(l)}
+            aria-pressed={lang === l}
+            title={l === 'en' ? 'English' : 'हिंदी'}
+            className={`${LANG_SEGMENT} ${lang === l ? 'bg-ink text-paper' : 'text-ink-soft hover:text-ink'}`}
+          >
+            {l === 'en' ? 'EN' : 'हिं'}
+          </button>
+        ))}
+      </div>
+      <button
+        type="button"
+        lang={other}
+        onClick={() => setLang(other)}
+        aria-label={other === 'hi' ? 'हिंदी में पढ़ें' : 'Read in English'}
+        className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-paper-deep text-[14px] font-semibold text-ink transition-colors hover:bg-hair focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink/30 sm:hidden"
+      >
+        {other === 'hi' ? 'हिं' : 'EN'}
+      </button>
+    </>
+  )
+}
+
+// Tighter padding (and a shorter email, below) between 1280 and 1536px, so the capsule still fits
+// with the language switch when signed in.
+const PILL_LINK = 'rounded-full px-3 py-2 text-[14px] 2xl:px-4 text-ink-soft transition-colors hover:bg-paper-deep hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink/30'
 
 const MENU_LINK = 'flex min-h-12 items-center rounded-2xl px-4 text-[16px] font-medium text-ink-soft transition-colors hover:bg-paper-deep hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink/30'
 
 export function SiteNav() {
   const { user, signOut } = useAuth()
+  const t = useCopy({ en, hi })
+  const { lang } = useLang()
+  const navLinks = NAV_PATHS.map((to, i) => ({ label: t.nav[i], to }))
   const navigate = useNavigate()
   const { pathname } = useLocation()
   // Below xl the page links live in a menu behind the three-line button, so phones reach every page from the top.
@@ -78,10 +146,10 @@ export function SiteNav() {
   }
 
   return (
-    <header ref={headerRef} className="sticky top-0 z-50 px-4 pb-3 pt-5">
+    <header ref={headerRef} lang={lang} className="sticky top-0 z-50 px-4 pb-3 pt-5">
       <div className="flex justify-center">
         <nav
-          aria-label="Main"
+          aria-label={t.navLabel}
           className="flex max-w-full items-center gap-1.5 rounded-full bg-white/95 px-3 py-3 backdrop-blur-md sm:gap-3 sm:px-5"
           style={{ boxShadow: CAPSULE_SHADOW }}
         >
@@ -91,7 +159,7 @@ export function SiteNav() {
             onClick={() => setMenuOpen((v) => !v)}
             aria-expanded={menuOpen}
             aria-controls="site-menu"
-            aria-label={menuOpen ? 'Close menu' : 'Open menu'}
+            aria-label={menuOpen ? t.closeMenu : t.openMenu}
             className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink/30 xl:hidden ${
               menuOpen ? 'bg-ink text-paper' : 'bg-paper-deep text-ink hover:bg-hair'
             }`}
@@ -106,8 +174,8 @@ export function SiteNav() {
             <div id="site-menu" className="absolute left-1/2 top-[calc(100%+0.75rem)] w-[calc(100vw-2rem)] max-w-md -translate-x-1/2 xl:hidden">
               <div className="sk-rise rounded-[28px] bg-white p-2" style={{ boxShadow: CAPSULE_SHADOW }}>
                 <ul>
-                  {NAV_LINKS.map((l) => (
-                    <li key={l.label}>
+                  {navLinks.map((l) => (
+                    <li key={l.to}>
                       <NavLink
                         to={l.to}
                         onClick={() => setMenuOpen(false)}
@@ -120,7 +188,7 @@ export function SiteNav() {
                   {/* The capsule is too narrow for the GitHub icon on small phones, so it moves in here. */}
                   <li className="sm:hidden">
                     <a href={GITHUB_URL} target="_blank" rel="noopener noreferrer" className={`${MENU_LINK} gap-3`}>
-                      <GithubIcon className="h-5 w-5" /> Source code on GitHub
+                      <GithubIcon className="h-5 w-5" /> {t.github}
                     </a>
                   </li>
                 </ul>
@@ -133,40 +201,40 @@ export function SiteNav() {
                         onClick={handleLogout}
                         className="min-h-11 shrink-0 rounded-full px-4 text-[15px] font-medium text-ink transition-colors hover:bg-paper-deep focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink/30"
                       >
-                        Logout
+                        {t.logout}
                       </button>
                     </div>
                   ) : (
-                    <Link to="/login" onClick={() => setMenuOpen(false)} className={MENU_LINK}>Log in / Sign up</Link>
+                    <Link to="/login" onClick={() => setMenuOpen(false)} className={MENU_LINK}>{t.login}</Link>
                   )}
                 </div>
               </div>
             </div>
           )}
 
-          <Link to="/" className="flex items-center gap-2.5 rounded-xl sm:mr-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink/30" aria-label="Sankshep home">
+          <Link to="/" className="flex items-center gap-2.5 rounded-xl sm:mr-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink/30" aria-label={t.home}>
             <BrandMark className="h-9 w-9 rounded-full" />
             {/* Small phones: the mark alone, so the capsule fits a 320px screen. */}
             <span className="hidden font-display text-[17px] text-ink sm:inline">Sankshep</span>
           </Link>
 
           <div className="hidden items-center gap-1 xl:flex">
-            {NAV_LINKS.map((l) =>
+            {navLinks.map((l) =>
               l.to.includes('#') ? (
-                <Link key={l.label} to={l.to} className={PILL_LINK}>{l.label}</Link>
+                <Link key={l.to} to={l.to} className={PILL_LINK}>{l.label}</Link>
               ) : (
-                <NavLink key={l.label} to={l.to} className={({ isActive }) => `${PILL_LINK} ${isActive ? 'bg-paper-deep text-ink' : ''}`}>
+                <NavLink key={l.to} to={l.to} className={({ isActive }) => `${PILL_LINK} ${isActive ? 'bg-paper-deep text-ink' : ''}`}>
                   {l.label}
                 </NavLink>
               ),
             )}
             {user ? (
               <>
-                <span className="ml-1 max-w-[160px] truncate text-[13.5px] text-ink-soft">{user.email}</span>
-                <button onClick={handleLogout} className={PILL_LINK}>Logout</button>
+                <span className="ml-1 max-w-[120px] truncate 2xl:max-w-[160px] text-[13.5px] text-ink-soft">{user.email}</span>
+                <button onClick={handleLogout} className={PILL_LINK}>{t.logout}</button>
               </>
             ) : (
-              <Link to="/login" className={PILL_LINK}>Log in / Sign up</Link>
+              <Link to="/login" className={PILL_LINK}>{t.login}</Link>
             )}
           </div>
 
@@ -175,17 +243,19 @@ export function SiteNav() {
             target="_blank"
             rel="noopener noreferrer"
             className="ml-1 hidden h-11 w-11 shrink-0 items-center justify-center rounded-full text-ink-soft transition-colors hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink/30 sm:flex xl:h-9 xl:w-9"
-            aria-label="Sankshep.ai source code on GitHub"
+            aria-label={t.githubLabel}
           >
             <GithubIcon className="h-5 w-5" />
           </a>
+
+          <LangToggle />
 
           <Link
             to="/workspace"
             className="ml-1 flex items-center gap-1.5 whitespace-nowrap rounded-full bg-ink px-3.5 py-2.5 text-[14px] font-medium text-paper sm:px-5 transition-transform hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-matcha"
           >
             <ArrowRight className="h-3.5 w-3.5" />
-            Open Workspace
+            {t.openWorkspace}
           </Link>
         </nav>
       </div>
@@ -193,19 +263,21 @@ export function SiteNav() {
   )
 }
 
-const FOOTER_LINKS: { label: string; to: string; external?: boolean }[] = [
-  { label: 'Terms and Conditions', to: '/terms-and-conditions' },
-  { label: 'Privacy Policy', to: '/privacy-policy' },
-  { label: 'Github', to: GITHUB_URL, external: true },
-  { label: 'Workspace', to: '/workspace' },
-  { label: 'Features', to: '/features' },
-  { label: 'How it works', to: '/how-it-works' },
-  { label: 'The Pipeline', to: '/#how-it-works' },
-  { label: 'About Us', to: '/about' },
-  { label: 'Contact Us', to: '/contact' },
+// In the same order as the copy's `footer` labels.
+const FOOTER_LINKS: { to: string; external?: boolean }[] = [
+  { to: '/terms-and-conditions' },
+  { to: '/privacy-policy' },
+  { to: GITHUB_URL, external: true },
+  { to: '/workspace' },
+  { to: '/features' },
+  { to: '/how-it-works' },
+  { to: '/#how-it-works' },
+  { to: '/about' },
+  { to: '/contact' },
 ]
 
 export function SiteFooter() {
+  const t = useCopy({ en, hi })
   return (
     <footer className="border-t border-hair bg-paper-deep">
       <div className="px-5 pb-4 pt-10 sm:px-8">
@@ -217,15 +289,15 @@ export function SiteFooter() {
       <div className="mx-auto max-w-[1200px] px-5 py-8 sm:px-8">
         <div className="flex flex-col items-start justify-between gap-4 border-t border-hair pt-6 sm:flex-row sm:items-center">
           <p className="text-[13px] text-ink-soft">© 2026 Sankshep.ai · Neural Ninjas VGEC</p>
-          <nav aria-label="Footer" className="flex flex-wrap items-center gap-x-6 gap-y-2">
-            {FOOTER_LINKS.map((l) =>
+          <nav aria-label={t.footerLabel} className="flex flex-wrap items-center gap-x-6 gap-y-2">
+            {FOOTER_LINKS.map((l, i) =>
               l.external ? (
-                <a key={l.label} href={l.to} target="_blank" rel="noopener noreferrer" className="py-1 text-[13px] text-ink-soft transition-colors hover:text-ink">
-                  {l.label}
+                <a key={l.to} href={l.to} target="_blank" rel="noopener noreferrer" className="py-1 text-[13px] text-ink-soft transition-colors hover:text-ink">
+                  {t.footer[i]}
                 </a>
               ) : (
-                <Link key={l.label} to={l.to} className="py-1 text-[13px] text-ink-soft transition-colors hover:text-ink">
-                  {l.label}
+                <Link key={l.to} to={l.to} className="py-1 text-[13px] text-ink-soft transition-colors hover:text-ink">
+                  {t.footer[i]}
                 </Link>
               ),
             )}
@@ -238,8 +310,9 @@ export function SiteFooter() {
 
 /** Nav + page + footer on the paper background, for every marketing and legal page. */
 export function SitePage({ children }: { children: ReactNode }) {
+  const { lang } = useLang()
   return (
-    <div className="min-h-screen bg-paper">
+    <div lang={lang} className="min-h-screen bg-paper">
       <SiteNav />
       <main id="main">{children}</main>
       <SiteFooter />

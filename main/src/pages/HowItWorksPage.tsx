@@ -5,8 +5,10 @@ import {
   Check, Database, FileText, Image as ImageIcon, KeyRound, Link2, Monitor, RotateCcw, ScanText, Server, Upload,
 } from 'lucide-react'
 import { ArrowRight, SitePage } from '../components/site/SiteChrome'
-import { ALL_FORMATS, MAX_COMPARE, MAX_FILE_BYTES, MAX_IMAGE_BYTES } from '../workspace/LeftPanel'
+import { ALL_FORMATS, MAX_COMPARE, MAX_FILE_BYTES } from '../workspace/LeftPanel'
 import { PROVIDERS } from '../lib/providers'
+import { useCopy } from '../i18n'
+import { HOW_COPY } from './howItWorksCopy'
 
 /*
  * Design read: an explainer for people deciding whether to trust the tool, in the
@@ -36,18 +38,19 @@ export default function HowItWorksPage() {
 /* ─── Hero ───────────────────────────────────────────────────────────────── */
 
 function Hero() {
+  const t = useCopy(HOW_COPY).hero
   return (
     <section className="relative overflow-hidden">
       <div className="mx-auto grid max-w-[1200px] items-center gap-14 px-5 pb-20 pt-14 sm:px-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)] lg:gap-10 lg:pb-28 lg:pt-20">
         <div>
-          <p className="text-[13.5px] font-semibold text-ink-soft">How it works</p>
+          <p className="text-[13.5px] font-semibold text-ink-soft">{t.eyebrow}</p>
           <motion.h1
             initial={{ opacity: 0, y: 24 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, ease: EASE }}
             className="font-headline mt-4 text-[clamp(3.2rem,7vw,6rem)] text-ink"
           >
-            One source in. <span className="font-serif text-matcha-deep">Every format</span> out.
+            {t.title}
           </motion.h1>
           <motion.p
             initial={{ opacity: 0, y: 12 }}
@@ -55,7 +58,7 @@ function Hero() {
             transition={{ duration: 0.7, delay: 0.15, ease: EASE }}
             className="mt-7 max-w-[46ch] text-[17.5px] leading-relaxed text-ink-soft"
           >
-            Here is exactly what happens between pressing Generate and reading your drafts, and where your content goes on the way.
+            {t.lead}
           </motion.p>
           <motion.div
             initial={{ opacity: 0, y: 12 }}
@@ -67,13 +70,13 @@ function Hero() {
               to="/workspace"
               className="group flex items-center gap-2 rounded-full bg-ink px-6 py-3.5 text-[15px] font-medium text-paper transition-transform hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-matcha"
             >
-              Try it on a document <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+              {t.tryIt} <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
             </Link>
             <a
               href="#stages"
               className="rounded-full border border-hair bg-white px-6 py-3.5 text-[15px] font-medium text-ink transition-colors hover:bg-paper-deep focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-matcha/50"
             >
-              Walk through the pipeline
+              {t.walk}
             </a>
           </motion.div>
         </div>
@@ -83,11 +86,10 @@ function Hero() {
   )
 }
 
-const HERO_OUTPUTS = ['Executive Summary', 'LinkedIn Post', 'Slide Deck', 'Hindi translation']
-
 /** Source document → pipeline → four drafts, drawn once when the hero loads. */
 function HeroFlow() {
   const [run, setRun] = useState(0)
+  const t = useCopy(HOW_COPY).hero
   return (
     <div className="relative">
       <div key={run} className="relative grid grid-cols-[minmax(0,1fr)_28px_auto_40px_minmax(0,1.15fr)] items-center rounded-[28px] border-2 border-ink bg-white p-5 shadow-[0_24px_60px_-30px_rgba(15,16,15,0.45)] sm:grid-cols-[minmax(0,1fr)_44px_auto_64px_minmax(0,1.15fr)] sm:p-8">
@@ -159,7 +161,7 @@ function HeroFlow() {
 
         {/* Drafts */}
         <ul className="grid gap-2.5">
-          {HERO_OUTPUTS.map((label, i) => (
+          {t.outputs.map((label, i) => (
             <motion.li
               key={label}
               initial={{ opacity: 0, x: 14 }}
@@ -180,7 +182,7 @@ function HeroFlow() {
         onClick={() => setRun((r) => r + 1)}
         className="mt-3 ml-auto flex min-h-11 items-center gap-1.5 rounded-full px-3 text-[13px] font-medium text-ink-soft transition-colors hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink/30"
       >
-        <RotateCcw className="h-3.5 w-3.5" /> Play again
+        <RotateCcw className="h-3.5 w-3.5" /> {t.playAgain}
       </button>
     </div>
   )
@@ -188,53 +190,30 @@ function HeroFlow() {
 
 /* ─── The four stages (scroll-driven) ────────────────────────────────────── */
 
-const STAGES = [
-  {
-    title: 'Ingest',
-    lead: 'Bring the source in however you have it.',
-    body: `Paste text, drop a link, or upload a TXT, Markdown, CSV or JSON file up to ${MAX_FILE_BYTES / MB} MB. Images up to ${MAX_IMAGE_BYTES / MB} MB are read too: by a vision model when you have picked one, otherwise by an OCR engine that runs in your browser.`,
-    facts: ['Paste, link or upload', 'Images: vision model or on-device OCR'],
-  },
-  {
-    title: 'Clean',
-    lead: 'One pass turns raw input into tidy source text.',
-    body: 'The first model you selected strips noise, repairs broken formatting and keeps every fact. If that call fails, the run carries on with your original text, so a hiccup here never stops your drafts.',
-    facts: ['One call, first selected model', 'Falls back to the raw text'],
-  },
-  {
-    title: 'Draft in parallel',
-    lead: 'Every format, from every model, at the same time.',
-    body: `Each format is its own step with its own prompt, carrying your tone and audience. They all run at once, and in comparison mode each of up to ${MAX_COMPARE} models writes the full set. One failed draft never takes the others down.`,
-    facts: ['Formats × models, all at once', 'Failures stay contained'],
-  },
-  {
-    title: 'Review and refine',
-    lead: 'Read, compare, refine, keep.',
-    body: 'Drafts land on the output canvas, side by side when you compare models. Refine any single draft with a plain instruction, copy or export it, and find it again later in History.',
-    facts: ['Refine one draft at a time', 'Saved to your History'],
-  },
-]
+const STAGE_COUNT = 4
 
 function Stages() {
   const [active, setActive] = useState(0)
   const sectionRef = useRef<HTMLElement>(null)
   const { scrollYProgress } = useScroll({ target: sectionRef, offset: ['start 60%', 'end 70%'] })
   const progress = useSpring(scrollYProgress, { stiffness: 120, damping: 24 })
+  const copy = useCopy(HOW_COPY)
+  const t = copy.pipeline
 
   return (
     <section id="stages" ref={sectionRef} className="scroll-mt-24 border-y border-hair bg-paper-deep">
       <div className="mx-auto max-w-[1200px] px-5 pt-20 sm:px-8 lg:pt-28">
-        <p className="text-[13.5px] font-semibold text-ink-soft">The pipeline</p>
-        <h2 className="font-display mt-3 max-w-[18ch] text-[clamp(2.2rem,4.8vw,3.6rem)] text-ink">Four steps, one run.</h2>
+        <p className="text-[13.5px] font-semibold text-ink-soft">{t.eyebrow}</p>
+        <h2 className="font-display mt-3 max-w-[18ch] text-[clamp(2.2rem,4.8vw,3.6rem)] text-ink">{t.title}</h2>
       </div>
 
       <div className="mx-auto grid max-w-[1200px] gap-10 px-5 pb-20 sm:px-8 lg:grid-cols-2 lg:gap-16 lg:pb-28">
         {/* Sticky stage visual (desktop) */}
         <div className="hidden lg:block">
           <div className="sticky top-28 flex h-[calc(100vh-9rem)] max-h-[720px] flex-col justify-center">
-            <ol className="mb-5 grid grid-cols-4 gap-2" aria-label="Pipeline progress">
-              {STAGES.map((s, i) => (
-                <li key={s.title} className={`text-[12.5px] font-medium transition-colors ${i <= active ? 'text-ink' : 'text-ink-mute'}`}>
+            <ol className="mb-5 grid grid-cols-4 gap-2" aria-label={t.progress}>
+              {copy.stages.map((s, i) => (
+                <li key={i} className={`text-[12.5px] font-medium transition-colors ${i <= active ? 'text-ink' : 'text-ink-mute'}`}>
                   <span className="font-mono tabular-nums">{String(i + 1).padStart(2, '0')}</span> {s.title}
                 </li>
               ))}
@@ -261,8 +240,8 @@ function Stages() {
 
         {/* Stage copy; each block claims the visual while it crosses the middle of the screen */}
         <div>
-          {STAGES.map((stage, i) => (
-            <StageCopy key={stage.title} index={i} onActive={() => setActive(i)} />
+          {copy.stages.map((_, i) => (
+            <StageCopy key={i} index={i} onActive={() => setActive(i)} />
           ))}
         </div>
       </div>
@@ -274,14 +253,14 @@ function StageCopy({ index, onActive }: { index: number; onActive: () => void })
   const ref = useRef<HTMLDivElement>(null)
   const inView = useInView(ref, { margin: '-45% 0px -45% 0px' })
   useEffect(() => { if (inView) onActive() }, [inView, onActive])
-  const stage = STAGES[index]
+  const stage = useCopy(HOW_COPY).stages[index]
 
   return (
     <div ref={ref} className="flex flex-col justify-center py-10 lg:min-h-[78vh] lg:py-0">
       <div className="mb-8 aspect-[5/4] w-full lg:hidden">
         <StageVisualOnView index={index} />
       </div>
-      <p className="font-mono text-[13px] text-ink-mute tabular-nums">{String(index + 1).padStart(2, '0')} / {String(STAGES.length).padStart(2, '0')}</p>
+      <p className="font-mono text-[13px] text-ink-mute tabular-nums">{String(index + 1).padStart(2, '0')} / {String(STAGE_COUNT).padStart(2, '0')}</p>
       <h3 className="font-headline mt-3 text-[clamp(2.4rem,4.5vw,3.6rem)] text-ink">{stage.title}</h3>
       <p className="mt-4 text-[19px] font-medium leading-snug text-ink">{stage.lead}</p>
       <p className="mt-4 max-w-[52ch] text-[16px] leading-[1.75] text-ink-soft">{stage.body}</p>
@@ -302,11 +281,12 @@ function StageVisualOnView({ index }: { index: number }) {
 }
 
 function StageVisual({ index }: { index: number }) {
+  const copy = useCopy(HOW_COPY)
   return (
     <div className="flex h-full flex-col overflow-hidden rounded-3xl border-2 border-ink bg-white shadow-[0_24px_60px_-34px_rgba(15,16,15,0.5)]">
       <div className="flex items-center justify-between border-b border-hair px-5 py-3">
-        <span className="text-[12.5px] font-semibold text-ink">{STAGES[index].title}</span>
-        <span className="font-mono text-[11.5px] text-ink-mute">step {index + 1} of {STAGES.length}</span>
+        <span className="text-[12.5px] font-semibold text-ink">{copy.stages[index].title}</span>
+        <span className="font-mono text-[11.5px] text-ink-mute">{copy.pipeline.stepOf(index + 1, STAGE_COUNT)}</span>
       </div>
       <div className="relative min-h-0 flex-1 bg-paper p-5 sm:p-6">
         {index === 0 && <IngestVisual />}
@@ -318,12 +298,11 @@ function StageVisual({ index }: { index: number }) {
   )
 }
 
+const SOURCE_ICONS = [FileText, Link2, Upload]
+
 function IngestVisual() {
-  const sources = [
-    { icon: FileText, label: 'Paste text' },
-    { icon: Link2, label: 'Link' },
-    { icon: Upload, label: 'report.md' },
-  ]
+  const t = useCopy(HOW_COPY).visuals
+  const sources = t.sources.map((label, i) => ({ icon: SOURCE_ICONS[i], label }))
   return (
     <div className="flex h-full flex-col gap-4">
       <div className="grid grid-cols-3 gap-2">
@@ -352,8 +331,8 @@ function IngestVisual() {
           <div className="flex items-center gap-2 text-[12px] font-medium text-ink-soft">
             <ImageIcon className="h-4 w-4" strokeWidth={1.8} /> q3-slide.png
           </div>
-          <p className="mt-4 text-[15px] font-bold leading-tight text-ink">Q3 revenue grew 12%</p>
-          <p className="mt-1.5 text-[13px] text-ink-soft">Churn fell to 3%</p>
+          <p className="mt-4 text-[15px] font-bold leading-tight text-ink">{t.slideLines[0]}</p>
+          <p className="mt-1.5 text-[13px] text-ink-soft">{t.slideLines[1]}</p>
           <motion.div
             aria-hidden
             initial={{ top: '0%' }}
@@ -364,16 +343,16 @@ function IngestVisual() {
         </motion.div>
         <div className="flex flex-col rounded-xl border border-dashed border-ink/25 bg-white/60 p-4">
           <div className="flex items-center gap-2 text-[12px] font-medium text-ink-soft">
-            <ScanText className="h-4 w-4" strokeWidth={1.8} /> Text read
+            <ScanText className="h-4 w-4" strokeWidth={1.8} /> {t.textRead}
           </div>
           <motion.p initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 2.3, duration: 0.4 }} className="mt-4 font-mono text-[12px] leading-relaxed text-ink">
-            Q3 revenue grew 12%
+            {t.slideLines[0]}
           </motion.p>
           <motion.p initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 2.5, duration: 0.4 }} className="font-mono text-[12px] leading-relaxed text-ink">
-            Churn fell to 3%
+            {t.slideLines[1]}
           </motion.p>
           <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 2.8 }} className="mt-auto text-[11.5px] text-ink-mute">
-            On-device OCR, nothing uploaded
+            {t.onDevice}
           </motion.p>
         </div>
       </div>
@@ -381,24 +360,26 @@ function IngestVisual() {
   )
 }
 
-const NOISY = [
-  { w: 34, noise: 'Accept cookies' },
+// `noise` indexes the copy's noise lines; the rest are real text, drawn as bars.
+const NOISY: { w: number; noise?: number }[] = [
+  { w: 34, noise: 0 },
   { w: 88 },
-  { w: 22, noise: 'Share · Print · Email' },
+  { w: 22, noise: 1 },
   { w: 71 },
   { w: 95 },
-  { w: 18, noise: 'Advertisement' },
+  { w: 18, noise: 2 },
   { w: 64 },
 ]
 
 function CleanVisual() {
+  const t = useCopy(HOW_COPY).visuals
   return (
     <div className="grid h-full grid-cols-[1fr_auto_1fr] items-stretch gap-3">
       <div className="rounded-xl border border-hair bg-white p-4">
-        <p className="text-[12px] font-medium text-ink-mute">Raw input</p>
+        <p className="text-[12px] font-medium text-ink-mute">{t.rawInput}</p>
         <div className="mt-4 space-y-2.5">
           {NOISY.map((line, i) =>
-            line.noise ? (
+            line.noise !== undefined ? (
               <motion.p
                 key={i}
                 initial={{ opacity: 1 }}
@@ -406,7 +387,7 @@ function CleanVisual() {
                 transition={{ delay: 0.6 + i * 0.1, duration: 0.4 }}
                 className="truncate font-mono text-[11px] text-red-800 line-through decoration-transparent"
               >
-                {line.noise}
+                {t.noise[line.noise]}
               </motion.p>
             ) : (
               <span key={i} style={{ width: `${line.w}%` }} className="block h-2 rounded-full bg-ink/20" />
@@ -418,7 +399,7 @@ function CleanVisual() {
         <ArrowRight className="h-5 w-5 text-ink" />
       </div>
       <div className="rounded-xl border border-ink/20 bg-white p-4">
-        <p className="text-[12px] font-medium text-ink-mute">Clean source</p>
+        <p className="text-[12px] font-medium text-ink-mute">{t.cleanSource}</p>
         <div className="mt-4 space-y-4">
           {[[100, 96, 58], [100, 88, 100, 40]].map((para, p) => (
             <div key={p} className="space-y-2">
@@ -436,18 +417,18 @@ function CleanVisual() {
           ))}
         </div>
         <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 2.3 }} className="mt-5 flex items-center gap-1.5 text-[11.5px] text-ink-soft">
-          <Check className="h-3.5 w-3.5 text-matcha-deep" strokeWidth={2.5} /> Every fact kept
+          <Check className="h-3.5 w-3.5 text-matcha-deep" strokeWidth={2.5} /> {t.factsKept}
         </motion.p>
       </div>
     </div>
   )
 }
 
-const FAN_FORMATS = ['Summary', 'LinkedIn', 'Slides', 'Blog']
 // Durations differ on purpose: parallel drafts finish in whatever order they finish.
 const FAN_TIMES = [[1.4, 1.9], [1.1, 1.6], [1.8, 1.3], [1.5, 2.1]]
 
 function FanOutVisual() {
+  const t = useCopy(HOW_COPY).visuals
   return (
     <div className="grid h-full grid-cols-[auto_52px_minmax(0,1fr)] items-center">
       <motion.div
@@ -456,7 +437,7 @@ function FanOutVisual() {
         transition={{ duration: 0.45 }}
         className="rounded-xl bg-ink px-3.5 py-3 text-[12px] font-medium text-paper"
       >
-        Clean<br />source
+        {t.cleanNode[0]}<br />{t.cleanNode[1]}
       </motion.div>
       <svg viewBox="0 0 52 100" preserveAspectRatio="none" className="h-[78%] w-full" aria-hidden>
         {[10, 37, 63, 90].map((y, i) => (
@@ -477,25 +458,25 @@ function FanOutVisual() {
       <div>
         <div className="mb-2 grid grid-cols-[72px_1fr_1fr] gap-2 px-1 font-mono text-[10.5px] text-ink-mute">
           <span />
-          <span>Model A</span>
-          <span>Model B</span>
+          <span>{t.models[0]}</span>
+          <span>{t.models[1]}</span>
         </div>
         <div className="space-y-2">
-          {FAN_FORMATS.map((f, r) => (
-            <div key={f} className="grid grid-cols-[72px_1fr_1fr] items-center gap-2 rounded-lg bg-white p-1.5 pl-2.5">
+          {t.fanFormats.map((f, r) => (
+            <div key={r} className="grid grid-cols-[72px_1fr_1fr] items-center gap-2 rounded-lg bg-white p-1.5 pl-2.5">
               <span className="truncate text-[12px] font-medium text-ink">{f}</span>
-              {FAN_TIMES[r].map((t, c) => (
+              {FAN_TIMES[r].map((secs, c) => (
                 <div key={c} className="relative h-6 overflow-hidden rounded-md bg-paper-deep">
                   <motion.div
                     initial={{ scaleX: 0 }}
                     animate={{ scaleX: 1 }}
-                    transition={{ delay: 0.6, duration: t, ease: 'easeInOut' }}
+                    transition={{ delay: 0.6, duration: secs, ease: 'easeInOut' }}
                     className="absolute inset-0 origin-left bg-matcha"
                   />
                   <motion.span
                     initial={{ opacity: 0, scale: 0.5 }}
                     animate={{ opacity: 1, scale: 1 }}
-                    transition={{ delay: 0.6 + t, type: 'spring', stiffness: 400, damping: 20 }}
+                    transition={{ delay: 0.6 + secs, type: 'spring', stiffness: 400, damping: 20 }}
                     className="absolute right-1.5 top-1/2 grid h-4 w-4 -translate-y-1/2 place-items-center rounded bg-ink"
                   >
                     <Check className="h-2.5 w-2.5 text-matcha" strokeWidth={3} />
@@ -506,23 +487,34 @@ function FanOutVisual() {
           ))}
         </div>
         <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 2.8 }} className="mt-3 px-1 text-[11.5px] text-ink-soft">
-          8 drafts, started together
+          {t.started}
         </motion.p>
       </div>
     </div>
   )
 }
 
+/** Whole user-visible characters, so a Devanagari letter and its vowel sign appear together. */
+function graphemes(text: string): string[] {
+  // Intl.Segmenter is in every current browser but not in this project's TypeScript lib, hence the local type.
+  const Segmenter = (Intl as unknown as {
+    Segmenter?: new (locale: undefined, options: { granularity: 'grapheme' }) => { segment: (t: string) => Iterable<{ segment: string }> }
+  }).Segmenter
+  if (Segmenter) return Array.from(new Segmenter(undefined, { granularity: 'grapheme' }).segment(text), (s) => s.segment)
+  return Array.from(text)
+}
+
 function useTypewriter(text: string, delayMs: number) {
   const [shown, setShown] = useState('')
   useEffect(() => {
+    const chars = graphemes(text)
     let i = 0
     let interval: number | undefined
     const start = window.setTimeout(() => {
       interval = window.setInterval(() => {
         i++
-        setShown(text.slice(0, i))
-        if (i >= text.length) window.clearInterval(interval)
+        setShown(chars.slice(0, i).join(''))
+        if (i >= chars.length) window.clearInterval(interval)
       }, 45)
     }, delayMs)
     return () => { window.clearTimeout(start); window.clearInterval(interval) }
@@ -531,12 +523,13 @@ function useTypewriter(text: string, delayMs: number) {
 }
 
 function DeliverVisual() {
-  const typed = useTypewriter('Shorter, three bullets', 1300)
+  const t = useCopy(HOW_COPY).visuals
+  const typed = useTypewriter(t.refineTyped, 1300)
   return (
     <div className="flex h-full flex-col gap-3">
       <div className="flex gap-1.5">
-        {['Summary', 'LinkedIn', 'Slides'].map((t, i) => (
-          <span key={t} className={`rounded-full px-3 py-1.5 text-[11.5px] font-medium ${i === 0 ? 'bg-white text-ink ring-1 ring-hair' : 'text-ink-mute'}`}>{t}</span>
+        {t.tabs.map((tab, i) => (
+          <span key={i} className={`rounded-full px-3 py-1.5 text-[11.5px] font-medium ${i === 0 ? 'bg-white text-ink ring-1 ring-hair' : 'text-ink-mute'}`}>{tab}</span>
         ))}
       </div>
       <div className="grid min-h-0 flex-1 grid-cols-2 gap-2.5">
@@ -560,7 +553,7 @@ function DeliverVisual() {
           {typed}
           <span className="ml-px inline-block h-3.5 w-px translate-y-0.5 bg-ink" aria-hidden />
         </span>
-        <span className="rounded-lg bg-ink px-3 py-1.5 text-[11.5px] font-semibold text-paper">Refine</span>
+        <span className="rounded-lg bg-ink px-3 py-1.5 text-[11.5px] font-semibold text-paper">{t.refine}</span>
       </div>
       <motion.div
         initial={{ opacity: 0, y: 8 }}
@@ -568,7 +561,7 @@ function DeliverVisual() {
         transition={{ delay: 2.6, duration: 0.4, ease: EASE }}
         className="flex items-center gap-2 text-[12px] text-ink-soft"
       >
-        <Check className="h-3.5 w-3.5 text-matcha-deep" strokeWidth={2.5} /> Saved to History
+        <Check className="h-3.5 w-3.5 text-matcha-deep" strokeWidth={2.5} /> {t.saved}
       </motion.div>
     </div>
   )
@@ -578,33 +571,20 @@ function DeliverVisual() {
 
 type Reach = 'yes' | 'partly' | 'never'
 
+// Names and the notes for each place are in the copy, in this same order (browser, provider, database).
 const PLACES = [
-  { id: 'browser', icon: Monitor, name: 'Your browser', stack: 'React 19, Vite, Tailwind CSS, Tesseract.js' },
-  { id: 'provider', icon: Server, name: 'The AI provider you pick', stack: 'Groq, Google Gemini or Mistral' },
-  { id: 'database', icon: Database, name: 'Sankshep database', stack: 'Supabase Auth and Postgres, row-level security' },
+  { id: 'browser', icon: Monitor },
+  { id: 'provider', icon: Server },
+  { id: 'database', icon: Database },
 ] as const
 
-const ITEMS: { label: string; reach: Record<(typeof PLACES)[number]['id'], [Reach, string]> }[] = [
-  {
-    label: 'Your source text',
-    reach: { browser: ['yes', 'Read here first'], provider: ['yes', 'Sent to write the drafts'], database: ['partly', 'First 300 characters only'] },
-  },
-  {
-    label: 'Your API key',
-    reach: { browser: ['yes', 'Held in tab memory'], provider: ['yes', 'Sent with each request'], database: ['never', 'Never stored'] },
-  },
-  {
-    label: 'An uploaded image',
-    reach: { browser: ['yes', 'OCR runs here'], provider: ['partly', 'Only if you pick a vision model'], database: ['never', 'Never stored'] },
-  },
-  {
-    label: 'Your drafts',
-    reach: { browser: ['yes', 'Shown on the canvas'], provider: ['yes', 'Written there'], database: ['yes', 'Kept for your History'] },
-  },
-  {
-    label: 'Your password',
-    reach: { browser: ['yes', 'Typed here'], provider: ['never', 'Never sent'], database: ['yes', 'Stored as a salted hash'] },
-  },
+/** Where each traced item reaches, one row per copy item, in PLACES order. */
+const ITEM_REACH: [Reach, Reach, Reach][] = [
+  ['yes', 'yes', 'partly'], // source text
+  ['yes', 'yes', 'never'], // API key
+  ['yes', 'partly', 'never'], // uploaded image
+  ['yes', 'yes', 'yes'], // drafts
+  ['yes', 'never', 'yes'], // password
 ]
 
 const REACH_STYLE: Record<Reach, string> = {
@@ -612,28 +592,28 @@ const REACH_STYLE: Record<Reach, string> = {
   partly: 'bg-matcha text-ink',
   never: 'bg-white text-ink-mute ring-1 ring-hair',
 }
-const REACH_LABEL: Record<Reach, string> = { yes: 'Goes here', partly: 'Partly', never: 'Never' }
 
 function DataFlow() {
   const [item, setItem] = useState(0)
-  const current = ITEMS[item]
+  const t = useCopy(HOW_COPY).dataFlow
+  const current = t.items[item]
 
   return (
     <section className="mx-auto max-w-[1200px] px-5 py-20 sm:px-8 lg:py-28">
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] lg:items-end">
         <div>
-          <p className="text-[13.5px] font-semibold text-ink-soft">The stack</p>
-          <h2 className="font-display mt-3 text-[clamp(2.2rem,4.8vw,3.6rem)] text-ink">What goes where.</h2>
+          <p className="text-[13.5px] font-semibold text-ink-soft">{t.eyebrow}</p>
+          <h2 className="font-display mt-3 text-[clamp(2.2rem,4.8vw,3.6rem)] text-ink">{t.title}</h2>
         </div>
         <p className="max-w-[48ch] text-[16px] leading-relaxed text-ink-soft lg:justify-self-end">
-          Three places touch your content. Pick something you care about and see which of them ever receives it.
+          {t.lead}
         </p>
       </div>
 
-      <div role="radiogroup" aria-label="Choose what to trace" className="mt-10 flex flex-wrap gap-2">
-        {ITEMS.map((it, i) => (
+      <div role="radiogroup" aria-label={t.traceLabel} className="mt-10 flex flex-wrap gap-2">
+        {t.items.map((it, i) => (
           <button
-            key={it.label}
+            key={i}
             type="button"
             role="radio"
             aria-checked={item === i}
@@ -649,8 +629,10 @@ function DataFlow() {
       </div>
 
       <div className="mt-8 grid gap-4 md:grid-cols-3">
-        {PLACES.map(({ id, icon: Icon, name, stack }, i) => {
-          const [reach, note] = current.reach[id]
+        {PLACES.map(({ id, icon: Icon }, i) => {
+          const reach = ITEM_REACH[item][i]
+          const note = current.notes[i]
+          const { name, stack } = t.places[i]
           return (
             <motion.article
               key={id}
@@ -673,7 +655,7 @@ function DataFlow() {
                     transition={{ duration: 0.2 }}
                     className={`rounded-md px-2.5 py-1 text-[12px] font-semibold ${REACH_STYLE[reach]}`}
                   >
-                    {REACH_LABEL[reach]}
+                    {t.reach[reach]}
                   </motion.span>
                 </AnimatePresence>
               </div>
@@ -699,7 +681,9 @@ function DataFlow() {
       <p className="mt-6 flex items-start gap-2 text-[13.5px] text-ink-mute">
         <KeyRound className="mt-0.5 h-4 w-4 shrink-0" strokeWidth={1.8} />
         <span>
-          The full detail is in the <Link to="/privacy-policy" className="font-medium text-ink underline decoration-ink/30 underline-offset-4 hover:decoration-ink">Privacy Policy</Link>.
+          {t.fullDetail(
+            <Link to="/privacy-policy" className="font-medium text-ink underline decoration-ink/30 underline-offset-4 hover:decoration-ink">{t.privacyLink}</Link>,
+          )}
         </span>
       </p>
     </section>
@@ -710,17 +694,18 @@ function DataFlow() {
 
 function FromTheCode() {
   const draftingModels = PROVIDERS.flatMap((p) => p.models).length
+  const t = useCopy(HOW_COPY).fromCode
   const facts: { value: string; label: ReactNode }[] = [
-    { value: String(ALL_FORMATS.length), label: <>output formats, plus one you describe yourself</> },
-    { value: String(draftingModels), label: <>drafting models across {PROVIDERS.length} providers</> },
-    { value: String(MAX_COMPARE), label: <>models side by side in one comparison</> },
-    { value: `${MAX_FILE_BYTES / MB} MB`, label: <>largest file you can upload</> },
-    { value: '0', label: <>API keys stored anywhere</> },
+    { value: String(ALL_FORMATS.length), label: t.formats },
+    { value: String(draftingModels), label: t.models(PROVIDERS.length) },
+    { value: String(MAX_COMPARE), label: t.compare },
+    { value: `${MAX_FILE_BYTES / MB} MB`, label: t.file },
+    { value: '0', label: t.keys },
   ]
   return (
     <section className="border-y border-hair bg-white">
       <div className="mx-auto max-w-[1200px] px-5 py-16 sm:px-8 lg:py-20">
-        <p className="text-[13.5px] font-semibold text-ink-soft">Read straight from the code</p>
+        <p className="text-[13.5px] font-semibold text-ink-soft">{t.eyebrow}</p>
         <dl className="mt-8 grid grid-cols-2 gap-x-6 gap-y-10 md:grid-cols-5">
           {facts.map((f, i) => (
             <motion.div
@@ -744,25 +729,26 @@ function FromTheCode() {
 /* ─── Closing ────────────────────────────────────────────────────────────── */
 
 function Closing() {
+  const t = useCopy(HOW_COPY).closing
   return (
     <section className="mx-auto max-w-[1200px] px-5 py-20 sm:px-8 lg:py-24">
       <div className="relative overflow-hidden rounded-3xl bg-ink px-8 py-16 text-center text-paper sm:px-12">
         <h2 className="font-headline mx-auto max-w-2xl text-[clamp(2.4rem,5vw,3.8rem)]">
-          Try it on <span className="font-serif text-matcha">your own</span> document.
+          {t.title}
         </h2>
-        <p className="mx-auto mt-4 max-w-md text-[15px] text-paper/70">Use the demo account, or sign up and keep your History private.</p>
+        <p className="mx-auto mt-4 max-w-md text-[15px] text-paper/70">{t.body}</p>
         <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
           <Link
             to="/workspace"
             className="inline-flex items-center gap-2 rounded-full bg-matcha px-6 py-3.5 text-[15px] font-medium text-ink transition-transform hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-matcha/50"
           >
-            Open Workspace <ArrowRight className="h-4 w-4" />
+            {t.open} <ArrowRight className="h-4 w-4" />
           </Link>
           <Link
             to="/about"
             className="rounded-full border border-paper/25 px-6 py-3.5 text-[15px] font-medium text-paper transition-colors hover:border-paper/60 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-matcha/50"
           >
-            Meet the team
+            {t.team}
           </Link>
         </div>
       </div>

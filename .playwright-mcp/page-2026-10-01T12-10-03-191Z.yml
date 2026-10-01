@@ -1,0 +1,97 @@
+- generic [ref=f24e3]:
+  - banner [ref=f24e739]:
+    - navigation "मुख्य" [ref=f24e741]:
+      - link "Sankshep होम" [ref=f24e744] [cursor=pointer]:
+        - /url: /
+        - generic [ref=f24e787]: Sankshep
+      - generic [ref=f24e788]:
+        - link "फ़ीचर्स" [ref=f24e789] [cursor=pointer]:
+          - /url: /features
+        - link "कैसे काम करता है" [ref=f24e790] [cursor=pointer]:
+          - /url: /how-it-works
+        - link "हमारे बारे में" [ref=f24e791] [cursor=pointer]:
+          - /url: /about
+        - link "संपर्क" [ref=f24e792] [cursor=pointer]:
+          - /url: /contact
+        - link "नियम व शर्तें" [ref=f24e793] [cursor=pointer]:
+          - /url: /terms-and-conditions
+        - link "गोपनीयता नीति" [ref=f24e794] [cursor=pointer]:
+          - /url: /privacy-policy
+        - link "लॉग इन / साइन अप" [ref=f24e795] [cursor=pointer]:
+          - /url: /login
+      - link "GitHub पर Sankshep.ai का सोर्स कोड" [ref=f24e796] [cursor=pointer]:
+        - /url: https://github.com/SiddharthDevmurari/SankShep.ai.git
+      - group "Language / भाषा" [ref=f24e799]:
+        - button "EN" [ref=f24e800]
+        - button "हिं" [pressed] [ref=f24e801]
+      - link "वर्कस्पेस खोलें" [ref=f24e747] [cursor=pointer]:
+        - /url: /workspace
+  - main [ref=f24e750]:
+    - generic [ref=f24e752]:
+      - complementary [ref=f24e753]:
+        - link "Sankshep होम" [ref=f24e754] [cursor=pointer]:
+          - /url: /
+          - generic [ref=f24e756]: Sankshep.ai
+        - generic [ref=f24e757]:
+          - heading "एक दस्तावेज़, हर फ़ॉर्मेट।" [level=2] [ref=f24e758]
+          - list [ref=f24e802]:
+            - listitem [ref=f24e803]:
+              - generic [ref=f24e804]: "01"
+              - text: कार्यकारी सारांश
+            - listitem [ref=f24e805]:
+              - generic [ref=f24e806]: "02"
+              - text: 5 स्लाइड का डेक
+            - listitem [ref=f24e807]:
+              - generic [ref=f24e808]: "03"
+              - text: LinkedIn पोस्ट
+            - listitem [ref=f24e809]:
+              - generic [ref=f24e810]: "04"
+              - text: वीडियो स्क्रिप्ट
+            - listitem [ref=f24e811]:
+              - generic [ref=f24e812]: "05"
+              - text: एडवाइज़री
+        - paragraph [ref=f24e813]: © 2026 Sankshep.ai · NTRO SIH
+      - generic [ref=f24e759]:
+        - tablist "अकाउंट" [ref=f24e760]:
+          - tab "साइन इन" [ref=f24e761]
+          - tab "नया अकाउंट" [selected] [ref=f24e763]
+        - generic [ref=f24e815]:
+          - heading "एक दस्तावेज़ से शुरुआत करें।" [level=1] [ref=f24e816]
+          - paragraph [ref=f24e817]: अकाउंट बनाइए और सीधे वर्कस्पेस में पहुँचिए। ईमेल पुष्टि का कोई चरण नहीं है।
+        - generic [ref=f24e768]:
+          - generic [ref=f24e769]:
+            - text: ईमेल
+            - textbox "ईमेल" [ref=f24e770]:
+              - /placeholder: you@example.com
+              - text: test@example.com
+          - generic [ref=f24e771]:
+            - text: पासवर्ड
+            - generic [ref=f24e772]:
+              - textbox "पासवर्ड" [ref=f24e773]:
+                - /placeholder: पासवर्ड बनाएँ
+                - text: abcdefgh
+              - button "पासवर्ड दिखाएँ" [ref=f24e774]
+            - list [ref=f24e818]:
+              - listitem [ref=f24e819]:
+                - text: 8 या ज़्यादा अक्षर
+                - generic [ref=f24e821]: (पूरा)
+              - listitem [ref=f24e822]:
+                - text: एक बड़ा अक्षर (A-Z)
+                - generic [ref=f24e824]: (अधूरा)
+              - listitem [ref=f24e825]:
+                - text: एक छोटा अक्षर (a-z)
+                - generic [ref=f24e827]: (पूरा)
+              - listitem [ref=f24e828]:
+                - text: एक अंक
+                - generic [ref=f24e830]: (अधूरा)
+              - listitem [ref=f24e831]:
+                - text: एक विशेष चिह्न
+                - generic [ref=f24e833]: (अधूरा)
+          - alert [ref=f24e839]: कम से कम 8 अक्षर रखें, जिनमें एक बड़ा अक्षर (A-Z), एक छोटा अक्षर (a-z), एक अंक और एक विशेष चिह्न हो।
+          - button "अकाउंट बनाएँ" [active] [ref=f24e834]
+        - generic [aria-hidden] [ref=f24e779]: या पहले घूमकर देखें
+        - button "डेमो अकाउंट से आगे बढ़ें demo@gmail.com प्रवेश करें" [ref=f24e782]:
+          - generic [ref=f24e783]:
+            - generic [ref=f24e784]: डेमो अकाउंट से आगे बढ़ें
+            - generic [ref=f24e785]: demo@gmail.com
+          - generic [ref=f24e786]: प्रवेश करें

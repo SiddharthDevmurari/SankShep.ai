@@ -1,0 +1,309 @@
+- generic [ref=f24e4]:
+  - banner [ref=f24e5]:
+    - navigation "Main" [ref=f24e419]:
+      - button "Open menu" [ref=f24e420]
+      - link "Sankshep home" [ref=f24e421] [cursor=pointer]:
+        - /url: /
+      - button "हिंदी में पढ़ें" [active] [ref=f24e422]: हिं
+      - link "Open Workspace" [ref=f24e423] [cursor=pointer]:
+        - /url: /workspace
+  - main [ref=f24e16]:
+    - generic [ref=f24e18]:
+      - generic [ref=f24e19]:
+        - generic [ref=f24e20]:
+          - paragraph [ref=f24e21]: Smart India Hackathon 2026 · SIH26154 · NTRO
+          - paragraph [ref=f24e22]: Gen AI Platform for Automated Content Transformation
+        - generic [ref=f24e23]: AI Content Transformation
+        - heading "Turn long, messy reports into ready-to-share content." [level=1] [ref=f24e424]:
+          - generic [ref=f24e25]: Turn
+          - generic [ref=f24e26]: long,
+          - generic [ref=f24e27]: messy
+          - generic [ref=f24e28]: reports
+          - generic [ref=f24e29]: into
+          - generic [ref=f24e30]: ready-to-share
+          - generic [ref=f24e31]: content.
+        - paragraph [ref=f24e35]: Drop in research papers, policy briefs, YouTube links, or rough notes. Sankshep instantly creates clean summaries, video scripts, LinkedIn posts, and slide decks — keeping your data safe and private.
+        - generic [ref=f24e36]:
+          - link "Launch Workspace" [ref=f24e425] [cursor=pointer]:
+            - /url: /workspace
+          - link "See How It Works" [ref=f24e426] [cursor=pointer]:
+            - /url: "#how-it-works"
+        - generic [ref=f24e41]:
+          - generic [ref=f24e42]: No credit card
+          - generic [ref=f24e45]: Fully on-device Private mode
+      - generic [ref=f24e49]:
+        - generic [ref=f24e50]: How Sankshep works
+        - generic [ref=f24e56]:
+          - paragraph [ref=f24e57]: Step 2 — Understand
+          - generic [ref=f24e58]: Analysing context · verifying sources
+        - generic [ref=f24e73]:
+          - generic [ref=f24e74]:
+            - button "Scene 1" [ref=f24e439]
+            - button "Scene 2" [ref=f24e441]
+            - button "Scene 3" [ref=f24e443]
+            - button "Scene 4" [ref=f24e444]
+          - generic [ref=f24e79]:
+            - button "Pause" [ref=f24e445]
+            - paragraph [ref=f24e446]: Sankshep reads & verifies every page.
+            - generic [ref=f24e85]: 0:03 / 0:12
+    - generic [ref=f24e86]:
+      - generic [ref=f24e87]:
+        - generic [ref=f24e88]:
+          - text: Demo video
+          - heading "Watch Sankshep at work." [level=2] [ref=f24e447]:
+            - generic [ref=f24e90]: Watch
+            - generic [ref=f24e91]: Sankshep
+            - generic [ref=f24e92]: at
+            - generic [ref=f24e93]: work.
+          - paragraph [ref=f24e95]: Our Smart India Hackathon 2026 walkthrough of the workspace.
+        - link "Open on YouTube" [ref=f24e448] [cursor=pointer]:
+          - /url: https://youtu.be/u4sPNRXTmRE
+      - iframe [ref=f24e100]:
+        - generic [ref=f25e1]:
+          - generic "YouTube Video Player" [ref=f25e3]
+          - generic [ref=f25e5]:
+            - generic:
+              - generic:
+                - generic [ref=f25e6] [cursor=pointer]
+                - button "Play video" [ref=f25e10] [cursor=pointer]
+                - button "Hide player controls" [ref=f25e12] [cursor=pointer]
+                - generic [ref=f25e19]:
+                  - generic [ref=f25e20]:
+                    - link "Sankshep.ai - Project Demo (S.I.H) | Gen-AI Content Transformation Platform" [ref=f25e21] [cursor=pointer]:
+                      - /url: https://www.youtube.com/watch?v=u4sPNRXTmRE
+                    - link "Siddharth Devmurari" [ref=f25e22] [cursor=pointer]:
+                      - /url: /channel/UCiMtsyATOPkhSuaWDpJ1-aQ
+                  - generic [ref=f25e24]:
+                    - button [ref=f25e25] [cursor=pointer]
+                    - generic [ref=f25e27]:
+                      - generic: Siddharth Devmurari
+                      - generic: 2 subscribers
+    - generic [ref=f24e102]:
+      - generic [ref=f24e103]:
+        - generic [ref=f24e104]:
+          - text: Privacy first
+          - heading "Your documents never have to leave your computer." [level=2] [ref=f24e449]:
+            - generic [ref=f24e106]: Your
+            - generic [ref=f24e107]: documents
+            - generic [ref=f24e108]: never
+            - generic [ref=f24e109]: have
+            - generic [ref=f24e450]: to
+            - generic [ref=f24e110]: leave
+            - generic [ref=f24e111]: your
+            - generic [ref=f24e112]: computer.
+        - generic [ref=f24e117]:
+          - paragraph [ref=f24e118]: "Contracts, financials, board papers: some documents can’t go to a cloud AI at all. Sankshep’s Private mode is built for them. One switch in the workspace moves every step onto your own machine, from reading the file to writing the last draft."
+          - link "See how Private mode works" [ref=f24e451] [cursor=pointer]:
+            - /url: /features#private-mode
+      - table [ref=f24e452]:
+        - caption [ref=f24e124]: What leaves your computer in Cloud mode and in Private mode
+        - rowgroup [ref=f24e125]:
+          - row [ref=f24e453]:
+            - columnheader "What leaves your computer" [ref=f24e454]
+            - columnheader "Private mode" [ref=f24e128]
+        - rowgroup [ref=f24e129]:
+          - row [ref=f24e455]:
+            - rowheader "Your document’s text" [ref=f24e456]
+            - cell "Stays on your computer" [ref=f24e457]
+          - row [ref=f24e461]:
+            - rowheader "Drafts and refinements" [ref=f24e462]
+            - cell "Written by your own GPU" [ref=f24e463]
+          - row [ref=f24e467]:
+            - rowheader "Images and scanned pages" [ref=f24e468]
+            - cell "Read by OCR in the browser" [ref=f24e469]
+          - row [ref=f24e473]:
+            - rowheader "Saved to History" [ref=f24e474]
+            - cell "Counts only, never text" [ref=f24e475]
+      - generic [ref=f24e154]:
+        - generic [ref=f24e479]:
+          - heading "Runs on your own machine" [level=3] [ref=f24e483]
+          - paragraph [ref=f24e484]: Private mode writes every draft with Qwen 2.5 VL through Ollama on your computer. Nothing is sent to Sankshep or to any AI provider.
+        - generic [ref=f24e485]:
+          - heading "Nothing to train on" [level=3] [ref=f24e489]
+          - paragraph [ref=f24e490]: No provider receives your text, so no one can keep it, log it or train a model on it.
+        - generic [ref=f24e491]:
+          - heading "Fits an everyday laptop" [level=3] [ref=f24e494]
+          - paragraph [ref=f24e495]: Each request is held to a 4,096-token window, so a 7B model runs in 8 GB of GPU memory and drafts stream in as they’re written.
+    - generic [ref=f24e173]:
+      - generic [ref=f24e174]:
+        - generic [ref=f24e175]: The pipeline
+        - heading "How Sankshep turns one source into every format." [level=2] [ref=f24e496]:
+          - generic [ref=f24e178]: How
+          - generic [ref=f24e179]: Sankshep
+          - generic [ref=f24e180]: turns
+          - generic [ref=f24e181]: one
+          - generic [ref=f24e182]: source
+          - generic [ref=f24e183]: into
+          - generic [ref=f24e184]: every
+          - generic [ref=f24e185]: format.
+        - paragraph [ref=f24e188]: One canonical understanding of your content feeds a private, agentic engine — so every deliverable stays consistent, verifiable, and on-brand.
+      - generic [ref=f24e189]:
+        - generic [ref=f24e190]: Step 1/8
+        - generic [ref=f24e196]:
+          - button "01 Ingest Drop in PDFs, docs, audio, video, or just paste a link — from anywhere you keep your content. PDF Audio Video URL" [ref=f24e497]:
+            - generic [ref=f24e199]: "01"
+            - heading "Ingest" [level=3] [ref=f24e498]
+            - paragraph [ref=f24e205]: Drop in PDFs, docs, audio, video, or just paste a link — from anywhere you keep your content.
+            - generic [ref=f24e206]:
+              - generic [ref=f24e207]: PDF
+              - generic [ref=f24e499]: Audio
+              - generic [ref=f24e500]: Video
+              - generic [ref=f24e210]: URL
+          - button "02 Parse We read the layout, tables, and even spoken words, then turn everything into clean, usable text. LlamaParse Unstructured Whisper" [ref=f24e501]:
+            - generic [ref=f24e212]: "02"
+            - heading "Parse" [level=3] [ref=f24e502]
+            - paragraph [ref=f24e219]: We read the layout, tables, and even spoken words, then turn everything into clean, usable text.
+            - generic [ref=f24e220]:
+              - generic [ref=f24e221]: LlamaParse
+              - generic [ref=f24e222]: Unstructured
+              - generic [ref=f24e223]: Whisper
+          - button "03 Chunk The text is broken into bite-sized pieces that each keep their full meaning and context. Semantic" [ref=f24e503]:
+            - generic [ref=f24e225]: "03"
+            - heading "Chunk" [level=3] [ref=f24e504]
+            - paragraph [ref=f24e231]: The text is broken into bite-sized pieces that each keep their full meaning and context.
+            - generic [ref=f24e232]: Semantic
+          - button "04 Embed & store Everything is saved in one searchable place, so the right passage is always easy to find. pgvector" [ref=f24e505]:
+            - generic [ref=f24e235]: "04"
+            - heading "Embed & store" [level=3] [ref=f24e506]
+            - paragraph [ref=f24e242]: Everything is saved in one searchable place, so the right passage is always easy to find.
+            - generic [ref=f24e243]: pgvector
+          - button "05 Orchestrate Smart assistants take over and decide exactly what to build and in what order. LangGraph Router" [ref=f24e507]:
+            - generic [ref=f24e246]: "05"
+            - heading "Orchestrate" [level=3] [ref=f24e508]
+            - paragraph [ref=f24e253]: Smart assistants take over and decide exactly what to build and in what order.
+            - generic [ref=f24e254]:
+              - generic [ref=f24e255]: LangGraph
+              - generic [ref=f24e256]: Router
+          - button "06 Generate Your summary, slide deck, video script, and social posts are all drafted at the same time. vLLM Llama-3" [ref=f24e509]:
+            - generic [ref=f24e258]: "06"
+            - heading "Generate" [level=3] [ref=f24e510]
+            - paragraph [ref=f24e264]: Your summary, slide deck, video script, and social posts are all drafted at the same time.
+            - generic [ref=f24e265]:
+              - generic [ref=f24e266]: vLLM
+              - generic [ref=f24e267]: Llama-3
+          - button "07 Validate Every draft is fact-checked against your source and rewritten until it holds up. Pydantic Reflection" [ref=f24e511]:
+            - generic [ref=f24e269]: "07"
+            - heading "Validate" [level=3] [ref=f24e512]
+            - paragraph [ref=f24e276]: Every draft is fact-checked against your source and rewritten until it holds up.
+            - generic [ref=f24e277]:
+              - generic [ref=f24e278]: Pydantic
+              - generic [ref=f24e279]: Reflection
+          - button "08 Deliver You get polished, ready-to-share files — with every claim linked back to the source. Deck PDF Word Social" [ref=f24e513]:
+            - generic [ref=f24e281]: "08"
+            - heading "Deliver" [level=3] [ref=f24e514]
+            - paragraph [ref=f24e287]: You get polished, ready-to-share files — with every claim linked back to the source.
+            - generic [ref=f24e288]:
+              - generic [ref=f24e515]: Deck
+              - generic [ref=f24e290]: PDF
+              - generic [ref=f24e291]: Word
+              - generic [ref=f24e516]: Social
+      - generic [ref=f24e293]:
+        - generic [ref=f24e517]:
+          - paragraph [ref=f24e518]: No waiting around
+          - paragraph [ref=f24e521]: Upload big files and keep working — Sankshep processes them in the background and never times out.
+        - generic [ref=f24e522]:
+          - paragraph [ref=f24e523]: Everything in one place
+          - paragraph [ref=f24e526]: Your content and its meaning live together in one spot, so answers stay consistent and never drift.
+        - generic [ref=f24e527]:
+          - paragraph [ref=f24e528]: Checks its own work
+          - paragraph [ref=f24e531]: Sankshep drafts, then reviews and fixes itself — so every output stays true to your original source.
+    - generic [ref=f24e310]:
+      - generic [ref=f24e311]:
+        - text: Sankshep Chat
+        - heading "Edit anything by just asking." [level=2] [ref=f24e532]:
+          - generic [ref=f24e313]: Edit
+          - generic [ref=f24e314]: anything
+          - generic [ref=f24e315]: by
+          - generic [ref=f24e316]: just
+          - generic [ref=f24e317]: asking.
+        - paragraph [ref=f24e319]: Need to change the tone or shorten a 10-page brief? Just type your request below the output, and Sankshep rewrites it in seconds.
+      - generic [ref=f24e321]:
+        - generic [ref=f24e322]:
+          - generic [ref=f24e323]: S
+          - text: Sankshep Chat
+          - generic [ref=f24e325]: generating
+        - generic [ref=f24e327]:
+          - text: Turn this
+          - mark [ref=f24e328]: 20-page security advisory
+          - text: into a
+          - mark [ref=f24e329]: 3-bullet quick brief
+          - text: .
+        - generic [ref=f24e330]:
+          - generic [ref=f24e331]: Ask Sankshep to refine…
+          - button "Regenerate" [ref=f24e533]
+    - generic [ref=f24e335]:
+      - generic [ref=f24e336]:
+        - generic [ref=f24e337]:
+          - text: How it works
+          - heading "From raw source to polished deliverable in three steps." [level=2] [ref=f24e534]:
+            - generic [ref=f24e339]: From
+            - generic [ref=f24e340]: raw
+            - generic [ref=f24e341]: source
+            - generic [ref=f24e342]: to
+            - generic [ref=f24e343]: polished
+            - generic [ref=f24e344]: deliverable
+            - generic [ref=f24e345]: in
+            - generic [ref=f24e346]: three
+            - generic [ref=f24e347]: steps.
+        - link "Explore all formats" [ref=f24e535] [cursor=pointer]:
+          - /url: /workspace
+      - generic [ref=f24e351]:
+        - article [ref=f24e352]:
+          - generic [ref=f24e353]: "01"
+          - generic [ref=f24e357]:
+            - paragraph [ref=f24e361]: Drop files or paste a URL
+            - paragraph [ref=f24e362]: PDF · DOCX · MP4 · Web
+          - heading "Drop in any content up to 30 MB" [level=3] [ref=f24e536]
+          - paragraph [ref=f24e364]: Drag & drop PDFs, docs, and images, or paste web URLs. Sankshep reads them all.
+        - article [ref=f24e365]:
+          - generic [ref=f24e366]: "02"
+          - generic [ref=f24e369]:
+            - generic [ref=f24e537]: Summary
+            - generic [ref=f24e538]: Advisory
+            - generic [ref=f24e539]: Slides
+            - generic [ref=f24e540]: Video
+            - generic [ref=f24e374]: LinkedIn
+            - generic [ref=f24e375]: Twitter/X
+          - heading "Pick every format you need" [level=3] [ref=f24e541]
+          - paragraph [ref=f24e377]: Choose from Summaries, Advisories, Slides, Video Scripts, or Social posts — all at once.
+        - article [ref=f24e378]:
+          - generic [ref=f24e379]: "03"
+          - generic [ref=f24e382]:
+            - generic [ref=f24e383]: Prompt › "A one-column brief with a risk table and 3 action items."
+            - generic [ref=f24e384]: Building custom template…
+          - heading "Design custom formats with AI" [level=3] [ref=f24e542]
+          - paragraph [ref=f24e388]: Describe how you want the output arranged, and AI builds a custom template instantly.
+    - generic [ref=f24e391]:
+      - heading "Give your reports a second life." [level=2] [ref=f24e543]:
+        - generic [ref=f24e393]: Give
+        - generic [ref=f24e394]: your
+        - generic [ref=f24e395]: reports
+        - generic [ref=f24e396]: a
+        - generic [ref=f24e397]: second
+        - generic [ref=f24e398]: life.
+      - paragraph [ref=f24e399]: Private, multi-format content creation — from the same trusted source.
+      - link "Open Workspace" [ref=f24e544] [cursor=pointer]:
+        - /url: /workspace
+  - contentinfo [ref=f24e403]:
+    - paragraph [aria-hidden] [ref=f24e405]: Sankshep.ai
+    - generic [ref=f24e407]:
+      - paragraph [ref=f24e408]: © 2026 Sankshep.ai · Neural Ninjas VGEC
+      - navigation "Footer" [ref=f24e545]:
+        - link "Terms and Conditions" [ref=f24e546] [cursor=pointer]:
+          - /url: /terms-and-conditions
+        - link "Privacy Policy" [ref=f24e547] [cursor=pointer]:
+          - /url: /privacy-policy
+        - link "Github" [ref=f24e548] [cursor=pointer]:
+          - /url: https://github.com/SiddharthDevmurari/SankShep.ai.git
+        - link "Workspace" [ref=f24e549] [cursor=pointer]:
+          - /url: /workspace
+        - link "Features" [ref=f24e550] [cursor=pointer]:
+          - /url: /features
+        - link "How it works" [ref=f24e551] [cursor=pointer]:
+          - /url: /how-it-works
+        - link "The Pipeline" [ref=f24e552] [cursor=pointer]:
+          - /url: /#how-it-works
+        - link "About Us" [ref=f24e553] [cursor=pointer]:
+          - /url: /about
+        - link "Contact Us" [ref=f24e554] [cursor=pointer]:
+          - /url: /contact

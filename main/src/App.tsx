@@ -1,6 +1,7 @@
 import { lazy, Suspense } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider } from './contexts/AuthContext'
+import { LangProvider } from './i18n'
 import { ProtectedRoute } from './components/ProtectedRoute'
 import { GlobalHeader } from './components/GlobalHeader'
 import { ScrollManager } from './components/site/SiteChrome'
@@ -19,34 +20,36 @@ const TermsPage = lazy(() => import('./pages/legal/TermsPage'))
 export default function App() {
   return (
     <BrowserRouter>
-      <AuthProvider>
-        <ScrollManager />
-        <div className="min-h-screen bg-paper">
-          <GlobalHeader />
-          <Suspense fallback={<div className="min-h-screen bg-paper" aria-busy="true" />}>
-            <Routes>
-              <Route path="/" element={<LandingPage />} />
-              <Route path="/login" element={<LoginPage />} />
-              <Route path="/about" element={<AboutPage />} />
-              <Route path="/contact" element={<ContactPage />} />
-              <Route path="/features" element={<FeaturesPage />} />
-              <Route path="/how-it-works" element={<HowItWorksPage />} />
-              <Route path="/privacy-policy" element={<PrivacyPolicyPage />} />
-              <Route path="/terms-and-conditions" element={<TermsPage />} />
-              {/* Every /workspace path, including unknown sub-paths, sits behind the auth guard. */}
-              <Route
-                path="/workspace/*"
-                element={
-                  <ProtectedRoute>
-                    <WorkspacePage />
-                  </ProtectedRoute>
-                }
-              />
-              <Route path="*" element={<Navigate to="/" replace />} />
-            </Routes>
-          </Suspense>
-        </div>
-      </AuthProvider>
+      <LangProvider>
+        <AuthProvider>
+          <ScrollManager />
+          <div className="min-h-screen bg-paper">
+            <GlobalHeader />
+            <Suspense fallback={<div className="min-h-screen bg-paper" aria-busy="true" />}>
+              <Routes>
+                <Route path="/" element={<LandingPage />} />
+                <Route path="/login" element={<LoginPage />} />
+                <Route path="/about" element={<AboutPage />} />
+                <Route path="/contact" element={<ContactPage />} />
+                <Route path="/features" element={<FeaturesPage />} />
+                <Route path="/how-it-works" element={<HowItWorksPage />} />
+                <Route path="/privacy-policy" element={<PrivacyPolicyPage />} />
+                <Route path="/terms-and-conditions" element={<TermsPage />} />
+                {/* Every /workspace path, including unknown sub-paths, sits behind the auth guard. */}
+                <Route
+                  path="/workspace/*"
+                  element={
+                    <ProtectedRoute>
+                      <WorkspacePage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route path="*" element={<Navigate to="/" replace />} />
+              </Routes>
+            </Suspense>
+          </div>
+        </AuthProvider>
+      </LangProvider>
     </BrowserRouter>
   )
 }

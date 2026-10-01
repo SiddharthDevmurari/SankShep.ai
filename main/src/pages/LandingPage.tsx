@@ -3,6 +3,8 @@ import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { SiteFooter, SiteNav } from '../components/site/SiteChrome'
 import { InstallAppButton } from '../components/InstallApp'
+import { useCopy, useLang } from '../i18n'
+import { LANDING_COPY } from './landingCopy'
 
 /* ---------- tiny inline icon set (stroke, 1.6) ---------- */
 type IconProps = { className?: string }
@@ -133,38 +135,32 @@ function Reveal({
   )
 }
 
-const HERO_CHIPS = [
-  { label: 'Executive Summary', meta: '1 page' },
-  { label: '5-Slide Deck', meta: 'PPTX' },
-  { label: 'Video Script', meta: '2 min' },
-  { label: 'LinkedIn Post', meta: 'social' },
-]
-
 // ── Hero ──────────────────────────────────────────────────────────────────────
 
 function Hero() {
+  const t = useCopy(LANDING_COPY).hero
   return (
     <section id="top" className="relative overflow-hidden">
       <div className="pointer-events-none absolute inset-0 opacity-[0.5]" style={{ backgroundImage: 'radial-gradient(#e2dfd2 1px, transparent 1px)', backgroundSize: '22px 22px', maskImage: 'radial-gradient(ellipse 80% 60% at 50% 0%, black 40%, transparent 100%)' }} />
       <div className="relative mx-auto grid max-w-[1200px] items-center gap-14 px-5 pb-20 pt-16 sm:px-8 lg:grid-cols-[1.05fr_0.95fr] lg:pb-28 lg:pt-24">
         <div>
           <div className="mb-6">
-            <p className="text-[13px] font-semibold text-ink-soft">Smart India Hackathon 2026 · SIH26154 · NTRO</p>
-            <p className="font-serif mt-1 text-[17px] leading-snug text-ink">Gen AI Platform for Automated Content Transformation</p>
+            <p className="text-[13px] font-semibold text-ink-soft">{t.sihLine}</p>
+            <p className="font-serif mt-1 text-[17px] leading-snug text-ink">{t.sihProblem}</p>
           </div>
-          <span className="inline-flex items-center rounded-full border border-hair bg-white px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-ink-soft">AI Content Transformation</span>
-          <Reveal as="h1" immediate text="Turn long, messy reports into ready-to-share content." className="font-display mt-6 text-[clamp(2.9rem,6.4vw,5rem)] text-ink" />
-          <p className="mt-6 max-w-xl text-[17px] leading-relaxed text-ink-soft">Drop in research papers, policy briefs, YouTube links, or rough notes. Sankshep instantly creates clean summaries, video scripts, LinkedIn posts, and slide decks — keeping your data safe and private.</p>
+          <span className="inline-flex items-center rounded-full border border-hair bg-white px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-ink-soft">{t.chip}</span>
+          <Reveal as="h1" immediate text={t.title} className="font-display mt-6 text-[clamp(2.9rem,6.4vw,5rem)] text-ink" />
+          <p className="mt-6 max-w-xl text-[17px] leading-relaxed text-ink-soft">{t.body}</p>
           <div className="mt-8 flex flex-wrap items-center gap-3">
             <Link to="/workspace" className="group flex items-center gap-2 rounded-full bg-ink px-6 py-3.5 text-[15px] font-medium text-paper transition-transform hover:-translate-y-0.5">
-              Launch Workspace <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+              {t.launch} <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
             </Link>
-            <a href="#how-it-works" className="rounded-full border border-hair bg-white px-6 py-3.5 text-[15px] font-medium text-ink transition-colors hover:bg-paper-deep">See How It Works</a>
+            <a href="#how-it-works" className="rounded-full border border-hair bg-white px-6 py-3.5 text-[15px] font-medium text-ink transition-colors hover:bg-paper-deep">{t.seeHow}</a>
             <InstallAppButton />
           </div>
           <div className="mt-8 flex items-center gap-5 text-[13px] text-ink-soft">
-            <span className="flex items-center gap-1.5"><Check className="h-4 w-4 text-matcha-deep" /> No credit card</span>
-            <span className="flex items-center gap-1.5"><Check className="h-4 w-4 text-matcha-deep" /> Fully on-device Private mode</span>
+            <span className="flex items-center gap-1.5"><Check className="h-4 w-4 text-matcha-deep" /> {t.noCard}</span>
+            <span className="flex items-center gap-1.5"><Check className="h-4 w-4 text-matcha-deep" /> {t.privateMode}</span>
           </div>
         </div>
         <HeroExplainer />
@@ -173,20 +169,16 @@ function Hero() {
   )
 }
 
-const SCENES = [
-  { tag: 'Step 1 — Ingest', caption: 'Drop in any report, paper, or link.' },
-  { tag: 'Step 2 — Understand', caption: 'Sankshep reads & verifies every page.' },
-  { tag: 'Step 3 — Choose', caption: 'Pick every format you need.' },
-  { tag: 'Step 4 — Deliver', caption: 'Get polished, source-linked outputs.' },
-]
+const SCENE_COUNT = 4
 const SCENE_MS = 3000
 
 function HeroExplainer() {
   const [scene, setScene] = useState(0)
   const [playing, setPlaying] = useState(true)
+  const copy = useCopy(LANDING_COPY).explainer
   useEffect(() => {
     if (!playing) return
-    const t = setTimeout(() => setScene((s) => (s + 1) % SCENES.length), SCENE_MS)
+    const t = setTimeout(() => setScene((s) => (s + 1) % SCENE_COUNT), SCENE_MS)
     return () => clearTimeout(t)
   }, [scene, playing])
   return (
@@ -199,30 +191,30 @@ function HeroExplainer() {
           <span className="h-2.5 w-2.5 rounded-full bg-[#e5e2d6]" />
           <span className="h-2.5 w-2.5 rounded-full bg-[#e5e2d6]" />
           <span className="ml-auto flex items-center gap-1.5 text-[11px] font-medium uppercase tracking-wide text-ink-soft/70">
-            <span className="h-1.5 w-1.5 rounded-full bg-red-400" /> How Sankshep works
+            <span className="h-1.5 w-1.5 rounded-full bg-red-400" /> {copy.label}
           </span>
         </div>
         <div className="relative h-[360px] bg-paper px-6 py-6 sm:h-[380px]">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-matcha-deep">{SCENES[scene].tag}</p>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-matcha-deep">{copy.scenes[scene].tag}</p>
           <div className="mt-4 h-[264px]"><SceneStage scene={scene} /></div>
         </div>
         <div className="border-t border-hair px-5 py-4">
           <div className="flex items-center gap-1.5">
-            {SCENES.map((_, i) => (
-              <button key={i} onClick={() => setScene(i)} className="group relative h-1.5 flex-1 overflow-hidden rounded-full bg-hair" aria-label={`Scene ${i + 1}`}>
+            {copy.scenes.map((_, i) => (
+              <button key={i} onClick={() => setScene(i)} className="group relative h-1.5 flex-1 overflow-hidden rounded-full bg-hair" aria-label={`${copy.scene} ${i + 1}`}>
                 <span className="absolute inset-y-0 left-0 rounded-full bg-ink" style={i < scene ? { width: '100%' } : i === scene ? { width: '100%', animation: playing ? `sk-bar ${SCENE_MS}ms linear both` : 'none' } : { width: '0%' }} />
               </button>
             ))}
           </div>
           <div className="mt-3 flex items-center gap-3">
-            <button onClick={() => setPlaying((p) => !p)} className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-ink text-paper transition-transform hover:scale-105" aria-label={playing ? 'Pause' : 'Play'}>
+            <button onClick={() => setPlaying((p) => !p)} className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-ink text-paper transition-transform hover:scale-105" aria-label={playing ? copy.pause : copy.play}>
               {playing ? (
                 <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="currentColor"><rect x="6" y="5" width="4" height="14" rx="1" /><rect x="14" y="5" width="4" height="14" rx="1" /></svg>
               ) : (
                 <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="currentColor"><path d="M7 5l12 7-12 7z" /></svg>
               )}
             </button>
-            <p key={scene} className="sk-rise text-[14px] font-medium text-ink">{SCENES[scene].caption}</p>
+            <p key={scene} className="sk-rise text-[14px] font-medium text-ink">{copy.scenes[scene].caption}</p>
             <span className="ml-auto text-[12px] tabular-nums text-ink-soft/70">0:0{scene * 3} / 0:12</span>
           </div>
         </div>
@@ -232,15 +224,16 @@ function HeroExplainer() {
 }
 
 function SceneStage({ scene }: { scene: number }) {
+  const copy = useCopy(LANDING_COPY).explainer
   if (scene === 0) return (
     <div key="s0" className="sk-rise flex h-full flex-col items-center justify-center">
       <div className="w-full rounded-2xl border-2 border-dashed border-hair bg-white p-8 text-center">
         <span className="sk-pop mx-auto grid h-14 w-14 place-items-center rounded-xl bg-ink text-paper"><FileIcon className="h-7 w-7" /></span>
         <p className="mt-4 text-[15px] font-semibold">Q3_Report.pdf</p>
-        <p className="text-[12px] text-ink-soft">42 MB · 84 pages</p>
+        <p className="text-[12px] text-ink-soft">{copy.fileMeta}</p>
       </div>
       <div className="mt-4 flex flex-wrap justify-center gap-2">
-        {['PDF', 'DOCX', 'MP4', 'YouTube', 'Web URL'].map((t) => (
+        {copy.sources.map((t) => (
           <span key={t} className="rounded-full border border-hair bg-white px-3 py-1 text-[11px] font-medium text-ink-soft">{t}</span>
         ))}
       </div>
@@ -255,15 +248,15 @@ function SceneStage({ scene }: { scene: number }) {
         </div>
       </div>
       <div className="mt-4 flex items-center justify-center gap-2 text-[13px] font-medium text-ink-soft">
-        <Sparkle className="h-4 w-4 text-matcha-deep" /> Analysing context · verifying sources
+        <Sparkle className="h-4 w-4 text-matcha-deep" /> {copy.analysing}
       </div>
     </div>
   )
   if (scene === 2) return (
     <div key="s2" className="sk-rise grid h-full grid-cols-2 content-center gap-2.5">
-      {HERO_CHIPS.map((c, i) => (
-        <div key={c.label} className="sk-pop flex items-center justify-between rounded-xl border border-ink/15 bg-matcha/70 px-3.5 py-3.5" style={{ animationDelay: `${i * 140}ms` }}>
-          <span className="text-[13.5px] font-medium leading-tight">{c.label}</span>
+      {copy.chips.map((label, i) => (
+        <div key={label} className="sk-pop flex items-center justify-between rounded-xl border border-ink/15 bg-matcha/70 px-3.5 py-3.5" style={{ animationDelay: `${i * 140}ms` }}>
+          <span className="text-[13.5px] font-medium leading-tight">{label}</span>
           <span className="grid h-5 w-5 shrink-0 place-items-center rounded-full bg-ink text-paper"><Check className="h-3 w-3" /></span>
         </div>
       ))}
@@ -271,7 +264,7 @@ function SceneStage({ scene }: { scene: number }) {
   )
   return (
     <div key="s3" className="sk-rise flex h-full flex-col justify-center gap-2.5">
-      {[{ t: 'Executive Summary', d: '1-page brief · exported' }, { t: '5-Slide Deck', d: 'PPTX · ready to present' }, { t: 'Video Script', d: '2-min narration + scenes' }].map((o, i) => (
+      {copy.outputs.map((o, i) => (
         <div key={o.t} className="sk-pop flex items-center gap-3 rounded-xl border border-hair bg-white px-4 py-3" style={{ animationDelay: `${i * 160}ms` }}>
           <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-matcha text-ink"><Check className="h-4 w-4" /></span>
           <div className="min-w-0"><p className="truncate text-[14px] font-semibold">{o.t}</p><p className="text-[12px] text-ink-soft">{o.d}</p></div>
@@ -285,46 +278,30 @@ function SceneStage({ scene }: { scene: number }) {
 // ── Security / Workflow / ChatBlock / HowItWorks / CTA / Footer ───────────────
 // (keeping these identical to original App.tsx)
 
-const STAGES = [
-  { icon: Upload, title: 'Ingest', desc: 'Drop in PDFs, docs, audio, video, or just paste a link — from anywhere you keep your content.', tags: ['PDF', 'Audio', 'Video', 'URL'], live: 'Q3_Report.pdf uploaded — 42 MB accepted.' },
-  { icon: FileIcon, title: 'Parse', desc: 'We read the layout, tables, and even spoken words, then turn everything into clean, usable text.', tags: ['LlamaParse', 'Unstructured', 'Whisper'], live: 'Layout, tables & speech extracted to clean text.' },
-  { icon: Layers, title: 'Chunk', desc: 'The text is broken into bite-sized pieces that each keep their full meaning and context.', tags: ['Semantic'], live: 'Split into coherent, context-aware passages.' },
-  { icon: Database, title: 'Embed & store', desc: 'Everything is saved in one searchable place, so the right passage is always easy to find.', tags: ['pgvector'], live: 'Embeddings written to a unified pgvector store.' },
-  { icon: Agents, title: 'Orchestrate', desc: 'Smart assistants take over and decide exactly what to build and in what order.', tags: ['LangGraph', 'Router'], live: 'Router dispatches the Generator & Critic agents.' },
-  { icon: Sparkle, title: 'Generate', desc: 'Your summary, slide deck, video script, and social posts are all drafted at the same time.', tags: ['vLLM', 'Llama-3'], live: 'Summary, deck, script & posts drafted in parallel.' },
-  { icon: Shield, title: 'Validate', desc: 'Every draft is fact-checked against your source and rewritten until it holds up.', tags: ['Pydantic', 'Reflection'], live: 'Schema-checked; rejected drafts revised in a loop.' },
-  { icon: Send, title: 'Deliver', desc: 'You get polished, ready-to-share files — with every claim linked back to the source.', tags: ['Deck', 'PDF', 'Word', 'Social'], live: 'Source-linked deliverables exported to you.' },
-]
+// One icon per pipeline stage, in the order of the copy's `pipeline.stages`.
+const STAGE_ICONS = [Upload, FileIcon, Layers, Database, Agents, Sparkle, Shield, Send]
+type Stage = (typeof LANDING_COPY.en.pipeline.stages)[number] & { icon: typeof Upload }
 
-/** What each processing mode sends off the user's computer; the rows match the workspace's actual behaviour. */
-const DATA_ROWS: { what: string; cloud: string; local: string }[] = [
-  { what: 'Your document’s text', cloud: 'Sent to the AI provider', local: 'Stays on your computer' },
-  { what: 'Drafts and refinements', cloud: 'Written by the provider', local: 'Written by your own GPU' },
-  { what: 'Images and scanned pages', cloud: 'Read by a vision model', local: 'Read by OCR in the browser' },
-  { what: 'Saved to History', cloud: 'Excerpt and drafts', local: 'Counts only, never text' },
-]
+/** The data rows (in the copy) say what each processing mode sends off the user's computer; they match the workspace's actual behaviour. */
+const SECURITY_ICONS = [Shield, NoTrain, Check]
 
 function Security() {
-  const items = [
-    { icon: Shield, title: 'Runs on your own machine', body: 'Private mode writes every draft with Qwen 2.5 VL through Ollama on your computer. Nothing is sent to Sankshep or to any AI provider.' },
-    { icon: NoTrain, title: 'Nothing to train on', body: 'No provider receives your text, so no one can keep it, log it or train a model on it.' },
-    { icon: Check, title: 'Fits an everyday laptop', body: 'Each request is held to a 4,096-token window, so a 7B model runs in 8 GB of GPU memory and drafts stream in as they’re written.' },
-  ]
+  const t = useCopy(LANDING_COPY).security
+  const items = t.items.map((item, i) => ({ ...item, icon: SECURITY_ICONS[i] }))
   return (
     <section id="security" className="bg-ink text-paper">
       <div className="mx-auto max-w-[1200px] px-5 py-20 sm:px-8 lg:py-28">
         <div className="grid gap-10 lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)] lg:items-end lg:gap-16">
           <div>
-            <span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-matcha">Privacy first</span>
-            <Reveal as="h2" text="Your documents never have to *leave your computer.*" accentClass="text-matcha" className="font-display mt-4 text-[clamp(2.2rem,4.8vw,3.6rem)] text-paper" />
+            <span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-matcha">{t.eyebrow}</span>
+            <Reveal as="h2" text={t.title} accentClass="text-matcha" className="font-display mt-4 text-[clamp(2.2rem,4.8vw,3.6rem)] text-paper" />
           </div>
           <div>
             <p className="text-[16px] leading-relaxed text-paper/75">
-              Contracts, financials, board papers: some documents can’t go to a cloud AI at all. Sankshep’s Private mode is built for them.
-              One switch in the workspace moves every step onto your own machine, from reading the file to writing the last draft.
+              {t.body}
             </p>
             <Link to="/features#private-mode" className="group mt-6 inline-flex items-center gap-1.5 text-[14px] font-medium text-matcha">
-              See how Private mode works <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+              {t.link} <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
             </Link>
           </div>
         </div>
@@ -332,16 +309,16 @@ function Security() {
         {/* The difference, row by row: what leaves the computer in each mode */}
         <div className="mt-14 overflow-hidden rounded-2xl border border-hair-dark">
           <table className="w-full border-collapse text-left text-[14px]">
-            <caption className="sr-only">What leaves your computer in Cloud mode and in Private mode</caption>
+            <caption className="sr-only">{t.caption}</caption>
             <thead>
               <tr className="border-b border-hair-dark text-[12.5px] text-paper/55">
-                <th scope="col" className="px-5 py-3.5 font-medium lg:px-7">What leaves your computer</th>
-                <th scope="col" className="hidden px-5 py-3.5 font-medium sm:table-cell lg:px-7">Cloud mode</th>
-                <th scope="col" className="px-5 py-3.5 font-medium text-matcha lg:px-7">Private mode</th>
+                <th scope="col" className="px-5 py-3.5 font-medium lg:px-7">{t.head[0]}</th>
+                <th scope="col" className="hidden px-5 py-3.5 font-medium sm:table-cell lg:px-7">{t.head[1]}</th>
+                <th scope="col" className="px-5 py-3.5 font-medium text-matcha lg:px-7">{t.head[2]}</th>
               </tr>
             </thead>
             <tbody>
-              {DATA_ROWS.map((r) => (
+              {t.rows.map((r) => (
                 <tr key={r.what} className="border-b border-hair-dark last:border-b-0">
                   <th scope="row" className="px-5 py-4 font-medium text-paper lg:px-7">{r.what}</th>
                   <td className="hidden px-5 py-4 text-paper/55 sm:table-cell lg:px-7">{r.cloud}</td>
@@ -368,7 +345,7 @@ function Security() {
   )
 }
 
-function PipelineCard({ stage, index, active, onPick }: { stage: typeof STAGES[number]; index: number; active: boolean; onPick: () => void }) {
+function PipelineCard({ stage, index, active, onPick }: { stage: Stage; index: number; active: boolean; onPick: () => void }) {
   const { icon: Icon } = stage
   return (
     <button
@@ -409,6 +386,8 @@ function PipelineCard({ stage, index, active, onPick }: { stage: typeof STAGES[n
 function PipelineMap() {
   const [active, setActive] = useState(0)
   const [running, setRunning] = useState(true)
+  const copy = useCopy(LANDING_COPY).pipeline
+  const STAGES: Stage[] = copy.stages.map((s, i) => ({ ...s, icon: STAGE_ICONS[i] }))
   const ref = useRef<HTMLDivElement>(null)
   const inView = useRef(false)
 
@@ -418,7 +397,7 @@ function PipelineMap() {
     const io = new IntersectionObserver(([e]) => (inView.current = e.isIntersecting), { threshold: 0.2 })
     io.observe(el)
     const t = setInterval(() => {
-      if (inView.current && running) setActive((a) => (a + 1) % STAGES.length)
+      if (inView.current && running) setActive((a) => (a + 1) % STAGE_ICONS.length)
     }, 2000)
     return () => { io.disconnect(); clearInterval(t) }
   }, [running])
@@ -458,8 +437,8 @@ function PipelineMap() {
             <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-green-400 opacity-60" />
             <span className="relative inline-flex h-2 w-2 rounded-full bg-green-500" />
           </span>
-          <span className="text-ink-soft">Step {active + 1}/8</span>
-          <span className="hidden text-ink sm:inline">· Q3_Report.pdf uploaded — 42 MB accepted.</span>
+          <span className="text-ink-soft">{copy.step} {active + 1}/8</span>
+          <span className="hidden text-ink sm:inline">· {STAGES[0].live}</span>
         </span>
       </div>
 
@@ -506,7 +485,7 @@ function PipelineMap() {
       {/* Mobile: single column 1–8 */}
       <div className="flex flex-col gap-3 lg:hidden">
         {STAGES.map((s, i) => (
-          <PipelineCard key={s.title} stage={s} index={i} active={active === i} onPick={() => setActive(i)} />
+          <PipelineCard key={i} stage={s} index={i} active={active === i} onPick={() => setActive(i)} />
         ))}
       </div>
     </div>
@@ -514,23 +493,19 @@ function PipelineMap() {
 }
 
 function Workflow() {
-  const highlights = [
-    { k: 'No waiting around', v: 'Upload big files and keep working — Sankshep processes them in the background and never times out.' },
-    { k: 'Everything in one place', v: 'Your content and its meaning live together in one spot, so answers stay consistent and never drift.' },
-    { k: 'Checks its own work', v: 'Sankshep drafts, then reviews and fixes itself — so every output stays true to your original source.' },
-  ]
+  const t = useCopy(LANDING_COPY).pipeline
   return (
     <section id="how-it-works" className="relative overflow-hidden border-y border-hair bg-paper">
       <div className="pointer-events-none absolute inset-0 opacity-[0.5]" style={{ backgroundImage: 'linear-gradient(#ece9dd 1px, transparent 1px), linear-gradient(90deg, #ece9dd 1px, transparent 1px)', backgroundSize: '48px 48px', maskImage: 'radial-gradient(ellipse 90% 70% at 50% 40%, black 30%, transparent 100%)' }} />
       <div className="relative mx-auto max-w-[1200px] px-5 py-20 sm:px-8 lg:py-28">
         <div className="max-w-2xl">
-          <span className="inline-flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-ink-soft"><span className="flex h-1.5 w-1.5 rounded-full bg-matcha-deep" /> The pipeline</span>
-          <Reveal as="h2" text="How Sankshep turns one source into every format." className="font-display mt-4 text-[clamp(2.2rem,4.8vw,3.6rem)] text-ink" />
-          <p className="mt-5 text-[16px] leading-relaxed text-ink-soft">One canonical understanding of your content feeds a private, agentic engine — so every deliverable stays consistent, verifiable, and on-brand.</p>
+          <span className="inline-flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-ink-soft"><span className="flex h-1.5 w-1.5 rounded-full bg-matcha-deep" /> {t.eyebrow}</span>
+          <Reveal as="h2" text={t.title} className="font-display mt-4 text-[clamp(2.2rem,4.8vw,3.6rem)] text-ink" />
+          <p className="mt-5 text-[16px] leading-relaxed text-ink-soft">{t.body}</p>
         </div>
         <PipelineMap />
         <div className="mt-12 grid gap-4 md:grid-cols-3">
-          {highlights.map((p) => (
+          {t.highlights.map((p) => (
             <div key={p.k} className="rounded-2xl border border-hair bg-white/70 p-5">
               <p className="flex items-center gap-2 text-[14px] font-semibold"><Check className="h-4 w-4 text-matcha-deep" />{p.k}</p>
               <p className="mt-2 text-[13.5px] leading-relaxed text-ink-soft">{p.v}</p>
@@ -543,29 +518,30 @@ function Workflow() {
 }
 
 function ChatBlock() {
+  const t = useCopy(LANDING_COPY).chat
   return (
     <section id="custom-prompts" className="bg-matcha text-ink">
       <div className="mx-auto grid max-w-[1200px] items-center gap-12 px-5 py-20 sm:px-8 lg:grid-cols-2 lg:py-28">
         <div>
-          <span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-ink/60">Sankshep Chat</span>
-          <Reveal as="h2" text="Edit anything by just asking." accentClass="text-ink" className="font-display mt-4 text-[clamp(2.6rem,5.8vw,4.6rem)] text-ink" />
-          <p className="mt-6 max-w-md text-[17px] leading-relaxed text-ink/70">Need to change the tone or shorten a 10-page brief? Just type your request below the output, and Sankshep rewrites it in seconds.</p>
+          <span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-ink/60">{t.eyebrow}</span>
+          <Reveal as="h2" text={t.title} accentClass="text-ink" className="font-display mt-4 text-[clamp(2.6rem,5.8vw,4.6rem)] text-ink" />
+          <p className="mt-6 max-w-md text-[17px] leading-relaxed text-ink/70">{t.body}</p>
         </div>
         <div className="relative">
           <div className="absolute -left-5 -top-5 hidden h-20 w-20 rounded-2xl bg-white/40 blur-xl sm:block" />
           <div className="relative rounded-2xl border border-ink/10 bg-white p-5 shadow-[0_30px_70px_-35px_rgba(15,16,15,0.5)]">
             <div className="flex items-center gap-2 text-[12px] font-medium text-ink-soft">
               <span className="grid h-6 w-6 place-items-center rounded-md bg-ink text-matcha"><span className="font-serif text-[13px] leading-none">S</span></span>
-              Sankshep Chat <span className="ml-auto flex items-center gap-1.5 text-[11px] text-ink-soft/70"><span className="h-1.5 w-1.5 rounded-full bg-matcha-deep" /> generating</span>
+              Sankshep Chat <span className="ml-auto flex items-center gap-1.5 text-[11px] text-ink-soft/70"><span className="h-1.5 w-1.5 rounded-full bg-matcha-deep" /> {t.generating}</span>
             </div>
             <div className="mt-4 rounded-xl border border-hair bg-paper p-4 text-[15px] leading-relaxed">
-              Turn this <mark className="rounded bg-mist px-1 py-0.5 text-ink">20-page security advisory</mark> into a <mark className="rounded bg-mist px-1 py-0.5 text-ink">3-bullet quick brief</mark>.
+              {t.prompt[0]}<mark className="rounded bg-mist px-1 py-0.5 text-ink">{t.prompt[1]}</mark>{t.prompt[2]}<mark className="rounded bg-mist px-1 py-0.5 text-ink">{t.prompt[3]}</mark>{t.prompt[4]}
             </div>
             <div className="mt-3 flex items-center gap-2">
-              <div className="flex flex-1 items-center gap-2 rounded-full border border-hair bg-white px-4 py-2.5 text-[13px] text-ink-soft/70">Ask Sankshep to refine…</div>
+              <div className="flex flex-1 items-center gap-2 rounded-full border border-hair bg-white px-4 py-2.5 text-[13px] text-ink-soft/70">{t.placeholder}</div>
               <button className="group flex items-center gap-1.5 rounded-full bg-ink px-4 py-2.5 text-[13px] font-medium text-paper">
                 <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" {...stroke}><path d="M21 12a9 9 0 1 1-3-6.7M21 4v5h-5" /></svg>
-                Regenerate
+                {t.regenerate}
               </button>
             </div>
           </div>
@@ -575,22 +551,21 @@ function ChatBlock() {
   )
 }
 
+const STEP_ACCENTS = ['file', 'formats', 'custom'] as const
+
 function HowItWorks() {
-  const steps = [
-    { n: '01', title: 'Drop in any content up to 30 MB', body: 'Drag & drop PDFs, docs, and images, or paste web URLs. Sankshep reads them all.', accent: 'file' },
-    { n: '02', title: 'Pick every format you need', body: 'Choose from Summaries, Advisories, Slides, Video Scripts, or Social posts — all at once.', accent: 'formats' },
-    { n: '03', title: 'Design custom formats with AI', body: 'Describe how you want the output arranged, and AI builds a custom template instantly.', accent: 'custom' },
-  ]
-  const tags = ['Summary', 'Advisory', 'Slides', 'Video', 'LinkedIn', 'Twitter/X']
+  const t = useCopy(LANDING_COPY).how
+  const steps = t.steps.map((s, i) => ({ ...s, n: `0${i + 1}`, accent: STEP_ACCENTS[i] }))
+  const tags = t.tags
   return (
     <section className="mx-auto max-w-[1200px] px-5 py-20 sm:px-8 lg:py-28">
       <div className="flex flex-col items-start justify-between gap-6 md:flex-row md:items-end">
         <div>
-          <span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-ink-soft">How it works</span>
-          <Reveal as="h2" text="From raw source to polished deliverable in three steps." className="font-display mt-4 max-w-xl text-[clamp(2.2rem,4.8vw,3.6rem)] text-ink" />
+          <span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-ink-soft">{t.eyebrow}</span>
+          <Reveal as="h2" text={t.title} className="font-display mt-4 max-w-xl text-[clamp(2.2rem,4.8vw,3.6rem)] text-ink" />
         </div>
         <Link to="/workspace" className="group flex items-center gap-1.5 text-[14px] font-medium text-ink">
-          Explore all formats <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+          {t.explore} <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
         </Link>
       </div>
       <div id="formats" className="mt-14 grid gap-5 lg:grid-cols-3">
@@ -604,8 +579,8 @@ function HowItWorks() {
               <div className="mt-6 rounded-xl border border-dashed border-hair bg-paper p-5">
                 <div className="grid place-items-center gap-2 py-3 text-center">
                   <FileIcon className="h-7 w-7 text-ink-soft" />
-                  <p className="text-[12px] font-medium text-ink-soft">Drop files or paste a URL</p>
-                  <p className="text-[11px] text-ink-soft/60">PDF · DOCX · MP4 · Web</p>
+                  <p className="text-[12px] font-medium text-ink-soft">{t.drop}</p>
+                  <p className="text-[11px] text-ink-soft/60">{t.fileTypes}</p>
                 </div>
               </div>
             )}
@@ -617,9 +592,9 @@ function HowItWorks() {
             {s.accent === 'custom' && (
               <div className="mt-6 rounded-xl border border-hair bg-paper p-5">
                 <div className="rounded-lg border border-hair bg-white px-3 py-2 text-[12px] text-ink-soft">
-                  <span className="text-ink-soft/60">Prompt ›</span> "A one-column brief with a risk table and 3 action items."
+                  <span className="text-ink-soft/60">{t.promptLabel}</span> {t.promptText}
                 </div>
-                <div className="mt-2 flex items-center gap-1.5 text-[11px] font-medium text-matcha-deep"><Sparkle className="h-3.5 w-3.5" /> Building custom template…</div>
+                <div className="mt-2 flex items-center gap-1.5 text-[11px] font-medium text-matcha-deep"><Sparkle className="h-3.5 w-3.5" /> {t.building}</div>
               </div>
             )}
             <h3 className="mt-6 text-[20px] font-medium leading-snug">{s.title}</h3>
@@ -634,23 +609,24 @@ function HowItWorks() {
 const DEMO_VIDEO_ID = 'u4sPNRXTmRE'
 
 function DemoVideo() {
+  const t = useCopy(LANDING_COPY).demo
   return (
     <section id="demo" className="mx-auto max-w-[1200px] px-5 pb-20 sm:px-8 lg:pb-28">
       <div className="flex flex-col items-start justify-between gap-6 md:flex-row md:items-end">
         <div>
-          <span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-ink-soft">Demo video</span>
-          <Reveal as="h2" text="Watch Sankshep *at work.*" accentClass="text-ink" className="font-display mt-4 max-w-xl text-[clamp(2.2rem,4.8vw,3.6rem)] text-ink" />
-          <p className="mt-4 max-w-md text-[15px] leading-relaxed text-ink-soft">Our Smart India Hackathon 2026 walkthrough of the workspace.</p>
+          <span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-ink-soft">{t.eyebrow}</span>
+          <Reveal as="h2" text={t.title} accentClass="text-ink" className="font-display mt-4 max-w-xl text-[clamp(2.2rem,4.8vw,3.6rem)] text-ink" />
+          <p className="mt-4 max-w-md text-[15px] leading-relaxed text-ink-soft">{t.body}</p>
         </div>
         <a href={`https://youtu.be/${DEMO_VIDEO_ID}`} target="_blank" rel="noreferrer" className="group flex items-center gap-1.5 text-[14px] font-medium text-ink">
-          Open on YouTube <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+          {t.open} <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
         </a>
       </div>
       <div className="mt-10 overflow-hidden rounded-[18px] border-2 border-ink bg-ink shadow-[0_20px_50px_-20px_rgba(15,16,15,0.45)]">
         <iframe
           className="aspect-video w-full"
           src={`https://www.youtube-nocookie.com/embed/${DEMO_VIDEO_ID}?rel=0`}
-          title="Sankshep.ai demo video"
+          title={t.frameTitle}
           loading="lazy"
           allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
           allowFullScreen
@@ -661,15 +637,16 @@ function DemoVideo() {
 }
 
 function CtaBanner() {
+  const t = useCopy(LANDING_COPY).cta
   return (
     <section className="mx-auto max-w-[1200px] px-5 pb-20 sm:px-8">
       <div className="relative overflow-hidden rounded-3xl border border-hair bg-ink px-8 py-16 text-center text-paper sm:px-12">
         <div className="pointer-events-none absolute inset-0 opacity-[0.12]" style={{ backgroundImage: 'radial-gradient(#d4ed64 1px, transparent 1px)', backgroundSize: '20px 20px' }} />
         <div className="relative">
-          <Reveal as="h2" text="Give your reports a second life." accentClass="text-matcha" className="font-display mx-auto max-w-2xl text-[clamp(2.2rem,4.8vw,3.4rem)] text-paper" />
-          <p className="mx-auto mt-4 max-w-md text-[15px] text-paper/60">Private, multi-format content creation — from the same trusted source.</p>
+          <Reveal as="h2" text={t.title} accentClass="text-matcha" className="font-display mx-auto max-w-2xl text-[clamp(2.2rem,4.8vw,3.4rem)] text-paper" />
+          <p className="mx-auto mt-4 max-w-md text-[15px] text-paper/60">{t.body}</p>
           <Link to="/workspace" className="mt-8 inline-flex items-center gap-2 rounded-full bg-matcha px-6 py-3.5 text-[15px] font-medium text-ink transition-transform hover:-translate-y-0.5">
-            Open Workspace <ArrowRight className="h-4 w-4" />
+            {t.button} <ArrowRight className="h-4 w-4" />
           </Link>
         </div>
       </div>
@@ -678,8 +655,9 @@ function CtaBanner() {
 }
 
 export default function LandingPage() {
+  const { lang } = useLang()
   return (
-    <div className="min-h-screen bg-paper">
+    <div lang={lang} className="min-h-screen bg-paper">
       <SiteNav />
       <main>
         <Hero />

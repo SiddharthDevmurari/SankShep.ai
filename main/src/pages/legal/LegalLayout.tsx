@@ -1,11 +1,32 @@
 import { useEffect, useState, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { SitePage } from '../../components/site/SiteChrome'
+import { useCopy } from '../../i18n'
 
 export interface LegalSection {
   id: string
   title: string
   body: ReactNode
+}
+
+const en = {
+  eyebrow: 'Legal',
+  updated: 'Last updated',
+  summaryLabel: 'Summary',
+  shortVersion: 'The short version',
+  contents: 'Contents',
+  readWith: (link: ReactNode) => <>Read this together with our {link}.</>,
+  translationNote: null as string | null,
+}
+
+const hi: typeof en = {
+  eyebrow: 'क़ानूनी',
+  updated: 'आख़िरी अपडेट',
+  summaryLabel: 'सारांश',
+  shortVersion: 'संक्षेप में',
+  contents: 'विषय-सूची',
+  readWith: (link: ReactNode) => <>इसे हमारी {link} के साथ पढ़ें।</>,
+  translationNote: 'यह हिंदी अनुवाद आपकी सुविधा के लिए है। अंग्रेज़ी संस्करण से कोई अंतर होने पर अंग्रेज़ी संस्करण ही मान्य होगा।',
 }
 
 /**
@@ -21,25 +42,27 @@ export function LegalLayout({ title, updated, summary, sections, sibling }: {
   sibling: { label: string; to: string }
 }) {
   const active = useActiveSection(sections.map((s) => s.id))
+  const t = useCopy({ en, hi })
 
   return (
     <SitePage>
       <article className="mx-auto max-w-[1100px] px-5 pb-24 pt-14 sm:px-8 lg:pt-20">
         <header className="max-w-[68ch]">
-          <p className="text-[13.5px] font-semibold text-ink-soft">Legal</p>
+          <p className="text-[13.5px] font-semibold text-ink-soft">{t.eyebrow}</p>
           <h1 className="font-display mt-3 text-[clamp(2.9rem,6.4vw,5rem)] text-ink">{title}</h1>
-          <p className="mt-5 font-mono text-[12.5px] text-ink-mute">Last updated {updated}</p>
+          <p className="mt-5 font-mono text-[12.5px] text-ink-mute">{t.updated} {updated}</p>
+          {t.translationNote && <p className="mt-4 text-[14px] leading-relaxed text-ink-soft">{t.translationNote}</p>}
         </header>
 
-        <aside aria-label="Summary" className="mt-10 max-w-[68ch] rounded-2xl border border-hair bg-white p-6 sm:p-7">
-          <h2 className="text-[13.5px] font-semibold text-ink">The short version</h2>
+        <aside aria-label={t.summaryLabel} className="mt-10 max-w-[68ch] rounded-2xl border border-hair bg-white p-6 sm:p-7">
+          <h2 className="text-[13.5px] font-semibold text-ink">{t.shortVersion}</h2>
           <div className="mt-3 space-y-2.5 text-[15px] leading-relaxed text-ink-soft [&_strong]:font-semibold [&_strong]:text-ink">{summary}</div>
         </aside>
 
         <div className="mt-14 grid gap-12 lg:grid-cols-[200px_minmax(0,68ch)] lg:gap-16">
-          <nav aria-label="Contents" className="hidden lg:block">
+          <nav aria-label={t.contents} className="hidden lg:block">
             <div className="sticky top-32">
-              <p className="text-[12.5px] font-semibold text-ink-mute">Contents</p>
+              <p className="text-[12.5px] font-semibold text-ink-mute">{t.contents}</p>
               <ol className="mt-3 space-y-0.5 border-l border-hair">
                 {sections.map((s, i) => (
                   <li key={s.id}>
@@ -71,8 +94,9 @@ export function LegalLayout({ title, updated, summary, sections, sibling }: {
             ))}
 
             <footer className="mt-6 rounded-2xl bg-paper-deep p-6 text-[14.5px] leading-relaxed text-ink-soft">
-              Read this together with our{' '}
-              <Link to={sibling.to} className="font-medium text-ink underline decoration-ink/30 underline-offset-4 hover:decoration-ink">{sibling.label}</Link>.
+              {t.readWith(
+                <Link to={sibling.to} className="font-medium text-ink underline decoration-ink/30 underline-offset-4 hover:decoration-ink">{sibling.label}</Link>,
+              )}
             </footer>
           </div>
         </div>

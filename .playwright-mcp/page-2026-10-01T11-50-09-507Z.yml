@@ -1,0 +1,357 @@
+- generic [ref=f8e4]:
+  - banner [ref=f8e5]:
+    - navigation "मुख्य" [ref=f8e452]:
+      - link "Sankshep होम" [ref=f8e453] [cursor=pointer]:
+        - /url: /
+        - generic [ref=f8e10]: Sankshep
+      - generic [ref=f8e11]:
+        - link "फ़ीचर्स" [ref=f8e454] [cursor=pointer]:
+          - /url: /features
+        - link "कैसे काम करता है" [ref=f8e455] [cursor=pointer]:
+          - /url: /how-it-works
+        - link "हमारे बारे में" [ref=f8e456] [cursor=pointer]:
+          - /url: /about
+        - link "संपर्क" [ref=f8e457] [cursor=pointer]:
+          - /url: /contact
+        - link "नियम व शर्तें" [ref=f8e458] [cursor=pointer]:
+          - /url: /terms-and-conditions
+        - link "गोपनीयता नीति" [ref=f8e459] [cursor=pointer]:
+          - /url: /privacy-policy
+        - link "लॉग इन / साइन अप" [ref=f8e460] [cursor=pointer]:
+          - /url: /login
+      - link "GitHub पर Sankshep.ai का सोर्स कोड" [ref=f8e461] [cursor=pointer]:
+        - /url: https://github.com/SiddharthDevmurari/SankShep.ai.git
+      - group "Language / भाषा" [ref=f8e22]:
+        - button "EN" [ref=f8e23]
+        - button "हिं" [active] [pressed] [ref=f8e24]
+      - link "वर्कस्पेस खोलें" [ref=f8e462] [cursor=pointer]:
+        - /url: /workspace
+  - main [ref=f8e28]:
+    - generic [ref=f8e30]:
+      - generic [ref=f8e31]:
+        - generic [ref=f8e32]:
+          - paragraph [ref=f8e33]: स्मार्ट इंडिया हैकाथॉन 2026 · SIH26154 · NTRO
+          - paragraph [ref=f8e34]: स्वचालित कंटेंट रूपांतरण के लिए Gen AI प्लेटफ़ॉर्म
+        - generic [ref=f8e35]: AI कंटेंट रूपांतरण
+        - heading "लंबी, उलझी रिपोर्टों को शेयर करने लायक कंटेंट में बदलें।" [level=1] [ref=f8e463]:
+          - generic [ref=f8e37]: लंबी,
+          - generic [ref=f8e38]: उलझी
+          - generic [ref=f8e39]: रिपोर्टों
+          - generic [ref=f8e40]: को
+          - generic [ref=f8e41]: शेयर
+          - generic [ref=f8e42]: करने
+          - generic [ref=f8e43]: लायक
+          - generic [ref=f8e464]: कंटेंट
+          - generic [ref=f8e465]: में
+          - generic [ref=f8e466]: बदलें।
+        - paragraph [ref=f8e44]: रिसर्च पेपर, नीति दस्तावेज़, YouTube लिंक या कच्चे नोट्स डालें। Sankshep तुरंत साफ़-सुथरे सारांश, वीडियो स्क्रिप्ट, LinkedIn पोस्ट और स्लाइड डेक बना देता है, और आपका डेटा सुरक्षित और निजी रखता है।
+        - generic [ref=f8e45]:
+          - link "वर्कस्पेस खोलें" [ref=f8e467] [cursor=pointer]:
+            - /url: /workspace
+          - link "देखें यह कैसे काम करता है" [ref=f8e468] [cursor=pointer]:
+            - /url: "#how-it-works"
+        - generic [ref=f8e50]:
+          - generic [ref=f8e51]: क्रेडिट कार्ड की ज़रूरत नहीं
+          - generic [ref=f8e54]: Private mode, पूरी तरह आपके डिवाइस पर
+      - generic [ref=f8e58]:
+        - generic [ref=f8e59]: Sankshep कैसे काम करता है
+        - generic [ref=f8e65]:
+          - paragraph [ref=f8e66]: "चरण 3: चुनाव"
+          - generic [ref=f8e469]:
+            - generic [ref=f8e470]: कार्यकारी सारांश
+            - generic [ref=f8e475]: 5 स्लाइड का डेक
+            - generic [ref=f8e480]: वीडियो स्क्रिप्ट
+            - generic [ref=f8e485]: LinkedIn पोस्ट
+        - generic [ref=f8e82]:
+          - generic [ref=f8e83]:
+            - button "दृश्य 1" [ref=f8e490]
+            - button "दृश्य 2" [ref=f8e491]
+            - button "दृश्य 3" [ref=f8e493]
+            - button "दृश्य 4" [ref=f8e495]
+          - generic [ref=f8e89]:
+            - button "रोकें" [ref=f8e496]
+            - paragraph [ref=f8e497]: जो भी फ़ॉर्मेट चाहिए, सब चुनें।
+            - generic [ref=f8e95]: 0:06 / 0:12
+    - generic [ref=f8e96]:
+      - generic [ref=f8e97]:
+        - generic [ref=f8e98]:
+          - text: डेमो वीडियो
+          - heading "Sankshep को काम करते देखें।" [level=2] [ref=f8e498]:
+            - generic [ref=f8e100]: Sankshep
+            - generic [ref=f8e101]: को
+            - generic [ref=f8e102]: काम
+            - generic [ref=f8e103]: करते
+            - generic [ref=f8e499]: देखें।
+          - paragraph [ref=f8e104]: स्मार्ट इंडिया हैकाथॉन 2026 के लिए वर्कस्पेस का हमारा वॉकथ्रू (अंग्रेज़ी में)।
+        - link "YouTube पर खोलें" [ref=f8e500] [cursor=pointer]:
+          - /url: https://youtu.be/u4sPNRXTmRE
+      - iframe [ref=f8e109]:
+        - generic [ref=f9e1]:
+          - generic "YouTube Video Player" [ref=f9e3]
+          - generic [ref=f9e5]:
+            - generic:
+              - generic:
+                - generic [ref=f9e6] [cursor=pointer]
+                - button "Play video" [ref=f9e10] [cursor=pointer]
+                - button "Hide player controls" [ref=f9e12] [cursor=pointer]
+                - generic [ref=f9e14]:
+                  - generic [ref=f9e19]:
+                    - generic [ref=f9e20]:
+                      - link "Sankshep.ai - Project Demo (S.I.H) | Gen-AI Content Transformation Platform" [ref=f9e21] [cursor=pointer]:
+                        - /url: https://www.youtube.com/watch?v=u4sPNRXTmRE
+                      - link "Siddharth Devmurari" [ref=f9e22] [cursor=pointer]:
+                        - /url: /channel/UCiMtsyATOPkhSuaWDpJ1-aQ
+                    - generic [ref=f9e24]:
+                      - button [ref=f9e25] [cursor=pointer]
+                      - generic [ref=f9e27]:
+                        - generic: Siddharth Devmurari
+                        - generic: 2 subscribers
+                  - generic [ref=f9e28]:
+                    - button "Copy link" [ref=f9e31] [cursor=pointer]
+                    - link "Watch on YouTube" [ref=f9e42] [cursor=pointer]:
+                      - /url: https://www.youtube.com/watch?v=u4sPNRXTmRE
+                      - generic [ref=f9e43]: Watch on
+    - generic [ref=f8e111]:
+      - generic [ref=f8e112]:
+        - generic [ref=f8e113]:
+          - text: गोपनीयता सबसे पहले
+          - heading "आपके दस्तावेज़ों को कभी आपके कंप्यूटर से बाहर नहीं जाना पड़ता।" [level=2] [ref=f8e501]:
+            - generic [ref=f8e115]: आपके
+            - generic [ref=f8e116]: दस्तावेज़ों
+            - generic [ref=f8e117]: को
+            - generic [ref=f8e118]: कभी
+            - generic [ref=f8e120]: आपके
+            - generic [ref=f8e121]: कंप्यूटर
+            - generic [ref=f8e122]: से
+            - generic [ref=f8e502]: बाहर
+            - generic [ref=f8e503]: नहीं
+            - generic [ref=f8e504]: जाना
+            - generic [ref=f8e505]: पड़ता।
+        - generic [ref=f8e123]:
+          - paragraph [ref=f8e124]: "अनुबंध, वित्तीय रिकॉर्ड, बोर्ड के कागज़ात: कुछ दस्तावेज़ क्लाउड AI को भेजे ही नहीं जा सकते। Sankshep का Private mode इन्हीं के लिए बना है। वर्कस्पेस में एक स्विच दबाते ही हर काम आपकी अपनी मशीन पर होने लगता है, फ़ाइल पढ़ने से लेकर आख़िरी ड्राफ़्ट लिखने तक।"
+          - link "देखें Private mode कैसे काम करता है" [ref=f8e506] [cursor=pointer]:
+            - /url: /features#private-mode
+      - table [ref=f8e507]:
+        - caption [ref=f8e130]: Cloud mode और Private mode में आपके कंप्यूटर से क्या बाहर जाता है
+        - rowgroup [ref=f8e131]:
+          - row [ref=f8e508]:
+            - columnheader "आपके कंप्यूटर से क्या बाहर जाता है" [ref=f8e509]
+            - columnheader "Cloud mode" [ref=f8e134]
+            - columnheader "Private mode" [ref=f8e135]
+        - rowgroup [ref=f8e136]:
+          - row [ref=f8e510]:
+            - rowheader "आपके दस्तावेज़ का टेक्स्ट" [ref=f8e511]
+            - cell "AI प्रोवाइडर को भेजा जाता है" [ref=f8e512]
+            - cell "आपके कंप्यूटर पर ही रहता है" [ref=f8e513]
+          - row [ref=f8e517]:
+            - rowheader "ड्राफ़्ट और सुधार" [ref=f8e518]
+            - cell "प्रोवाइडर लिखता है" [ref=f8e519]
+            - cell "आपका अपना GPU लिखता है" [ref=f8e520]
+          - row [ref=f8e524]:
+            - rowheader "इमेज और स्कैन किए पेज" [ref=f8e525]
+            - cell "विज़न मॉडल पढ़ता है" [ref=f8e526]
+            - cell "ब्राउज़र में OCR से पढ़े जाते हैं" [ref=f8e527]
+          - row [ref=f8e531]:
+            - rowheader "History में सहेजा जाता है" [ref=f8e532]
+            - cell "अंश और ड्राफ़्ट" [ref=f8e533]
+            - cell "सिर्फ़ गिनती, टेक्स्ट कभी नहीं" [ref=f8e534]
+      - generic [ref=f8e165]:
+        - generic [ref=f8e538]:
+          - heading "आपकी अपनी मशीन पर चलता है" [level=3] [ref=f8e542]
+          - paragraph [ref=f8e543]: Private mode हर ड्राफ़्ट आपके कंप्यूटर पर Ollama के ज़रिए Qwen 2.5 VL से लिखता है। Sankshep या किसी AI प्रोवाइडर को कुछ नहीं भेजा जाता।
+        - generic [ref=f8e544]:
+          - heading "ट्रेनिंग के लिए कुछ नहीं" [level=3] [ref=f8e548]
+          - paragraph [ref=f8e549]: किसी प्रोवाइडर को आपका टेक्स्ट मिलता ही नहीं, इसलिए न कोई उसे रख सकता है, न लॉग कर सकता है, न उस पर मॉडल ट्रेन कर सकता है।
+        - generic [ref=f8e550]:
+          - heading "आम लैपटॉप पर भी चलता है" [level=3] [ref=f8e553]
+          - paragraph [ref=f8e554]: हर अनुरोध 4,096 टोकन की सीमा में रहता है, इसलिए 7B मॉडल 8 GB GPU मेमोरी में चल जाता है और ड्राफ़्ट लिखे जाते ही दिखने लगते हैं।
+    - generic [ref=f8e184]:
+      - generic [ref=f8e185]:
+        - generic [ref=f8e186]: पाइपलाइन
+        - heading "Sankshep एक स्रोत को हर फ़ॉर्मेट में कैसे बदलता है।" [level=2] [ref=f8e555]:
+          - generic [ref=f8e189]: Sankshep
+          - generic [ref=f8e190]: एक
+          - generic [ref=f8e191]: स्रोत
+          - generic [ref=f8e192]: को
+          - generic [ref=f8e193]: हर
+          - generic [ref=f8e194]: फ़ॉर्मेट
+          - generic [ref=f8e195]: में
+          - generic [ref=f8e196]: कैसे
+          - generic [ref=f8e556]: बदलता
+          - generic [ref=f8e557]: है।
+        - paragraph [ref=f8e197]: आपके कंटेंट की एक ही प्रामाणिक समझ एक निजी, एजेंट-आधारित इंजन को चलाती है, ताकि हर डिलीवरेबल एक-सा, जाँचने योग्य और आपके ब्रांड के अनुरूप रहे।
+      - generic [ref=f8e198]:
+        - generic [ref=f8e200]:
+          - generic [ref=f8e204]: चरण 1/8
+          - generic [ref=f8e205]: · Q3_Report.pdf अपलोड हुई, 42 MB स्वीकार।
+        - generic [ref=f8e206]:
+          - generic [ref=f8e207]:
+            - button "01 इनपुट PDF, डॉक्यूमेंट, ऑडियो, वीडियो डालें या बस एक लिंक पेस्ट करें, आपका कंटेंट जहाँ भी हो। PDF ऑडियो वीडियो URL" [ref=f8e558]:
+              - generic [ref=f8e210]: "01"
+              - heading "इनपुट" [level=3] [ref=f8e559]
+              - paragraph [ref=f8e216]: PDF, डॉक्यूमेंट, ऑडियो, वीडियो डालें या बस एक लिंक पेस्ट करें, आपका कंटेंट जहाँ भी हो।
+              - generic [ref=f8e217]:
+                - generic [ref=f8e218]: PDF
+                - generic [ref=f8e560]: ऑडियो
+                - generic [ref=f8e561]: वीडियो
+                - generic [ref=f8e221]: URL
+            - button "02 पार्सिंग हम लेआउट, टेबल और बोले गए शब्द तक पढ़ते हैं, फिर सब कुछ साफ़, काम के टेक्स्ट में बदल देते हैं। LlamaParse Unstructured Whisper" [ref=f8e565]:
+              - generic [ref=f8e226]: "02"
+              - heading "पार्सिंग" [level=3] [ref=f8e566]
+              - paragraph [ref=f8e233]: हम लेआउट, टेबल और बोले गए शब्द तक पढ़ते हैं, फिर सब कुछ साफ़, काम के टेक्स्ट में बदल देते हैं।
+              - generic [ref=f8e234]:
+                - generic [ref=f8e235]: LlamaParse
+                - generic [ref=f8e236]: Unstructured
+                - generic [ref=f8e237]: Whisper
+            - button "03 टुकड़े टेक्स्ट को छोटे-छोटे हिस्सों में बाँटा जाता है, और हर हिस्सा अपना पूरा अर्थ और संदर्भ बनाए रखता है। Semantic" [ref=f8e570]:
+              - generic [ref=f8e242]: "03"
+              - heading "टुकड़े" [level=3] [ref=f8e571]
+              - paragraph [ref=f8e248]: टेक्स्ट को छोटे-छोटे हिस्सों में बाँटा जाता है, और हर हिस्सा अपना पूरा अर्थ और संदर्भ बनाए रखता है।
+              - generic [ref=f8e249]: Semantic
+            - button "04 एम्बेड और स्टोर सब कुछ एक खोजने योग्य जगह पर सहेजा जाता है, ताकि सही अंश हमेशा आसानी से मिल जाए। pgvector" [ref=f8e575]:
+              - generic [ref=f8e255]: "04"
+              - heading "एम्बेड और स्टोर" [level=3] [ref=f8e576]
+              - paragraph [ref=f8e262]: सब कुछ एक खोजने योग्य जगह पर सहेजा जाता है, ताकि सही अंश हमेशा आसानी से मिल जाए।
+              - generic [ref=f8e263]: pgvector
+          - generic [ref=f8e268]:
+            - button "08 डिलीवरी आपको शेयर करने के लिए तैयार फ़ाइलें मिलती हैं, और हर दावा स्रोत से जुड़ा होता है। डेक PDF Word सोशल" [ref=f8e577]:
+              - generic [ref=f8e270]: "08"
+              - heading "डिलीवरी" [level=3] [ref=f8e578]
+              - paragraph [ref=f8e276]: आपको शेयर करने के लिए तैयार फ़ाइलें मिलती हैं, और हर दावा स्रोत से जुड़ा होता है।
+              - generic [ref=f8e277]:
+                - generic [ref=f8e579]: डेक
+                - generic [ref=f8e279]: PDF
+                - generic [ref=f8e280]: Word
+                - generic [ref=f8e580]: सोशल
+            - button "07 जाँच हर ड्राफ़्ट को आपके स्रोत से मिलाकर जाँचा जाता है और तब तक दोबारा लिखा जाता है जब तक वह खरा न उतरे। Pydantic Reflection" [ref=f8e584]:
+              - generic [ref=f8e286]: "07"
+              - heading "जाँच" [level=3] [ref=f8e585]
+              - paragraph [ref=f8e293]: हर ड्राफ़्ट को आपके स्रोत से मिलाकर जाँचा जाता है और तब तक दोबारा लिखा जाता है जब तक वह खरा न उतरे।
+              - generic [ref=f8e294]:
+                - generic [ref=f8e295]: Pydantic
+                - generic [ref=f8e296]: Reflection
+            - button "06 जनरेट आपका सारांश, स्लाइड डेक, वीडियो स्क्रिप्ट और सोशल पोस्ट, सब एक साथ लिखे जाते हैं। vLLM Llama-3" [ref=f8e589]:
+              - generic [ref=f8e301]: "06"
+              - heading "जनरेट" [level=3] [ref=f8e590]
+              - paragraph [ref=f8e307]: आपका सारांश, स्लाइड डेक, वीडियो स्क्रिप्ट और सोशल पोस्ट, सब एक साथ लिखे जाते हैं।
+              - generic [ref=f8e308]:
+                - generic [ref=f8e309]: vLLM
+                - generic [ref=f8e310]: Llama-3
+            - button "05 संचालन स्मार्ट असिस्टेंट काम संभालते हैं और तय करते हैं कि क्या बनाना है और किस क्रम में। LangGraph Router" [ref=f8e594]:
+              - generic [ref=f8e315]: "05"
+              - heading "संचालन" [level=3] [ref=f8e595]
+              - paragraph [ref=f8e322]: स्मार्ट असिस्टेंट काम संभालते हैं और तय करते हैं कि क्या बनाना है और किस क्रम में।
+              - generic [ref=f8e323]:
+                - generic [ref=f8e324]: LangGraph
+                - generic [ref=f8e325]: Router
+      - generic [ref=f8e326]:
+        - generic [ref=f8e596]:
+          - paragraph [ref=f8e597]: इंतज़ार नहीं
+          - paragraph [ref=f8e600]: बड़ी फ़ाइलें अपलोड करें और काम करते रहें। Sankshep उन्हें बैकग्राउंड में प्रोसेस करता है और कभी टाइम-आउट नहीं होता।
+        - generic [ref=f8e601]:
+          - paragraph [ref=f8e602]: सब कुछ एक जगह
+          - paragraph [ref=f8e605]: आपका कंटेंट और उसका अर्थ एक ही जगह रहते हैं, इसलिए जवाब एक-से रहते हैं और भटकते नहीं।
+        - generic [ref=f8e606]:
+          - paragraph [ref=f8e607]: अपना काम ख़ुद जाँचता है
+          - paragraph [ref=f8e610]: Sankshep ड्राफ़्ट लिखता है, फिर ख़ुद उसकी समीक्षा करके सुधारता है, ताकि हर आउटपुट आपके मूल स्रोत के प्रति सच्चा रहे।
+    - generic [ref=f8e343]:
+      - generic [ref=f8e344]:
+        - text: Sankshep Chat
+        - heading "बस कहिए, और कुछ भी बदलवाइए।" [level=2] [ref=f8e611]:
+          - generic [ref=f8e346]: बस
+          - generic [ref=f8e347]: कहिए,
+          - generic [ref=f8e348]: और
+          - generic [ref=f8e349]: कुछ
+          - generic [ref=f8e350]: भी
+          - generic [ref=f8e612]: बदलवाइए।
+        - paragraph [ref=f8e351]: टोन बदलनी है या 10 पेज का ब्रीफ़ छोटा करना है? आउटपुट के नीचे बस अपना अनुरोध लिखें, और Sankshep कुछ ही सेकंड में उसे दोबारा लिख देता है।
+      - generic [ref=f8e354]:
+        - generic [ref=f8e355]:
+          - generic [ref=f8e356]: S
+          - text: Sankshep Chat
+          - generic [ref=f8e358]: लिख रहा है
+        - generic [ref=f8e360]:
+          - text: इस
+          - mark [ref=f8e361]: 20 पेज की सुरक्षा एडवाइज़री
+          - text: को
+          - mark [ref=f8e362]: 3 बिंदुओं वाले छोटे ब्रीफ़
+          - text: में बदलो।
+        - generic [ref=f8e363]:
+          - generic [ref=f8e364]: Sankshep से सुधार करवाएँ…
+          - button "दोबारा बनाएँ" [ref=f8e613]
+    - generic [ref=f8e368]:
+      - generic [ref=f8e369]:
+        - generic [ref=f8e370]:
+          - text: यह कैसे काम करता है
+          - heading "कच्चे स्रोत से तैयार डिलीवरेबल तक, तीन चरणों में।" [level=2] [ref=f8e614]:
+            - generic [ref=f8e372]: कच्चे
+            - generic [ref=f8e373]: स्रोत
+            - generic [ref=f8e374]: से
+            - generic [ref=f8e375]: तैयार
+            - generic [ref=f8e376]: डिलीवरेबल
+            - generic [ref=f8e377]: तक,
+            - generic [ref=f8e378]: तीन
+            - generic [ref=f8e379]: चरणों
+            - generic [ref=f8e380]: में।
+        - link "सभी फ़ॉर्मेट देखें" [ref=f8e615] [cursor=pointer]:
+          - /url: /workspace
+      - generic [ref=f8e384]:
+        - article [ref=f8e385]:
+          - generic [ref=f8e386]: "01"
+          - generic [ref=f8e390]:
+            - paragraph [ref=f8e394]: फ़ाइलें डालें या URL पेस्ट करें
+            - paragraph [ref=f8e395]: PDF · DOCX · MP4 · वेब
+          - heading "30 MB तक का कोई भी कंटेंट डालें" [level=3] [ref=f8e616]
+          - paragraph [ref=f8e397]: PDF, डॉक्यूमेंट और इमेज खींचकर छोड़ें, या वेब URL पेस्ट करें। Sankshep सब पढ़ लेता है।
+        - article [ref=f8e398]:
+          - generic [ref=f8e399]: "02"
+          - generic [ref=f8e402]:
+            - generic [ref=f8e617]: सारांश
+            - generic [ref=f8e618]: एडवाइज़री
+            - generic [ref=f8e619]: स्लाइड
+            - generic [ref=f8e620]: वीडियो
+            - generic [ref=f8e407]: LinkedIn
+            - generic [ref=f8e408]: Twitter/X
+          - heading "जो फ़ॉर्मेट चाहिए, सब चुनें" [level=3] [ref=f8e621]
+          - paragraph [ref=f8e410]: सारांश, एडवाइज़री, स्लाइड, वीडियो स्क्रिप्ट या सोशल पोस्ट में से चुनें, सब एक साथ।
+        - article [ref=f8e411]:
+          - generic [ref=f8e412]: "03"
+          - generic [ref=f8e415]:
+            - generic [ref=f8e416]: प्रॉम्प्ट › "जोखिम तालिका और 3 कार्य-बिंदुओं वाला, एक कॉलम का ब्रीफ़।"
+            - generic [ref=f8e417]: कस्टम टेम्पलेट बन रहा है…
+          - heading "AI से अपने फ़ॉर्मेट बनाएँ" [level=3] [ref=f8e622]
+          - paragraph [ref=f8e421]: बताइए कि आउटपुट कैसे सजा हो, और AI तुरंत आपके लिए टेम्पलेट बना देता है।
+    - generic [ref=f8e424]:
+      - heading "अपनी रिपोर्टों को नया जीवन दें।" [level=2] [ref=f8e623]:
+        - generic [ref=f8e426]: अपनी
+        - generic [ref=f8e427]: रिपोर्टों
+        - generic [ref=f8e428]: को
+        - generic [ref=f8e429]: नया
+        - generic [ref=f8e430]: जीवन
+        - generic [ref=f8e431]: दें।
+      - paragraph [ref=f8e432]: निजी, कई फ़ॉर्मेट में कंटेंट, एक ही भरोसेमंद स्रोत से।
+      - link "वर्कस्पेस खोलें" [ref=f8e624] [cursor=pointer]:
+        - /url: /workspace
+  - contentinfo [ref=f8e436]:
+    - paragraph [aria-hidden] [ref=f8e438]: Sankshep.ai
+    - generic [ref=f8e440]:
+      - paragraph [ref=f8e441]: © 2026 Sankshep.ai · Neural Ninjas VGEC
+      - navigation "फ़ुटर" [ref=f8e625]:
+        - link "नियम और शर्तें" [ref=f8e626] [cursor=pointer]:
+          - /url: /terms-and-conditions
+        - link "गोपनीयता नीति" [ref=f8e627] [cursor=pointer]:
+          - /url: /privacy-policy
+        - link "GitHub" [ref=f8e628] [cursor=pointer]:
+          - /url: https://github.com/SiddharthDevmurari/SankShep.ai.git
+        - link "वर्कस्पेस" [ref=f8e629] [cursor=pointer]:
+          - /url: /workspace
+        - link "फ़ीचर्स" [ref=f8e630] [cursor=pointer]:
+          - /url: /features
+        - link "यह कैसे काम करता है" [ref=f8e631] [cursor=pointer]:
+          - /url: /how-it-works
+        - link "पाइपलाइन" [ref=f8e632] [cursor=pointer]:
+          - /url: /#how-it-works
+        - link "हमारे बारे में" [ref=f8e633] [cursor=pointer]:
+          - /url: /about
+        - link "संपर्क करें" [ref=f8e634] [cursor=pointer]:
+          - /url: /contact
