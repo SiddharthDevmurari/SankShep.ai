@@ -631,6 +631,35 @@ function HowItWorks() {
   )
 }
 
+const DEMO_VIDEO_ID = 'u4sPNRXTmRE'
+
+function DemoVideo() {
+  return (
+    <section id="demo" className="mx-auto max-w-[1200px] px-5 pb-20 sm:px-8 lg:pb-28">
+      <div className="flex flex-col items-start justify-between gap-6 md:flex-row md:items-end">
+        <div>
+          <span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-ink-soft">Demo video</span>
+          <Reveal as="h2" text="Watch Sankshep *at work.*" accentClass="text-ink" className="font-display mt-4 max-w-xl text-[clamp(2.2rem,4.8vw,3.6rem)] text-ink" />
+          <p className="mt-4 max-w-md text-[15px] leading-relaxed text-ink-soft">Our Smart India Hackathon 2026 walkthrough of the workspace.</p>
+        </div>
+        <a href={`https://youtu.be/${DEMO_VIDEO_ID}`} target="_blank" rel="noreferrer" className="group flex items-center gap-1.5 text-[14px] font-medium text-ink">
+          Open on YouTube <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+        </a>
+      </div>
+      <div className="mt-10 overflow-hidden rounded-[18px] border-2 border-ink bg-ink shadow-[0_20px_50px_-20px_rgba(15,16,15,0.45)]">
+        <iframe
+          className="aspect-video w-full"
+          src={`https://www.youtube-nocookie.com/embed/${DEMO_VIDEO_ID}?rel=0`}
+          title="Sankshep.ai demo video"
+          loading="lazy"
+          allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+          allowFullScreen
+        />
+      </div>
+    </section>
+  )
+}
+
 function CtaBanner() {
   return (
     <section className="mx-auto max-w-[1200px] px-5 pb-20 sm:px-8">
@@ -654,6 +683,7 @@ export default function LandingPage() {
       <SiteNav />
       <main>
         <Hero />
+        <DemoVideo />
         <Security />
         <Workflow />
         <ChatBlock />
