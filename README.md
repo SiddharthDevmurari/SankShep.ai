@@ -387,6 +387,7 @@ main/
 │   ├── contexts/AuthContext.tsx # Session, sign-in/up, sign-out, account deletion
 │   ├── components/
 │   │   ├── ProtectedRoute.tsx   # Auth guard for /workspace/*
+│   │   ├── demo/                # Landing hero: animated workspace mockup, scripted pointer, step controls
 │   │   └── site/SiteChrome.tsx  # Shared site nav (with the mobile menu) and footer
 │   ├── pages/
 │   │   ├── LandingPage.tsx

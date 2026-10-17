@@ -139,7 +139,7 @@ body {
   }
 }
 
-/* ---- hero explainer motion ---- */
+/* ---- entrance motion: panels rise in, chips pop in ---- */
 @keyframes sk-rise {
   from { opacity: 0; transform: translateY(10px); }
   to { opacity: 1; transform: translateY(0); }
@@ -148,14 +148,6 @@ body {
   0% { opacity: 0; transform: scale(0.94); }
   60% { transform: scale(1.02); }
   100% { opacity: 1; transform: scale(1); }
-}
-@keyframes sk-scan {
-  0% { transform: translateY(-6%); }
-  100% { transform: translateY(106%); }
-}
-@keyframes sk-bar {
-  from { width: 0%; }
-  to { width: 100%; }
 }
 .sk-rise { animation: sk-rise 0.5s cubic-bezier(0.22, 1, 0.36, 1) both; }
 .sk-pop { animation: sk-pop 0.45s cubic-bezier(0.22, 1, 0.36, 1) both; }

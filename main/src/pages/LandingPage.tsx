@@ -5,6 +5,7 @@ import { SiteFooter, SiteNav } from '../components/site/SiteChrome'
 import { InstallAppButton } from '../components/InstallApp'
 import { useCopy, useLang } from '../i18n'
 import { LANDING_COPY } from './landingCopy'
+import { WorkspaceDemo } from '../components/demo/WorkspaceDemo'
 
 /* ---------- tiny inline icon set (stroke, 1.6) ---------- */
 type IconProps = { className?: string }
@@ -137,141 +138,38 @@ function Reveal({
 
 // ── Hero ──────────────────────────────────────────────────────────────────────
 
+// The headline and the copy sit above a full-width, animated demo of the workspace (components/demo).
 function Hero() {
   const t = useCopy(LANDING_COPY).hero
   return (
-    <section id="top" className="relative overflow-hidden">
-      <div className="pointer-events-none absolute inset-0 opacity-[0.5]" style={{ backgroundImage: 'radial-gradient(#e2dfd2 1px, transparent 1px)', backgroundSize: '22px 22px', maskImage: 'radial-gradient(ellipse 80% 60% at 50% 0%, black 40%, transparent 100%)' }} />
-      <div className="relative mx-auto grid max-w-[1200px] items-center gap-14 px-5 pb-20 pt-16 sm:px-8 lg:grid-cols-[1.05fr_0.95fr] lg:pb-28 lg:pt-24">
-        <div>
-          <div className="mb-6">
+    <section id="top" className="relative">
+      <div className="mx-auto max-w-[1200px] px-5 pb-20 pt-10 sm:px-8 sm:pt-14 lg:pb-24 lg:pt-16">
+        <div className="grid gap-8 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,0.8fr)] lg:items-end lg:gap-14">
+          <div>
             <p className="text-[13px] font-semibold text-ink-soft">{t.sihLine}</p>
             <p className="font-serif mt-1 text-[17px] leading-snug text-ink">{t.sihProblem}</p>
+            <Reveal as="h1" immediate text={t.title} className="font-display mt-6 text-[clamp(2.6rem,6vw,4.75rem)] text-ink" />
           </div>
-          <span className="inline-flex items-center rounded-full border border-hair bg-white px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-ink-soft">{t.chip}</span>
-          <Reveal as="h1" immediate text={t.title} className="font-display mt-6 text-[clamp(2.9rem,6.4vw,5rem)] text-ink" />
-          <p className="mt-6 max-w-xl text-[17px] leading-relaxed text-ink-soft">{t.body}</p>
-          <div className="mt-8 flex flex-wrap items-center gap-3">
-            <Link to="/workspace" className="group flex items-center gap-2 rounded-full bg-ink px-6 py-3.5 text-[15px] font-medium text-paper transition-transform hover:-translate-y-0.5">
-              {t.launch} <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
-            </Link>
-            <a href="#how-it-works" className="rounded-full border border-hair bg-white px-6 py-3.5 text-[15px] font-medium text-ink transition-colors hover:bg-paper-deep">{t.seeHow}</a>
-            <InstallAppButton />
-          </div>
-          <div className="mt-8 flex items-center gap-5 text-[13px] text-ink-soft">
-            <span className="flex items-center gap-1.5"><Check className="h-4 w-4 text-matcha-deep" /> {t.noCard}</span>
-            <span className="flex items-center gap-1.5"><Check className="h-4 w-4 text-matcha-deep" /> {t.privateMode}</span>
+          <div className="lg:pb-1.5">
+            <p className="max-w-xl text-[17px] leading-relaxed text-ink-soft">{t.body}</p>
+            <div className="mt-7 flex flex-wrap items-center gap-3">
+              <Link to="/workspace" className="group flex items-center gap-2 rounded-full bg-ink px-6 py-3.5 text-[15px] font-medium text-paper transition-transform hover:-translate-y-0.5">
+                {t.launch} <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+              </Link>
+              <a href="#how-it-works" className="rounded-full border border-hair bg-white px-6 py-3.5 text-[15px] font-medium text-ink transition-colors hover:bg-paper-deep">{t.seeHow}</a>
+              <InstallAppButton />
+            </div>
+            <div className="mt-6 flex flex-wrap items-center gap-x-5 gap-y-2 text-[13px] text-ink-soft">
+              <span className="flex items-center gap-1.5"><Check className="h-4 w-4 text-matcha-deep" /> {t.noCard}</span>
+              <span className="flex items-center gap-1.5"><Check className="h-4 w-4 text-matcha-deep" /> {t.privateMode}</span>
+            </div>
           </div>
         </div>
-        <HeroExplainer />
+        <div className="mt-10 lg:mt-14">
+          <WorkspaceDemo />
+        </div>
       </div>
     </section>
-  )
-}
-
-const SCENE_COUNT = 4
-const SCENE_MS = 3000
-
-function HeroExplainer() {
-  const [scene, setScene] = useState(0)
-  const [playing, setPlaying] = useState(true)
-  const copy = useCopy(LANDING_COPY).explainer
-  useEffect(() => {
-    if (!playing) return
-    const t = setTimeout(() => setScene((s) => (s + 1) % SCENE_COUNT), SCENE_MS)
-    return () => clearTimeout(t)
-  }, [scene, playing])
-  return (
-    <div className="relative">
-      <div className="sk-glow-ring pointer-events-none absolute -inset-3 rounded-[26px] bg-matcha/50 blur-2xl" />
-      <div className="pointer-events-none absolute -inset-px rounded-[19px] bg-gradient-to-br from-matcha via-transparent to-matcha/40" />
-      <div className="relative overflow-hidden rounded-[18px] border-2 border-ink bg-white shadow-[0_20px_50px_-20px_rgba(15,16,15,0.45)] ring-1 ring-ink/5">
-        <div className="flex items-center gap-1.5 border-b border-hair px-5 py-3">
-          <span className="h-2.5 w-2.5 rounded-full bg-[#e5e2d6]" />
-          <span className="h-2.5 w-2.5 rounded-full bg-[#e5e2d6]" />
-          <span className="h-2.5 w-2.5 rounded-full bg-[#e5e2d6]" />
-          <span className="ml-auto flex items-center gap-1.5 text-[11px] font-medium uppercase tracking-wide text-ink-soft/70">
-            <span className="h-1.5 w-1.5 rounded-full bg-red-400" /> {copy.label}
-          </span>
-        </div>
-        <div className="relative h-[360px] bg-paper px-6 py-6 sm:h-[380px]">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-matcha-deep">{copy.scenes[scene].tag}</p>
-          <div className="mt-4 h-[264px]"><SceneStage scene={scene} /></div>
-        </div>
-        <div className="border-t border-hair px-5 py-4">
-          <div className="flex items-center gap-1.5">
-            {copy.scenes.map((_, i) => (
-              <button key={i} onClick={() => setScene(i)} className="group relative h-1.5 flex-1 overflow-hidden rounded-full bg-hair" aria-label={`${copy.scene} ${i + 1}`}>
-                <span className="absolute inset-y-0 left-0 rounded-full bg-ink" style={i < scene ? { width: '100%' } : i === scene ? { width: '100%', animation: playing ? `sk-bar ${SCENE_MS}ms linear both` : 'none' } : { width: '0%' }} />
-              </button>
-            ))}
-          </div>
-          <div className="mt-3 flex items-center gap-3">
-            <button onClick={() => setPlaying((p) => !p)} className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-ink text-paper transition-transform hover:scale-105" aria-label={playing ? copy.pause : copy.play}>
-              {playing ? (
-                <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="currentColor"><rect x="6" y="5" width="4" height="14" rx="1" /><rect x="14" y="5" width="4" height="14" rx="1" /></svg>
-              ) : (
-                <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="currentColor"><path d="M7 5l12 7-12 7z" /></svg>
-              )}
-            </button>
-            <p key={scene} className="sk-rise text-[14px] font-medium text-ink">{copy.scenes[scene].caption}</p>
-            <span className="ml-auto text-[12px] tabular-nums text-ink-soft/70">0:0{scene * 3} / 0:12</span>
-          </div>
-        </div>
-      </div>
-    </div>
-  )
-}
-
-function SceneStage({ scene }: { scene: number }) {
-  const copy = useCopy(LANDING_COPY).explainer
-  if (scene === 0) return (
-    <div key="s0" className="sk-rise flex h-full flex-col items-center justify-center">
-      <div className="w-full rounded-2xl border-2 border-dashed border-hair bg-white p-8 text-center">
-        <span className="sk-pop mx-auto grid h-14 w-14 place-items-center rounded-xl bg-ink text-paper"><FileIcon className="h-7 w-7" /></span>
-        <p className="mt-4 text-[15px] font-semibold">Q3_Report.pdf</p>
-        <p className="text-[12px] text-ink-soft">{copy.fileMeta}</p>
-      </div>
-      <div className="mt-4 flex flex-wrap justify-center gap-2">
-        {copy.sources.map((t) => (
-          <span key={t} className="rounded-full border border-hair bg-white px-3 py-1 text-[11px] font-medium text-ink-soft">{t}</span>
-        ))}
-      </div>
-    </div>
-  )
-  if (scene === 1) return (
-    <div key="s1" className="sk-rise flex h-full flex-col justify-center">
-      <div className="relative overflow-hidden rounded-2xl border border-hair bg-white p-5">
-        <div className="pointer-events-none absolute inset-x-0 top-0 h-16 bg-gradient-to-b from-matcha/70 to-transparent" style={{ animation: 'sk-scan 1.6s ease-in-out infinite' }} />
-        <div className="relative space-y-2.5">
-          {[92, 78, 85, 64, 88, 72].map((w, i) => <div key={i} className="h-2.5 rounded-full bg-paper-deep" style={{ width: `${w}%` }} />)}
-        </div>
-      </div>
-      <div className="mt-4 flex items-center justify-center gap-2 text-[13px] font-medium text-ink-soft">
-        <Sparkle className="h-4 w-4 text-matcha-deep" /> {copy.analysing}
-      </div>
-    </div>
-  )
-  if (scene === 2) return (
-    <div key="s2" className="sk-rise grid h-full grid-cols-2 content-center gap-2.5">
-      {copy.chips.map((label, i) => (
-        <div key={label} className="sk-pop flex items-center justify-between rounded-xl border border-ink/15 bg-matcha/70 px-3.5 py-3.5" style={{ animationDelay: `${i * 140}ms` }}>
-          <span className="text-[13.5px] font-medium leading-tight">{label}</span>
-          <span className="grid h-5 w-5 shrink-0 place-items-center rounded-full bg-ink text-paper"><Check className="h-3 w-3" /></span>
-        </div>
-      ))}
-    </div>
-  )
-  return (
-    <div key="s3" className="sk-rise flex h-full flex-col justify-center gap-2.5">
-      {copy.outputs.map((o, i) => (
-        <div key={o.t} className="sk-pop flex items-center gap-3 rounded-xl border border-hair bg-white px-4 py-3" style={{ animationDelay: `${i * 160}ms` }}>
-          <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-matcha text-ink"><Check className="h-4 w-4" /></span>
-          <div className="min-w-0"><p className="truncate text-[14px] font-semibold">{o.t}</p><p className="text-[12px] text-ink-soft">{o.d}</p></div>
-          <ArrowRight className="ml-auto h-4 w-4 text-ink-soft" />
-        </div>
-      ))}
-    </div>
   )
 }
 
