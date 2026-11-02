@@ -24,7 +24,7 @@ export const FORMATS = [
   { id: 'advisory', label: 'Advisory', short: 'Advisory', desc: 'Findings & actions', icon: ShieldAlert },
   { id: 'infographic', label: 'Infographic', short: 'Infographic', desc: 'Stats & layout', icon: ChartPie },
   { id: 'simple', label: 'Simplified Explanation', short: 'Simplified', desc: 'Plain language', icon: Lightbulb },
-  { id: 'translation', label: 'Language Translation', short: 'Translation', desc: 'Indian languages', icon: Languages },
+  { id: 'translation', label: 'Language Translation', short: 'Translation', desc: '13 languages', icon: Languages },
 ] as const
 
 export type FormatId = (typeof FORMATS)[number]['id']

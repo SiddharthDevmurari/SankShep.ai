@@ -1,6 +1,7 @@
 // Features page copy in English and Hindi. Headlines are [before, accent, after], so the page keeps
 // drawing the accent with its own highlighter. Workspace names like Generate, Refine, Stop, History and
 // Private mode stay in Latin, since the workspace itself is in English.
+import { defineCopy } from '../i18n'
 import { MAX_COMPARE } from '../workspace/LeftPanel'
 
 type Headline = [string, string, string]
@@ -207,7 +208,7 @@ const en = {
       { title: 'Compare models side by side', body: `Run the same brief through up to ${MAX_COMPARE} models and read their drafts next to each other.` },
       { title: 'Write for the right readers', body: 'Pick managers, HR and sales, engineers or the general public, or describe your own readers and save them for next time.' },
       { title: 'Choose a tone once', body: 'Professional, technical, casual or academic, applied to every draft in the run.' },
-      { title: 'Six Indian languages', body: 'Translate into Hindi, Gujarati, Marathi, Bengali, Telugu or Tamil, the whole document, line by line.' },
+      { title: 'English and 12 Indian languages', body: 'Translate the whole document, line by line, into English, Hindi, Bengali, Marathi, Telugu, Tamil, Gujarati, Urdu, Kannada, Odia, Malayalam, Punjabi or Assamese.' },
       { title: 'Read images and scans', body: 'Photos of pages and scanned PDFs are read first, so a picture of a report works as a source too.' },
       { title: 'Take it with you', body: 'Copy any draft, download it as Markdown or plain text, and take slide decks away as PowerPoint. Past runs wait for you in History.' },
     ],
@@ -434,7 +435,7 @@ const hi: typeof en = {
       { title: 'मॉडलों की साथ-साथ तुलना', body: `एक ही ब्रीफ़ को ${MAX_COMPARE} तक मॉडलों से चलाएँ और उनके ड्राफ़्ट एक-दूसरे के बगल में पढ़ें।` },
       { title: 'सही पाठकों के लिए लिखें', body: 'मैनेजर, HR और सेल्स, इंजीनियर या आम जनता चुनें, या अपने पाठकों का वर्णन करके उन्हें अगली बार के लिए सहेज लें।' },
       { title: 'टोन एक बार चुनें', body: 'पेशेवर, तकनीकी, बोलचाल वाली या अकादमिक, रन के हर ड्राफ़्ट पर लागू।' },
-      { title: 'छह भारतीय भाषाएँ', body: 'पूरे दस्तावेज़ का, लाइन-दर-लाइन, हिंदी, गुजराती, मराठी, बांग्ला, तेलुगु या तमिल में अनुवाद करें।' },
+      { title: 'अंग्रेज़ी और 12 भारतीय भाषाएँ', body: 'पूरे दस्तावेज़ का, लाइन-दर-लाइन, अंग्रेज़ी, हिंदी, बांग्ला, मराठी, तेलुगु, तमिल, गुजराती, उर्दू, कन्नड़, ओड़िया, मलयालम, पंजाबी या असमिया में अनुवाद करें।' },
       { title: 'इमेज और स्कैन पढ़ें', body: 'पेजों की फ़ोटो और स्कैन किए PDF पहले पढ़े जाते हैं, इसलिए किसी रिपोर्ट की तस्वीर भी स्रोत बन सकती है।' },
       { title: 'साथ ले जाएँ', body: 'कोई भी ड्राफ़्ट कॉपी करें, उसे Markdown या सादे टेक्स्ट के रूप में डाउनलोड करें, और स्लाइड डेक PowerPoint के रूप में ले जाएँ। पिछले रन History में आपका इंतज़ार करते हैं।' },
     ],
@@ -446,4 +447,4 @@ const hi: typeof en = {
   },
 }
 
-export const FEATURES_COPY = { en, hi }
+export const FEATURES_COPY = defineCopy('features', { en, hi })

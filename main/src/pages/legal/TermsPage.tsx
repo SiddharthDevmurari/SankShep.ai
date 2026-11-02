@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom'
 import { GITHUB_URL } from '../../components/site/SiteChrome'
-import { useCopy } from '../../i18n'
+import { defineCopy, useCopy } from '../../i18n'
 import { LegalLayout, type LegalSection } from './LegalLayout'
 
 const ISSUES_URL = GITHUB_URL.replace(/\.git$/, '') + '/issues'
@@ -342,7 +342,9 @@ const hi: typeof en = {
   ),
 }
 
+export const TERMS_COPY = defineCopy('terms', { en, hi })
+
 export default function TermsPage() {
-  const t = useCopy({ en, hi })
+  const t = useCopy(TERMS_COPY)
   return <LegalLayout title={t.title} updated={t.updated} sections={t.sections} sibling={t.sibling} summary={t.summary} />
 }

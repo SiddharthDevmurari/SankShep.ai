@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { Download, EllipsisVertical, Share, SquarePlus, X } from 'lucide-react'
 import { promptInstall, useInstall, type Platform } from '../lib/install'
-import { useCopy } from '../i18n'
+import { defineCopy, useCopy } from '../i18n'
 
 const B = ({ children }: { children: ReactNode }) => <b className="font-semibold text-ink">{children}</b>
 
@@ -46,6 +46,8 @@ const hi: typeof en = {
   ],
 }
 
+export const INSTALL_COPY = defineCopy('install', { en, hi })
+
 /**
  * "Download for Android" / "Download for iOS", shown only on those devices and only
  * while the app isn't installed. Android opens the browser's install dialog when it
@@ -55,7 +57,7 @@ const hi: typeof en = {
 export function InstallAppButton({ className = '' }: { className?: string }) {
   const { platform, installed, canPrompt } = useInstall()
   const [showSteps, setShowSteps] = useState(false)
-  const t = useCopy({ en, hi })
+  const t = useCopy(INSTALL_COPY)
 
   if (installed || platform === 'other') return null
 
@@ -89,7 +91,7 @@ function inAppBrowser() {
 
 function InstallSteps({ platform, onClose }: { platform: Platform; onClose: () => void }) {
   const closeRef = useRef<HTMLButtonElement>(null)
-  const t = useCopy({ en, hi })
+  const t = useCopy(INSTALL_COPY)
 
   useEffect(() => {
     closeRef.current?.focus()

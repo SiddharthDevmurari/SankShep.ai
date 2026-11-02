@@ -374,9 +374,10 @@ ${source}`,
       user: `Translate the following text into ${targetLanguage ?? 'Hindi'}. Requirements:
 - Translate every line, heading, list item and table cell, in the original order
 - Keep the line breaks, Markdown and numbering exactly as in the source
+- Keep every number, date, amount and phone number in the same digits as the source (0-9), so helplines and deadlines stay easy to read
 - Use natural, idiomatic ${targetLanguage ?? 'Hindi'}, keeping the original meaning and tone
 - Keep technical terms, adding the English in brackets when there is no ${targetLanguage ?? 'Hindi'} equivalent
-- Output only the translation
+${targetLanguage === 'English' ? '' : `- Write in the ${targetLanguage ?? 'Hindi'} script, never in Latin letters (Urdu in Nastaliq/Arabic script, Punjabi in Gurmukhi, Odia in Odia script)\n`}- Output only the translation
 
 Text to translate:
 ${source}`,

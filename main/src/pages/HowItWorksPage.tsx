@@ -160,19 +160,19 @@ function HeroFlow() {
         </svg>
 
         {/* Drafts */}
-        <ul className="grid gap-2.5">
+        <ul className="grid min-w-0 gap-2.5">
           {t.outputs.map((label, i) => (
             <motion.li
               key={label}
               initial={{ opacity: 0, x: 14 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.5, delay: 1.8 + i * 0.12, ease: EASE }}
-              className="flex items-center gap-2 rounded-xl border border-hair bg-white px-2.5 py-2.5 sm:gap-2.5 sm:px-3"
+              className="flex min-w-0 items-center gap-2 rounded-xl border border-hair bg-white px-2.5 py-2.5 sm:gap-2.5 sm:px-3"
             >
               <span className="grid h-5 w-5 shrink-0 place-items-center rounded-md bg-matcha">
                 <Check className="h-3 w-3 text-ink" strokeWidth={3} />
               </span>
-              <span className="truncate text-[11.5px] font-medium text-ink sm:text-[13px]">{label}</span>
+              <span className="min-w-0 truncate text-[11.5px] font-medium text-ink sm:text-[13px]">{label}</span>
             </motion.li>
           ))}
         </ul>
@@ -239,7 +239,7 @@ function Stages() {
         </div>
 
         {/* Stage copy; each block claims the visual while it crosses the middle of the screen */}
-        <div>
+        <div className="min-w-0">
           {copy.stages.map((_, i) => (
             <StageCopy key={i} index={i} onActive={() => setActive(i)} />
           ))}
@@ -256,7 +256,7 @@ function StageCopy({ index, onActive }: { index: number; onActive: () => void })
   const stage = useCopy(HOW_COPY).stages[index]
 
   return (
-    <div ref={ref} className="flex flex-col justify-center py-10 lg:min-h-[78vh] lg:py-0">
+    <div ref={ref} className="flex min-w-0 flex-col justify-center py-10 lg:min-h-[78vh] lg:py-0">
       <div className="mb-8 aspect-[5/4] w-full lg:hidden">
         <StageVisualOnView index={index} />
       </div>
@@ -527,9 +527,9 @@ function DeliverVisual() {
   const typed = useTypewriter(t.refineTyped, 1300)
   return (
     <div className="flex h-full flex-col gap-3">
-      <div className="flex gap-1.5">
+      <div className="flex min-w-0 gap-1.5">
         {t.tabs.map((tab, i) => (
-          <span key={i} className={`rounded-full px-3 py-1.5 text-[11.5px] font-medium ${i === 0 ? 'bg-white text-ink ring-1 ring-hair' : 'text-ink-mute'}`}>{tab}</span>
+          <span key={i} className={`min-w-0 truncate rounded-full px-3 py-1.5 text-[11.5px] font-medium ${i === 0 ? 'bg-white text-ink ring-1 ring-hair' : 'text-ink-mute'}`}>{tab}</span>
         ))}
       </div>
       <div className="grid min-h-0 flex-1 grid-cols-2 gap-2.5">

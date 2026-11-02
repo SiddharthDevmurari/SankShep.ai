@@ -69,6 +69,7 @@ export function WorkspaceDemo() {
           <div
             ref={stageRef}
             lang="en"
+            dir="ltr"
             aria-hidden="true"
             inert
             className="demo-stage pointer-events-none absolute left-0 top-0 origin-top-left select-none transition-opacity duration-300"

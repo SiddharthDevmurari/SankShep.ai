@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,300..800;1,6..72,300..800&family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Noto+Sans+Devanagari:wght@400;500;600;700&family=Noto+Serif+Devanagari:wght@400;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,300..800;1,6..72,300..800&family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Noto+Sans+Devanagari:wght@400;500;600;700&family=Noto+Serif+Devanagari:wght@400;600;700&family=Noto+Sans+Bengali:wght@400;500;600;700&family=Noto+Sans+Telugu:wght@400;500;600;700&family=Noto+Sans+Tamil:wght@400;500;600;700&family=Noto+Sans+Gujarati:wght@400;500;600;700&family=Noto+Sans+Kannada:wght@400;500;600;700&family=Noto+Sans+Oriya:wght@400;500;600;700&family=Noto+Sans+Malayalam:wght@400;500;600;700&family=Noto+Sans+Gurmukhi:wght@400;500;600;700&family=Noto+Serif+Bengali:wght@400;600;700&family=Noto+Serif+Telugu:wght@400;600;700&family=Noto+Serif+Tamil:wght@400;600;700&family=Noto+Serif+Gujarati:wght@400;600;700&family=Noto+Serif+Kannada:wght@400;600;700&family=Noto+Serif+Oriya:wght@400;600;700&family=Noto+Serif+Malayalam:wght@400;600;700&family=Noto+Serif+Gurmukhi:wght@400;600;700&family=Noto+Naskh+Arabic:wght@400;500;600;700&display=swap');
 @import 'tailwindcss';
 
 @theme {
@@ -21,11 +21,12 @@
   --color-line: #dcd8cb;
 
   /* Newsreader for bold display headings; Instrument Serif for italic accents */
-  /* The Noto Devanagari faces only cover Hindi text: the Latin fonts have no Devanagari, so those characters
-     fall through to Noto, and Google serves those files only to pages that actually contain Hindi. */
-  --font-display: 'Newsreader', 'Noto Serif Devanagari', ui-serif, Georgia, serif;
-  --font-serif: 'Instrument Serif', 'Noto Serif Devanagari', ui-serif, Georgia, serif;
-  --font-sans: 'Inter', 'Noto Sans Devanagari', ui-sans-serif, system-ui, sans-serif;
+  /* The Noto faces only cover the Indian scripts: the Latin fonts have none of them, so those characters fall
+     through to Noto, and Google serves each file only to pages that contain that script (Bengali covers Assamese;
+     Urdu uses Naskh, which stays compact enough for the tight display headings). */
+  --font-display: 'Newsreader', 'Noto Serif Devanagari', 'Noto Serif Bengali', 'Noto Serif Telugu', 'Noto Serif Tamil', 'Noto Serif Gujarati', 'Noto Serif Kannada', 'Noto Serif Oriya', 'Noto Serif Malayalam', 'Noto Serif Gurmukhi', 'Noto Naskh Arabic', ui-serif, Georgia, serif;
+  --font-serif: 'Instrument Serif', 'Noto Serif Devanagari', 'Noto Serif Bengali', 'Noto Serif Telugu', 'Noto Serif Tamil', 'Noto Serif Gujarati', 'Noto Serif Kannada', 'Noto Serif Oriya', 'Noto Serif Malayalam', 'Noto Serif Gurmukhi', 'Noto Naskh Arabic', ui-serif, Georgia, serif;
+  --font-sans: 'Inter', 'Noto Sans Devanagari', 'Noto Sans Bengali', 'Noto Sans Telugu', 'Noto Sans Tamil', 'Noto Sans Gujarati', 'Noto Sans Kannada', 'Noto Sans Oriya', 'Noto Sans Malayalam', 'Noto Sans Gurmukhi', 'Noto Naskh Arabic', ui-sans-serif, system-ui, sans-serif;
   --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
 }
 
@@ -93,19 +94,31 @@ body {
   letter-spacing: -0.01em;
 }
 
-/* Hindi pages: Devanagari vowel signs sit above and below the line, so the tight display leading clips them;
-   letter-spacing pulls joined letters apart; and Devanagari has no italic, so the serif accent stays upright. */
-[lang='hi'] .font-display,
-[lang='hi'] .font-headline {
+/* Indian-language pages: vowel signs sit above and below the line, so the tight display leading clips them;
+   letter-spacing pulls joined letters apart; and these scripts have no italic, so the serif accent stays upright. */
+:is([lang='hi'], [lang='bn'], [lang='mr'], [lang='te'], [lang='ta'], [lang='gu'], [lang='ur'], [lang='kn'], [lang='or'], [lang='ml'], [lang='pa'], [lang='as']) :is(.font-display, .font-headline) {
   line-height: 1.22;
   letter-spacing: 0;
 }
-[lang='hi'] .font-serif {
+:is([lang='hi'], [lang='bn'], [lang='mr'], [lang='te'], [lang='ta'], [lang='gu'], [lang='ur'], [lang='kn'], [lang='or'], [lang='ml'], [lang='pa'], [lang='as']) .font-serif {
   font-style: normal;
   letter-spacing: 0;
 }
-[lang='hi'] [class*='tracking-'] {
+:is([lang='hi'], [lang='bn'], [lang='mr'], [lang='te'], [lang='ta'], [lang='gu'], [lang='ur'], [lang='kn'], [lang='or'], [lang='ml'], [lang='pa'], [lang='as']) [class*='tracking-'] {
   letter-spacing: 0;
+}
+/* Words in these languages can run long (one Malayalam word can be wider than a phone): break inside a word
+   only when it would not fit otherwise. Hindi and English keep the browser's normal wrapping. */
+:is([lang='bn'], [lang='mr'], [lang='te'], [lang='ta'], [lang='gu'], [lang='ur'], [lang='kn'], [lang='or'], [lang='ml'], [lang='pa'], [lang='as']) {
+  overflow-wrap: anywhere;
+}
+/* Right-to-left pages (Urdu): arrows point the way the reader moves. The workspace mockup stays left to right. */
+[dir='rtl'] :is(.sk-arrow, .lucide-arrow-right, .lucide-arrow-up-right, .lucide-chevron-right, .lucide-arrow-left):not([dir='ltr'] *) {
+  transform: scaleX(-1);
+}
+/* Urdu (Naskh) needs a little more room between lines than Latin text. */
+[lang='ur'] :is(.font-display, .font-headline) {
+  line-height: 1.4;
 }
 
 /* ---- word-by-word text reveal ---- */

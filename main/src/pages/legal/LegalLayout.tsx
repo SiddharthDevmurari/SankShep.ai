@@ -1,7 +1,7 @@
 import { useEffect, useState, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { SitePage } from '../../components/site/SiteChrome'
-import { useCopy } from '../../i18n'
+import { defineCopy, useCopy } from '../../i18n'
 
 export interface LegalSection {
   id: string
@@ -29,6 +29,8 @@ const hi: typeof en = {
   translationNote: 'यह हिंदी अनुवाद आपकी सुविधा के लिए है। अंग्रेज़ी संस्करण से कोई अंतर होने पर अंग्रेज़ी संस्करण ही मान्य होगा।',
 }
 
+export const LEGAL_COPY = defineCopy('legal', { en, hi })
+
 /**
  * Reading layout shared by the Privacy Policy and the Terms: a plain-language
  * summary up top, a sticky contents list on wide screens, and one narrow column
@@ -42,7 +44,7 @@ export function LegalLayout({ title, updated, summary, sections, sibling }: {
   sibling: { label: string; to: string }
 }) {
   const active = useActiveSection(sections.map((s) => s.id))
-  const t = useCopy({ en, hi })
+  const t = useCopy(LEGAL_COPY)
 
   return (
     <SitePage>

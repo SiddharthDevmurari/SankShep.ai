@@ -12,7 +12,7 @@ export function RichText({ text }: { text: string }) {
 
   const flushPara = () => {
     if (para.length) {
-      blocks.push(<p key={blocks.length} className="my-4 text-[15.5px] leading-[1.8] text-ink/90">{inline(para.join(' '))}</p>)
+      blocks.push(<p key={blocks.length} dir="auto" className="my-4 text-[15.5px] leading-[1.8] text-ink/90">{inline(para.join(' '))}</p>)
       para = []
     }
   }
@@ -20,7 +20,7 @@ export function RichText({ text }: { text: string }) {
     if (list) {
       const Tag = list.ordered ? 'ol' : 'ul'
       blocks.push(
-        <Tag key={blocks.length} className={`my-4 space-y-2 pl-6 text-[15.5px] leading-[1.75] text-ink/90 ${list.ordered ? 'list-decimal' : 'list-disc'} marker:text-ink-soft/50`}>
+        <Tag key={blocks.length} dir="auto" className={`my-4 space-y-2 pl-6 text-[15.5px] leading-[1.75] text-ink/90 ${list.ordered ? 'list-decimal' : 'list-disc'} marker:text-ink-soft/50`}>
           {list.items.map((it, i) => <li key={i} className="pl-1">{inline(it)}</li>)}
         </Tag>,
       )
@@ -39,8 +39,8 @@ export function RichText({ text }: { text: string }) {
       const level = heading.length === 3 ? heading[1].length : 3
       blocks.push(
         level <= 2
-          ? <h2 key={blocks.length} className="mb-3 mt-9 font-display text-[26px] text-ink first:mt-0">{inline(content)}</h2>
-          : <h3 key={blocks.length} className="mb-2 mt-7 text-[16px] font-semibold tracking-[-0.01em] text-ink first:mt-0">{inline(content.replace(/:$/, ''))}</h3>,
+          ? <h2 key={blocks.length} dir="auto" className="mb-3 mt-9 font-display text-[26px] text-ink first:mt-0">{inline(content)}</h2>
+          : <h3 key={blocks.length} dir="auto" className="mb-2 mt-7 text-[16px] font-semibold tracking-[-0.01em] text-ink first:mt-0">{inline(content.replace(/:$/, ''))}</h3>,
       )
       continue
     }

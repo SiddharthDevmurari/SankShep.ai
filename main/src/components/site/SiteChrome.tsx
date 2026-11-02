@@ -2,9 +2,9 @@
 // (Features, About, How it works, Privacy Policy, Terms and Conditions).
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom'
-import { Menu, X } from 'lucide-react'
+import { ChevronDown, Globe, Menu, X } from 'lucide-react'
 import { useAuth } from '../../contexts/AuthContext'
-import { useCopy, useLang, type Lang } from '../../i18n'
+import { LANGUAGES, defineCopy, useCopy, useLang, usePageLang, type Lang } from '../../i18n'
 import logoUrl from '../../assets/logo.jpeg'
 
 export const GITHUB_URL = 'https://github.com/SiddharthDevmurari/SankShep.ai.git'
@@ -17,7 +17,7 @@ export const GithubIcon = ({ className }: { className?: string }) => (
 )
 
 export const ArrowRight = ({ className }: { className?: string }) => (
-  <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+  <svg viewBox="0 0 24 24" className={`sk-arrow ${className ?? ''}`} fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
     <path d="M5 12h14M13 6l6 6-6 6" />
   </svg>
 )
@@ -62,42 +62,38 @@ const hi: typeof en = {
   footer: ['नियम और शर्तें', 'गोपनीयता नीति', 'GitHub', 'वर्कस्पेस', 'फ़ीचर्स', 'यह कैसे काम करता है', 'पाइपलाइन', 'हमारे बारे में', 'संपर्क करें'],
 }
 
-const LANG_SEGMENT = 'h-9 min-w-10 rounded-full px-2.5 text-[13.5px] font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink/30'
+export const CHROME_COPY = defineCopy('chrome', { en, hi })
 
 /**
- * EN | हिं switch in the capsule. Phones get a single button that flips to the other language
- * (it shows the language you'd switch to), so the capsule still fits a narrow screen.
+ * The site language, as the browser's own dropdown: keyboard, screen readers and phone pickers work as is.
+ * The select sits invisibly over a compact face (globe + the language's own name; just the code on phones),
+ * so the capsule still fits a narrow screen. Each option is written in its own script.
  */
-function LangToggle() {
-  const { lang, setLang } = useLang()
-  const other: Lang = lang === 'en' ? 'hi' : 'en'
+function LangMenu() {
+  const { lang, setLang, loading } = useLang()
+  const shown = LANGUAGES.find((l) => l.code === (loading ?? lang)) ?? LANGUAGES[0]
   return (
-    <>
-      <div role="group" aria-label="Language / भाषा" className="hidden shrink-0 items-center gap-0.5 rounded-full bg-paper-deep p-1 sm:flex">
-        {(['en', 'hi'] as const).map((l) => (
-          <button
-            key={l}
-            type="button"
-            lang={l}
-            onClick={() => setLang(l)}
-            aria-pressed={lang === l}
-            title={l === 'en' ? 'English' : 'हिंदी'}
-            className={`${LANG_SEGMENT} ${lang === l ? 'bg-ink text-paper' : 'text-ink-soft hover:text-ink'}`}
-          >
-            {l === 'en' ? 'EN' : 'हिं'}
-          </button>
-        ))}
-      </div>
-      <button
-        type="button"
-        lang={other}
-        onClick={() => setLang(other)}
-        aria-label={other === 'hi' ? 'हिंदी में पढ़ें' : 'Read in English'}
-        className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-paper-deep text-[14px] font-semibold text-ink transition-colors hover:bg-hair focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink/30 sm:hidden"
+    <div
+      className="relative flex h-11 shrink-0 items-center gap-1.5 rounded-full bg-paper-deep pe-2.5 ps-3 text-ink transition-colors hover:bg-hair focus-within:ring-2 focus-within:ring-ink/30 sm:h-10"
+      aria-busy={loading !== null}
+    >
+      <Globe aria-hidden className={`h-4 w-4 shrink-0 text-ink-soft ${loading ? 'animate-pulse' : ''}`} />
+      <span aria-hidden className="text-[13.5px] font-semibold uppercase sm:hidden">{shown.code}</span>
+      <span aria-hidden lang={shown.code} className="hidden text-[13.5px] font-semibold sm:inline">{shown.native}</span>
+      <ChevronDown aria-hidden className="h-3.5 w-3.5 shrink-0 text-ink-mute" />
+      <select
+        value={shown.code}
+        onChange={(e) => setLang(e.target.value as Lang)}
+        aria-label="Language / भाषा"
+        className="absolute inset-0 h-full w-full cursor-pointer appearance-none rounded-full opacity-0"
       >
-        {other === 'hi' ? 'हिं' : 'EN'}
-      </button>
-    </>
+        {LANGUAGES.map((l) => (
+          <option key={l.code} value={l.code} lang={l.code}>
+            {l.code === 'en' ? l.native : `${l.native} (${l.name})`}
+          </option>
+        ))}
+      </select>
+    </div>
   )
 }
 
@@ -109,7 +105,7 @@ const MENU_LINK = 'flex min-h-12 items-center rounded-2xl px-4 text-[16px] font-
 
 export function SiteNav() {
   const { user, signOut } = useAuth()
-  const t = useCopy({ en, hi })
+  const t = useCopy(CHROME_COPY)
   const { lang } = useLang()
   const navLinks = NAV_PATHS.map((to, i) => ({ label: t.nav[i], to }))
   const navigate = useNavigate()
@@ -248,14 +244,16 @@ export function SiteNav() {
             <GithubIcon className="h-5 w-5" />
           </a>
 
-          <LangToggle />
+          <LangMenu />
 
           <Link
             to="/workspace"
-            className="ml-1 flex items-center gap-1.5 whitespace-nowrap rounded-full bg-ink px-3.5 py-2.5 text-[14px] font-medium text-paper sm:px-5 transition-transform hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-matcha"
+            title={t.openWorkspace}
+            className="ms-1 flex min-w-0 max-w-[10.5rem] items-center gap-1.5 whitespace-nowrap rounded-full bg-ink px-3.5 py-2.5 text-[14px] font-medium text-paper sm:max-w-none sm:px-5 transition-transform hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-matcha"
           >
-            <ArrowRight className="h-3.5 w-3.5" />
-            {t.openWorkspace}
+            {/* Some languages run long: on phones the arrow goes and the label ends in "…" rather than widen the page. */}
+            <ArrowRight className="hidden h-3.5 w-3.5 shrink-0 sm:block" />
+            <span className="min-w-0 truncate">{t.openWorkspace}</span>
           </Link>
         </nav>
       </div>
@@ -277,7 +275,7 @@ const FOOTER_LINKS: { to: string; external?: boolean }[] = [
 ]
 
 export function SiteFooter() {
-  const t = useCopy({ en, hi })
+  const t = useCopy(CHROME_COPY)
   return (
     <footer className="border-t border-hair bg-paper-deep">
       <div className="px-5 pb-4 pt-10 sm:px-8">
@@ -310,9 +308,9 @@ export function SiteFooter() {
 
 /** Nav + page + footer on the paper background, for every marketing and legal page. */
 export function SitePage({ children }: { children: ReactNode }) {
-  const { lang } = useLang()
+  const { lang, dir } = usePageLang()
   return (
-    <div lang={lang} className="min-h-screen bg-paper">
+    <div lang={lang} dir={dir} className="min-h-screen bg-paper">
       <SiteNav />
       <main id="main">{children}</main>
       <SiteFooter />

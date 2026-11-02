@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { SiteFooter, SiteNav } from '../components/site/SiteChrome'
 import { InstallAppButton } from '../components/InstallApp'
-import { useCopy, useLang } from '../i18n'
+import { useCopy, usePageLang } from '../i18n'
 import { LANDING_COPY } from './landingCopy'
 import { WorkspaceDemo } from '../components/demo/WorkspaceDemo'
 
@@ -18,7 +18,7 @@ const stroke = {
 }
 
 const ArrowRight = ({ className }: IconProps) => (
-  <svg viewBox="0 0 24 24" className={className} {...stroke}>
+  <svg viewBox="0 0 24 24" className={`sk-arrow ${className ?? ''}`} {...stroke}>
     <path d="M5 12h14M13 6l6 6-6 6" />
   </svg>
 )
@@ -553,9 +553,9 @@ function CtaBanner() {
 }
 
 export default function LandingPage() {
-  const { lang } = useLang()
+  const { lang, dir } = usePageLang()
   return (
-    <div lang={lang} className="min-h-screen bg-paper">
+    <div lang={lang} dir={dir} className="min-h-screen bg-paper">
       <SiteNav />
       <main>
         <Hero />

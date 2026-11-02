@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom'
 import { GITHUB_URL } from '../../components/site/SiteChrome'
-import { useCopy } from '../../i18n'
+import { defineCopy, useCopy } from '../../i18n'
 import { LegalLayout, type LegalSection } from './LegalLayout'
 
 const ISSUES_URL = GITHUB_URL.replace(/\.git$/, '') + '/issues'
@@ -139,7 +139,7 @@ const SECTIONS_EN: LegalSection[] = [
     body: (
       <p>
         We do not set tracking or advertising cookies. When you sign in, your session token is kept in your browser’s local storage so you
-        stay signed in; logging out removes it. Your choice of English or Hindi for these pages is kept there too, so the site opens in the
+        stay signed in; logging out removes it. Your choice of language for these pages is kept there too, so the site opens in the
         same language next time; it never leaves your browser.
       </p>
     ),
@@ -308,7 +308,7 @@ const SECTIONS_HI: LegalSection[] = [
     body: (
       <p>
         हम ट्रैकिंग या विज्ञापन कुकीज़ सेट नहीं करते। साइन इन करने पर आपका सेशन टोकन आपके ब्राउज़र के local storage में रखा जाता है ताकि
-        आप साइन इन बने रहें; लॉग आउट करने पर वह हट जाता है। इन पेजों के लिए आपकी चुनी हुई भाषा (अंग्रेज़ी या हिंदी) भी वहीं रखी जाती है,
+        आप साइन इन बने रहें; लॉग आउट करने पर वह हट जाता है। इन पेजों के लिए आपकी चुनी हुई भाषा भी वहीं रखी जाती है,
         ताकि अगली बार साइट उसी भाषा में खुले; यह आपके ब्राउज़र से बाहर कभी नहीं जाती।
       </p>
     ),
@@ -373,7 +373,9 @@ const hi: typeof en = {
   ),
 }
 
+export const PRIVACY_COPY = defineCopy('privacy', { en, hi })
+
 export default function PrivacyPolicyPage() {
-  const t = useCopy({ en, hi })
+  const t = useCopy(PRIVACY_COPY)
   return <LegalLayout title={t.title} updated={t.updated} sections={t.sections} sibling={t.sibling} summary={t.summary} />
 }

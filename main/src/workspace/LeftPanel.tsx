@@ -10,6 +10,7 @@ import {
   type ApiKeys, type ImageInput, type ModelKind, type ModelRef, type ProviderId,
 } from '../lib/providers'
 import { describeReader, pickImageReader } from '../lib/ingest'
+import { LANGUAGES } from '../lib/languages'
 import { PREFERRED_LOCAL_MODEL } from '../lib/local'
 import { extractDocument, isDocumentFile } from '../lib/documents'
 import { fetchSavedAudiences, removeAudience, saveAudience } from '../lib/audiences'
@@ -62,7 +63,7 @@ export const ALL_FORMATS: { label: OutputFormat; short: string; desc: string; ic
   { label: 'Advisory', short: 'Advisory', desc: 'Findings & actions', icon: ShieldAlert },
   { label: 'Infographic', short: 'Infographic', desc: 'Stats & layout', icon: ChartPie },
   { label: 'Simplified Explanation', short: 'Simplified', desc: 'Plain language', icon: Lightbulb },
-  { label: 'Language Translation', short: 'Translation', desc: 'Indian languages', icon: Languages },
+  { label: 'Language Translation', short: 'Translation', desc: '13 languages', icon: Languages },
 ]
 
 const TONES: { value: ToneOption; note: string }[] = [
@@ -72,7 +73,6 @@ const TONES: { value: ToneOption; note: string }[] = [
   { value: 'Academic', note: 'scholarly' },
 ]
 
-const LANGUAGES = ['Hindi', 'Gujarati', 'Marathi', 'Bengali', 'Telugu', 'Tamil']
 
 const SCHEMA_SUGGESTIONS = ['Risk table first', 'Bullets only', 'Action checklist']
 
@@ -731,20 +731,27 @@ export function LeftPanel({ onGenerate, onStop, generating, onStatusChange }: Pr
                 <legend className="flex items-center gap-2 px-1 text-[13px] font-semibold text-ink">
                   <Languages className="h-4 w-4" /> Translate into
                 </legend>
+                {/* The native name sits under each language, so readers of that script spot it at once. */}
                 <div className="grid grid-cols-3 gap-1.5">
-                  {LANGUAGES.map((l) => (
-                    <button
-                      key={l}
-                      type="button"
-                      aria-pressed={targetLanguage === l}
-                      onClick={() => setTargetLanguage(l)}
-                      className={`rounded-lg py-2 text-[13px] font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink/30 ${
-                        targetLanguage === l ? 'bg-ink text-paper' : 'bg-paper-deep text-ink-soft hover:text-ink'
-                      }`}
-                    >
-                      {l}
-                    </button>
-                  ))}
+                  {LANGUAGES.map((l) => {
+                    const on = targetLanguage === l.name
+                    return (
+                      <button
+                        key={l.code}
+                        type="button"
+                        aria-pressed={on}
+                        onClick={() => setTargetLanguage(l.name)}
+                        className={`min-h-11 rounded-lg px-1 py-1.5 text-center transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink/30 ${
+                          on ? 'bg-ink text-paper' : 'bg-paper-deep text-ink-soft hover:text-ink'
+                        }`}
+                      >
+                        <span className="block truncate text-[13px] font-medium leading-tight">{l.name}</span>
+                        {l.code !== 'en' && (
+                          <span lang={l.code} className={`mt-0.5 block truncate text-[11.5px] leading-tight ${on ? 'text-paper/75' : 'text-ink-mute'}`}>{l.native}</span>
+                        )}
+                      </button>
+                    )
+                  })}
                 </div>
               </fieldset>
             )}

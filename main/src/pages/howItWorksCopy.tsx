@@ -1,5 +1,6 @@
 // How it works page copy in English and Hindi. Numbers come from the workspace code, so both languages stay in step with it.
 // Workspace labels the reader will see in the (English) app, like Generate and History, stay in Latin.
+import { defineCopy } from '../i18n'
 import { MAX_COMPARE, MAX_FILE_BYTES, MAX_IMAGE_BYTES } from '../workspace/LeftPanel'
 
 const MB = 1024 * 1024
@@ -199,4 +200,4 @@ const hi: typeof en = {
   },
 }
 
-export const HOW_COPY = { en, hi }
+export const HOW_COPY = defineCopy('how', { en, hi })

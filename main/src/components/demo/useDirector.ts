@@ -126,7 +126,8 @@ export function useDirector({ stageRef, cursorRef, scaleRef, ready, startPaused,
       let elapsed = 0
       let last = performance.now()
       const tick = (now: number) => {
-        if (tokenRef.current !== token) return resolve(false)
+        // A seek, or the demo leaving the page (navigating away mid-move), ends this beat.
+        if (tokenRef.current !== token || !stageRef.current) return resolve(false)
         const dt = Math.min(now - last, 50)
         last = now
         if (running()) elapsed = Math.min(ms, elapsed + dt)

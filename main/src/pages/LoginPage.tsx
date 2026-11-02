@@ -3,7 +3,7 @@ import { Navigate, useNavigate, useLocation, Link } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { DEMO_EMAIL, DEMO_PASSWORD } from '../lib/supabase'
 import { PASSWORD_RULES, isStrongPassword, PASSWORD_POLICY_MESSAGE } from '../lib/password'
-import { useCopy, useLang } from '../i18n'
+import { defineCopy, useCopy, usePageLang } from '../i18n'
 import { ArrowUpRight, Check, Eye, EyeOff, UserX } from 'lucide-react'
 import { AnimatePresence, MotionConfig, motion } from 'motion/react'
 import { BrandMark } from '../components/site/SiteChrome'
@@ -108,13 +108,15 @@ const hi: typeof en = {
   disabledNext: 'चालू होने के बाद, हमेशा की तरह साइन इन करें।',
   contactAdmin: 'एडमिन से संपर्क करें',
 }
+
+export const LOGIN_COPY = defineCopy('login', { en, hi })
 const field =
   'w-full rounded-lg border border-hair bg-paper px-4 py-3 text-[15px] text-ink outline-none transition-colors placeholder:text-ink-mute/70 hover:border-line focus:border-ink focus:bg-white focus-visible:ring-2 focus-visible:ring-matcha'
 
 export default function LoginPage() {
   const { user, loading: authLoading, signIn, signUp, disabledEmail, clearDisabledNotice } = useAuth()
-  const t = useCopy({ en, hi })
-  const { lang } = useLang()
+  const t = useCopy(LOGIN_COPY)
+  const { lang, dir } = usePageLang()
   const navigate = useNavigate()
   const location = useLocation()
   // Only return to a workspace page; anything else in navigation state is ignored.
@@ -190,7 +192,7 @@ export default function LoginPage() {
     <MotionConfig reducedMotion="user">
       {/* Sits under the capsule nav, so fill what's left of the viewport. The dot grid is the same
           texture as the landing hero, so the form sits on the site's own canvas. */}
-      <main lang={lang} className="relative isolate flex min-h-[calc(100dvh-6rem)] items-center justify-center overflow-hidden bg-paper px-4 py-10 sm:px-8 lg:py-16">
+      <main lang={lang} dir={dir} className="relative isolate flex min-h-[calc(100dvh-6rem)] items-center justify-center overflow-hidden bg-paper px-4 py-10 sm:px-8 lg:py-16">
         {/* Same dot grid as the landing hero, one step darker so it reads behind the card */}
         <div
           aria-hidden
@@ -419,7 +421,7 @@ export default function LoginPage() {
 
 /** Shown when an admin has disabled the account: what happened, what's kept, and who can undo it. */
 function AccountDisabledNotice({ email }: { email: string }) {
-  const t = useCopy({ en, hi })
+  const t = useCopy(LOGIN_COPY)
   return (
     <motion.div
       role="alert"

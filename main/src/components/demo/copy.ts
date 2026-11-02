@@ -1,4 +1,5 @@
 // The demo's captions and controls. The mockup itself stays in English, as the real workspace does.
+import { defineCopy } from '../../i18n'
 const en = {
   region: 'Sankshep workspace demo',
   description:
@@ -14,7 +15,7 @@ const en = {
     { label: 'Pick formats', caption: 'Choose every format you need. All of them are drafted from the same source.' },
     { label: 'Audience & model', caption: 'Say who will read it, then pick the model that writes it.' },
     { label: 'Generate', caption: 'One click drafts all three formats at the same time.' },
-    { label: 'Read & refine', caption: 'Read each draft, ask for changes in plain words, then preview the post.' },
+    { label: 'Read & refine', caption: 'Read each draft, ask for changes in plain words, then preview the article.' },
     { label: 'Export', caption: 'Download the deck as PowerPoint, or any draft as Markdown or plain text.' },
     { label: 'History', caption: 'Every draft is saved to History, where you can filter by format.' },
   ],
@@ -35,10 +36,10 @@ const hi: typeof en = {
     { label: 'फ़ॉर्मेट चुनें', caption: 'जो भी फ़ॉर्मेट चाहिए, सब चुनें। सब एक ही स्रोत से लिखे जाते हैं।' },
     { label: 'ऑडियंस और मॉडल', caption: 'बताइए कि इसे कौन पढ़ेगा, फिर लिखने वाला मॉडल चुनिए।' },
     { label: 'जनरेट', caption: 'एक क्लिक में तीनों फ़ॉर्मेट एक साथ तैयार होते हैं।' },
-    { label: 'पढ़ें और सुधारें', caption: 'हर ड्राफ़्ट पढ़ें, सीधे शब्दों में बदलाव माँगें, फिर पोस्ट का प्रीव्यू देखें।' },
+    { label: 'पढ़ें और सुधारें', caption: 'हर ड्राफ़्ट पढ़ें, सीधे शब्दों में बदलाव माँगें, फिर लेख का प्रीव्यू देखें।' },
     { label: 'एक्सपोर्ट', caption: 'डेक को PowerPoint में, या कोई भी ड्राफ़्ट Markdown या सादे टेक्स्ट में डाउनलोड करें।' },
     { label: 'History', caption: 'हर ड्राफ़्ट History में सहेजा जाता है, जहाँ आप फ़ॉर्मेट से फ़िल्टर कर सकते हैं।' },
   ],
 }
 
-export const DEMO_COPY = { en, hi }
+export const DEMO_COPY = defineCopy('demo', { en, hi })

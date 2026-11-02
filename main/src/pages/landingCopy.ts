@@ -1,5 +1,6 @@
 // Landing page copy in English and Hindi. Feature names that appear in the (English) workspace,
 // like "Private mode" and "Cloud mode", and tool names in the pipeline tags stay in Latin.
+import { defineCopy } from '../i18n'
 
 const en = {
   hero: {
@@ -41,22 +42,22 @@ const en = {
   pipeline: {
     eyebrow: 'The pipeline',
     title: 'How Sankshep turns one source into every format.',
-    body: 'One canonical understanding of your content feeds a private, agentic engine — so every deliverable stays consistent, verifiable, and on-brand.',
+    body: 'One canonical understanding of your content feeds a private, agentic engine, so every deliverable stays consistent, verifiable, and on-brand.',
     step: 'Step',
     stages: [
-      { title: 'Ingest', desc: 'Drop in PDFs, docs, audio, video, or just paste a link — from anywhere you keep your content.', tags: ['PDF', 'Audio', 'Video', 'URL'], live: 'Q3_Report.pdf uploaded — 42 MB accepted.' },
+      { title: 'Ingest', desc: 'Drop in PDFs, docs, audio, video, or just paste a link, from anywhere you keep your content.', tags: ['PDF', 'Audio', 'Video', 'URL'], live: 'Q3_Report.pdf uploaded: 42 MB accepted.' },
       { title: 'Parse', desc: 'We read the layout, tables, and even spoken words, then turn everything into clean, usable text.', tags: ['LlamaParse', 'Unstructured', 'Whisper'], live: 'Layout, tables & speech extracted to clean text.' },
       { title: 'Chunk', desc: 'The text is broken into bite-sized pieces that each keep their full meaning and context.', tags: ['Semantic'], live: 'Split into coherent, context-aware passages.' },
       { title: 'Embed & store', desc: 'Everything is saved in one searchable place, so the right passage is always easy to find.', tags: ['pgvector'], live: 'Embeddings written to a unified pgvector store.' },
       { title: 'Orchestrate', desc: 'Smart assistants take over and decide exactly what to build and in what order.', tags: ['LangGraph', 'Router'], live: 'Router dispatches the Generator & Critic agents.' },
       { title: 'Generate', desc: 'Your summary, slide deck, video script, and social posts are all drafted at the same time.', tags: ['vLLM', 'Llama-3'], live: 'Summary, deck, script & posts drafted in parallel.' },
       { title: 'Validate', desc: 'Every draft is fact-checked against your source and rewritten until it holds up.', tags: ['Pydantic', 'Reflection'], live: 'Schema-checked; rejected drafts revised in a loop.' },
-      { title: 'Deliver', desc: 'You get polished, ready-to-share files — with every claim linked back to the source.', tags: ['Deck', 'PDF', 'Word', 'Social'], live: 'Source-linked deliverables exported to you.' },
+      { title: 'Deliver', desc: 'You get polished, ready-to-share files, with every claim linked back to the source.', tags: ['Deck', 'PDF', 'Word', 'Social'], live: 'Source-linked deliverables exported to you.' },
     ],
     highlights: [
-      { k: 'No waiting around', v: 'Upload big files and keep working — Sankshep processes them in the background and never times out.' },
+      { k: 'No waiting around', v: 'Upload big files and keep working: Sankshep processes them in the background and never times out.' },
       { k: 'Everything in one place', v: 'Your content and its meaning live together in one spot, so answers stay consistent and never drift.' },
-      { k: 'Checks its own work', v: 'Sankshep drafts, then reviews and fixes itself — so every output stays true to your original source.' },
+      { k: 'Checks its own work', v: 'Sankshep drafts, then reviews and fixes itself, so every output stays true to your original source.' },
     ],
   },
   chat: {
@@ -75,7 +76,7 @@ const en = {
     explore: 'Explore all formats',
     steps: [
       { title: 'Drop in any content up to 30 MB', body: 'Drag & drop PDFs, docs, and images, or paste web URLs. Sankshep reads them all.' },
-      { title: 'Pick every format you need', body: 'Choose from Summaries, Advisories, Slides, Video Scripts, or Social posts — all at once.' },
+      { title: 'Pick every format you need', body: 'Choose from Summaries, Advisories, Slides, Video Scripts, or Social posts, all at once.' },
       { title: 'Design custom formats with AI', body: 'Describe how you want the output arranged, and AI builds a custom template instantly.' },
     ],
     drop: 'Drop files or paste a URL',
@@ -87,7 +88,7 @@ const en = {
   },
   cta: {
     title: 'Give your reports a second life.',
-    body: 'Private, multi-format content creation — from the same trusted source.',
+    body: 'Private, multi-format content creation, from the same trusted source.',
     button: 'Open Workspace',
   },
 }
@@ -182,4 +183,4 @@ const hi: typeof en = {
   },
 }
 
-export const LANDING_COPY = { en, hi }
+export const LANDING_COPY = defineCopy('landing', { en, hi })

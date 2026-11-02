@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import { MotionConfig, motion } from 'motion/react'
 import { Check, Copy, Mail } from 'lucide-react'
 import { ArrowRight, GITHUB_URL, GithubIcon, SitePage } from '../components/site/SiteChrome'
-import { useCopy } from '../i18n'
+import { defineCopy, useCopy } from '../i18n'
 
 /** Inline LinkedIn mark: lucide-react 1.x has no brand icons. */
 const LinkedInIcon = ({ className }: { className?: string }) => (
@@ -103,11 +103,13 @@ const hi: typeof en = {
   copiedStatus: (email: string) => `${email} कॉपी हो गया`,
 }
 
+export const CONTACT_COPY = defineCopy('contact', { en, hi })
+
 const initials = (name: string) => name.split(/\s+/).map((part) => part[0]).join('').slice(0, 2).toUpperCase()
 const githubHandle = (url: string) => '@' + url.replace(/\/+$/, '').split('/').pop()
 
 export default function ContactPage() {
-  const t = useCopy({ en, hi })
+  const t = useCopy(CONTACT_COPY)
   return (
     <MotionConfig reducedMotion="user">
       <SitePage>
@@ -189,7 +191,7 @@ const ICON_TILE =
 
 function MemberCard({ member, index }: { member: Member; index: number }) {
   const [copied, setCopied] = useState(false)
-  const t = useCopy({ en, hi })
+  const t = useCopy(CONTACT_COPY)
 
   const copyEmail = async () => {
     try {
